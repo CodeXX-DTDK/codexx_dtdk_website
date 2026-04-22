@@ -1,0 +1,84 @@
+---
+title: Rule Anatomy
+description: The four files that make up a codegen rule — config, preamble, grouping, and transformation — and the contract each must satisfy.
+---
+
+import { FileTree, Aside } from '@astrojs/starlight/components';
+
+A rule is a directory containing up to four files:
+
+<FileTree>
+- .codegen/rules/RuleName/
+  - RuleName.config.yaml    **(required)** Engine configuration
+  - RuleName.luau           **(required)** Transformation script
+  - RuleName.preamble.luau  *(optional)* File header emitter
+  - RuleName.grouping.luau  *(optional)* Output path router
+</FileTree>
+
+The directory name, the config filename, and the script filename must all match exactly — case-sensitive.
+
+## `RuleName.config.yaml`
+
+Controls engine behavior for this rule. Minimum viable config:
+
+```yaml
+version: 1
+
+output:
+  language: cpp
+```
+
+Full schema: see [Config Schema Reference](/reference/config-schema/).
+
+## `RuleName.luau`
+
+The transformation script. Receives one AST entity as JSON, returns JSON with `source` and optionally `inline`.
+
+**Contract:**
+- Input: `json.decode(input)` → Lua table (one entity)
+- Output: `json.encode({ source = "...", inline = { {source="..."}, ... } })`
+- Must not raise an error on any valid entity (validate defensively)
+- Must be a pure function — no global state, no I/O
+
+## `RuleName.preamble.luau`
+
+Optional. Runs once per unique output file before any transformation output.
+
+**Contract:**
+- Input: JSON string (currently always `"{}"`)
+- Output: raw string (not JSON) — prepended to the output file verbatim
+
+## `RuleName.grouping.luau`
+
+Optional. Runs once with all matched entities. Returns a routing map.
+
+**Contract:**
+- Input: `json.decode(input)` → `{ entities: [...] }`
+- Output: `json.encode({ [registryId] = "output/path.cpp", ... })`
+- Every entity in the input must appear in the output map
+- Paths are relative to the `--output` directory
+
+## Rule naming and triggering
+
+The rule name (directory name) controls how it is triggered:
+
+**Attribute annotation** (struct/class/enum level):
+```cpp
+struct [[codegen::RuleName]] MyStruct { ... };
+```
+
+**Anchor comment** (inline injection):
+```cpp
+// [[codegen::generated::RuleName::qualified::EnumName]]
+enum class MyEnum { A, B, C };
+```
+
+The qualified path in anchor comments (`qualified::EnumName`) is passed to the script via the entity's metadata and controls the generated function's qualified name.
+
+<Aside type="tip" title="Key Takeaways">
+- Four files: `config.yaml` (required), transformation `.luau` (required), `preamble.luau` (optional), `grouping.luau` (optional).
+- All files must use the same name prefix matching the directory name.
+- The transformation script is a pure function: JSON in, JSON out, no side effects.
+- The preamble returns a raw string (not JSON).
+- The grouping script returns a `registryId → outputPath` JSON map covering every matched entity.
+</Aside>

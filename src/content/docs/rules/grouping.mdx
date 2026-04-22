@@ -1,0 +1,47 @@
+---
+title: Grouping Logic
+description: Reference documentation for grouping.luau scripts — input format, output contract, and routing patterns.
+---
+
+See [Grouping & Fan-in](/concepts/grouping/) for the conceptual overview. This page is the contract reference.
+
+## Input
+
+```json
+{
+  "entities": [
+    {
+      "registryId": 42,
+      "identifier": { "name": "MyStruct" },
+      "_namespaces": ["myns"],
+      "sourceFile": "include/myns/my_struct.h",
+      "kind": "Struct",
+      "annotations": [{ "name": "RuleName", "arguments": [] }]
+    }
+  ]
+}
+```
+
+Every field available on the transformation script's input node is also available in the entity list here.
+
+## Output
+
+```json
+{
+  "42": "generated/myns/output.cpp"
+}
+```
+
+- Keys are `registryId` values as strings.
+- Values are output file paths, relative to the `--output` directory.
+- Every entity in the input must have a corresponding key in the output. Missing entries cause an engine error.
+
+## Routing patterns
+
+| Pattern | Description | Example path expression |
+|---|---|---|
+| 1:1 (default) | Entity → file derived from source path | (omit grouping.luau) |
+| Fan-in | All entities → one file | `"generated/all.cpp"` |
+| Namespace-based | Entity → file named after its top namespace | `entity._namespaces[1] .. "/registry.cpp"` |
+| Annotation-argument | Entity → file named by annotation argument | `entity.annotations[1].arguments[1]` |
+| Conditional | Internal vs public routing | `if isInternal then "internal.md" else "public.md"` |

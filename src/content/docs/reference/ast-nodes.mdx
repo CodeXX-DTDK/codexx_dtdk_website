@@ -1,0 +1,65 @@
+---
+title: AST Node Types
+description: All node kinds emitted by the codegen parser — fields, types, and JSON representations.
+---
+
+For the practical guide to navigating the AST in rule scripts, see [The AST Schema](/concepts/ast-schema/).
+
+## Node kinds
+
+| Kind | Trigger annotation | Description |
+|---|---|---|
+| `Struct` | `[[codegen::RuleName]]` on `struct` | C++ struct declaration |
+| `Class` | `[[codegen::RuleName]]` on `class` | C++ class declaration |
+| `Enum` | anchor comment or `[[codegen::RuleName]]` | C++ enum or enum class declaration |
+
+## Common fields (all kinds)
+
+| Field | Type | Description |
+|---|---|---|
+| `kind` | string | Node kind (see above) |
+| `identifier.name` | string | Unqualified entity name |
+| `identifier.templateArguments` | TypeSig[] | Template parameter nodes |
+| `_namespaces` | string[] | Enclosing namespace stack, outermost first |
+| `annotations` | Annotation[] | All `[[codegen::...]]` annotations on this declaration |
+
+## Struct / Class fields
+
+| Field | Type | Description |
+|---|---|---|
+| `memberVariables` | MemberNode[] | Public member variable declarations |
+
+## Enum fields
+
+| Field | Type | Description |
+|---|---|---|
+| `isScoped` | bool | `true` for `enum class` |
+| `enumerators` | Enumerator[] | Enumerator list |
+| `enumerators[].name` | string | Enumerator name |
+| `enumerators[].value` | string\|null | Explicit value as source text, or `null` |
+
+## MemberNode kinds
+
+| Kind | Description |
+|---|---|
+| `Variable` | Single variable: `int x;` |
+| `VariableGroup` | Multiple variables sharing a type: `int x, y, z;` |
+
+`VariableGroup` has a `variables` array of `Variable`-shaped objects.
+
+## TypeSig (type signature)
+
+| Field | Type | Description |
+|---|---|---|
+| `identifier.name` | string | Base type name (e.g. `"vector"`, `"uint32_t"`) |
+| `identifier.templateArguments` | TypeSig[] | Template arguments (recursive) |
+| `isConst` | bool | `const` qualifier |
+| `isPointer` | bool | Pointer declarator |
+| `isReference` | bool | Reference declarator |
+
+## Annotation
+
+| Field | Type | Description |
+|---|---|---|
+| `name` | string | Rule name from `[[codegen::name]]` |
+| `arguments` | string[] | Parenthesized arguments, if any |

@@ -1,0 +1,64 @@
+---
+title: Introduction
+description: Why codegen exists, and why existing tools fall short for modern C++ teams.
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+## The problem with C++ code generation today
+
+Every large C++ codebase eventually needs code generation. Serialization boilerplate. Enum-to-string maps. FFI bindings. Documentation schemas. OpenAPI stubs. The list grows with the codebase.
+
+The tools available today force a choice between two bad options.
+
+**Option A: Clang plugins.**
+Correct access to the AST. But they require a matching compiler version, link against private Clang internals, and break silently across toolchain upgrades. Writing one is a multi-week project. Debugging one requires understanding Clang internals. Distributing one means shipping a compiler plugin binary for every platform you support.
+
+**Option B: Template engines + header parsing.**
+Jinja2, Mustache, or a hand-rolled regex scanner. Fast to start, brittle in practice. They cannot reason about namespaces, template parameters, inheritance, or constexpr values. The first time you need to handle `std::optional<std::vector<T>>` in a type mapping, you are writing a parser, not a template.
+
+**Neither option is the right abstraction.**
+
+---
+
+## What codegen changes
+
+codegen separates the problem into two clean layers:
+
+1. **Parsing** — handled by the engine. The full C++ AST, resolved and serialized to JSON, including namespaces, template arguments, member variables, enumerators, and annotations.
+
+2. **Transformation** — handled by you, in LuaU. Your rule receives one AST node as JSON and returns output text. The rule has no knowledge of the file system, no side effects, and no compiler coupling.
+
+This separation has three consequences:
+
+- Rules are **testable in isolation**. Feed a JSON blob to your script, assert the output. No compiler required.
+- Rules are **portable**. The LuaU VM is embedded in the engine binary. No interpreter to install, no version to pin.
+- Rules are **safe to share**. The sandbox prevents a third-party rule from exfiltrating source code, calling home, or corrupting your build.
+
+---
+
+## The non-1:1 guarantee
+
+Most generators assume one input file produces one output file. This assumption is wrong for a large class of real-world tasks.
+
+- **API documentation**: You want one `api-reference.md` consolidating every annotated struct, regardless of which header it lives in.
+- **Serialization registries**: You want one `registry.cpp` with a registration call per type, not one file per type.
+- **FFI manifests**: You want one `bindings.ts` with every exported interface, sorted and deduplicated.
+
+codegen solves this with the `grouping.luau` script. For each matched entity, the grouping script decides which output file it belongs to. The engine then routes each entity's output to the correct file, calls the preamble once per output file, and stitches the result. The input file topology is irrelevant.
+
+This is the capability that makes codegen qualitatively different from any template-based approach.
+
+---
+
+## Self-hosted
+
+codegen generates parts of its own infrastructure. The same rule system you use to generate your serialization layer is the system used to generate codegen's own internal glue code. This means every feature in the rule system is tested against a production codebase — not a toy example.
+
+<Aside type="tip" title="Key Takeaways">
+- Clang plugins and template engines are both wrong abstractions for the same reason: one couples to the compiler, the other cannot reason about types.
+- codegen's two-layer model (engine parses, rule transforms) decouples AST access from transformation logic.
+- The `grouping.luau` script enables non-1:1 file routing — the defining capability that separates codegen from every alternative.
+- The LuaU sandbox makes rules safe to share and auditable.
+- The tool is self-hosted: it generates its own infrastructure using the same rule system you use.
+</Aside>

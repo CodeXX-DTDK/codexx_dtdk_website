@@ -1,0 +1,73 @@
+---
+title: VS Code DAP Debugger
+description: Set breakpoints in LuaU rule scripts and step through execution in VS Code using the Debug Adapter Protocol.
+---
+
+import { Aside, Steps } from '@astrojs/starlight/components';
+
+<Aside type="note">
+The VS Code DAP debugger is a **Professional tier** feature.
+</Aside>
+
+## Overview
+
+The codegen VS Code extension integrates the LuaU debugger via the Debug Adapter Protocol. You can:
+
+- Set breakpoints in `.luau` rule scripts
+- Inspect the `node` variable (the decoded AST entity) at any point
+- Step into `json.decode` / `json.encode` boundary calls
+- Watch local variables and the call stack
+
+## Setup
+
+<Steps>
+
+1. **Install the extension**
+
+   Search for `codegen` in the VS Code Extensions marketplace and install.
+
+2. **Add a launch configuration**
+
+   ```json title=".vscode/launch.json"
+   {
+     "version": "0.2.0",
+     "configurations": [
+       {
+         "name": "Debug codegen Rule",
+         "type": "codegen",
+         "request": "launch",
+         "config": "${workspaceFolder}/.codegen/rules/ToString/ToString.config.yaml",
+         "input": "${workspaceFolder}/include",
+         "output": "${workspaceFolder}/generated",
+         "stopOnEntry": true
+       }
+     ]
+   }
+   ```
+
+3. **Set a breakpoint**
+
+   Open any `.luau` rule script and click the gutter to set a breakpoint.
+
+4. **Start debugging**
+
+   Press `F5` or use the Run menu. The engine starts, pauses at your breakpoint, and VS Code shows the current LuaU locals including the full `node` table.
+
+</Steps>
+
+## Inspecting the AST in the debugger
+
+When paused inside the transformation script, expand the `node` variable in the Variables panel to navigate the full AST. This is often the fastest way to understand the exact shape of the JSON your rule receives for a specific entity.
+
+## Limitations
+
+- The debugger attaches to a single rule run. It does not support multi-rule sessions.
+- Breakpoints in `preamble.luau` and `grouping.luau` are supported.
+- Hot-reload (editing the script while paused) is not supported — restart the debug session after edits.
+
+<Aside type="tip" title="Key Takeaways">
+- The debugger uses DAP — no custom protocol, no port to configure. Works with the standard VS Code debug UI.
+- Inspect `node` directly in the Variables panel to understand the AST shape for a specific entity.
+- Breakpoints work in transformation, preamble, and grouping scripts.
+- Requires Professional tier license.
+</Aside>

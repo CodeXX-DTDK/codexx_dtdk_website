@@ -1,0 +1,65 @@
+---
+title: License Activation
+description: How to activate Professional and Team licenses, including offline and air-gapped activation.
+---
+
+import { Steps, Aside } from '@astrojs/starlight/components';
+
+## Online activation
+
+```sh
+codegen license activate <your-license-key>
+# License activated. Tier: Professional. Machine: hostname.
+```
+
+This stores a cryptographically signed token at `~/.config/codegen/license.token` (Linux/macOS) or `%APPDATA%\codegen\license.token` (Windows). All subsequent verification is local — no internet access required after activation.
+
+## Offline activation
+
+For machines without internet access:
+
+<Steps>
+
+1. **On a connected machine**, generate a machine fingerprint file from the air-gapped machine's identifier:
+
+   ```sh
+   codegen license fingerprint --machine-id <id> > fingerprint.json
+   ```
+
+2. **Submit** `fingerprint.json` to the license portal to receive a `token.json` file.
+
+3. **On the air-gapped machine**, install the token:
+
+   ```sh
+   codegen license install token.json
+   ```
+
+</Steps>
+
+## Token format
+
+License tokens are Ed25519-signed JSON objects. The engine verifies the signature against the embedded public key at startup — no network call, no server round-trip.
+
+The token contains:
+- Licensed tier
+- Expiry (if applicable — perpetual licenses have no expiry field)
+- Machine binding (optional — some licenses are machine-bound, others are floating)
+
+## Revoking a license
+
+```sh
+codegen license deactivate
+```
+
+This deletes the local token. The license seat becomes available for activation on another machine (subject to seat limits).
+
+## Team license management
+
+Team licenses are managed via the team dashboard. Seat assignment, revocation, and audit logs are available there. Individual team members activate with the same `codegen license activate <key>` command using the team key.
+
+<Aside type="tip" title="Key Takeaways">
+- Activation stores a signed token locally. All verification after activation is offline.
+- Offline/air-gapped activation uses a fingerprint-exchange flow — no continuous internet access needed.
+- Tokens are Ed25519-signed against an embedded public key — no server round-trip at runtime.
+- `codegen license deactivate` releases the seat for use on another machine.
+</Aside>

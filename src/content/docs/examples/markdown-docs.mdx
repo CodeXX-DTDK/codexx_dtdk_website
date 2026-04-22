@@ -1,0 +1,215 @@
+---
+title: "Markdown Docs: N structs ⇒ 1 file"
+description: The MarkdownDocs example demonstrates fan-in grouping — consolidating annotated structs from any number of headers into a single API reference document.
+---
+
+import { Aside, FileTree, Steps } from '@astrojs/starlight/components';
+
+The `MarkdownDocs` example is the clearest demonstration of codegen's grouping capability. It consolidates every annotated C++ struct — regardless of which header it lives in — into a single `api-reference.md` file. No post-processing. No shell script. The engine handles the fan-in.
+
+## What it produces
+
+Given a codebase with annotated structs across multiple headers, the rule produces one file:
+
+```markdown title="generated/docs/api-reference.md"
+# API Reference
+
+> This file is auto-generated. Do not edit manually.
+
+---
+
+## `network::ConnectionOptions`
+
+| Field | Type |
+|---|---|
+| `host` | `string` |
+| `port` | `uint16_t` |
+| `timeout_ms` | `uint32_t` |
+
+---
+
+## `storage::CacheConfig`
+
+| Field | Type |
+|---|---|
+| `maxEntries` | `size_t` |
+| `evictionPolicy` | `EvictionPolicy` |
+
+---
+```
+
+The preamble (`# API Reference`, auto-generated notice) appears exactly once. Each struct contributes one section, in declaration order.
+
+## Annotating your structs
+
+```cpp title="include/network/connection.h"
+struct [[codegen::MarkdownDocs]] ConnectionOptions {
+    std::string  host;
+    uint16_t     port;
+    uint32_t     timeout_ms;
+};
+```
+
+```cpp title="include/storage/cache.h"
+struct [[codegen::MarkdownDocs]] CacheConfig {
+    size_t         maxEntries;
+    EvictionPolicy evictionPolicy;
+};
+```
+
+Both headers, different directories. The engine finds both, the grouping script routes both to the same output file.
+
+## The rule files
+
+<FileTree>
+- .codegen/rules/MarkdownDocs/
+  - MarkdownDocs.config.yaml
+  - MarkdownDocs.luau
+  - MarkdownDocs.grouping.luau
+  - MarkdownDocs.preamble.luau
+</FileTree>
+
+### `MarkdownDocs.config.yaml`
+
+```yaml title="MarkdownDocs.config.yaml"
+version: 1
+
+output:
+  language: markdown
+  # No outputDirectory or outputNameTemplate — grouping.luau controls all paths.
+```
+
+Because grouping handles all routing, the config does not set `outputDirectory` or `outputNameTemplate`.
+
+### `MarkdownDocs.grouping.luau`
+
+```lua title="MarkdownDocs.grouping.luau"
+-- Routes ALL matched structs into a single consolidated output file.
+-- Input file topology is irrelevant — structs from any header end up here.
+
+return function(input)
+    local data = json.decode(input)
+    if not data then error("failed to decode input") end
+
+    local OUTPUT = "generated/docs/api-reference.md"
+
+    local result = {}
+    for _, ent in ipairs(data.entities) do
+        result[tostring(ent.registryId)] = OUTPUT
+    end
+
+    return json.encode(result)
+end
+```
+
+This is the fan-in pivot. Every entity, one output path. The engine sees this map and knows to call the preamble once and collect all transformation outputs into that single file.
+
+### `MarkdownDocs.preamble.luau`
+
+```lua title="MarkdownDocs.preamble.luau"
+-- Emitted once at the top of the consolidated file.
+-- Deduplicated automatically because all entities share one output path.
+
+return function(input)
+    return "# API Reference\n\n"
+        .. "> This file is auto-generated. Do not edit manually.\n\n"
+        .. "---\n\n"
+end
+```
+
+The preamble script is called **once per unique output path**. Since every entity routes to the same file, this runs exactly once — no matter how many structs are annotated.
+
+### `MarkdownDocs.luau`
+
+```lua title="MarkdownDocs.luau"
+-- Generates a Markdown section for each annotated struct.
+-- grouping.luau consolidates all sections into a single api-reference.md.
+
+return function(input)
+    local node = json.decode(input)
+    if not node then error("failed to decode input") end
+
+    local structName = node.identifier and node.identifier.name
+    if not structName or structName == "" then error("struct has no name") end
+
+    -- Build the fully-qualified name using namespace context
+    local namespaces = node._namespaces or {}
+    local nsPrefix = table.concat(namespaces, "::")
+    local qualifiedName = nsPrefix ~= "" and (nsPrefix .. "::" .. structName) or structName
+
+    -- Build field table rows
+    local rows = {}
+    local function typeName(tSig)
+        if not tSig or not tSig.identifier then return "?" end
+        return tSig.identifier.name or "?"
+    end
+
+    local function processVar(varNode)
+        local fname = varNode.identifier and varNode.identifier.name or varNode.name
+        if not fname then return end
+        local t = typeName(varNode.typeSignature)
+        fname = fname:gsub("|", "\\|")
+        t = t:gsub("|", "\\|")
+        table.insert(rows, "| `" .. fname .. "` | `" .. t .. "` |")
+    end
+
+    for _, varNode in ipairs(node.memberVariables or {}) do
+        if varNode.kind == "Variable" then
+            processVar(varNode)
+        elseif varNode.kind == "VariableGroup" then
+            for _, v in ipairs(varNode.variables or {}) do processVar(v) end
+        end
+    end
+
+    -- Assemble the section
+    local lines = { "## `" .. qualifiedName .. "`", "" }
+
+    if #rows > 0 then
+        table.insert(lines, "| Field | Type |")
+        table.insert(lines, "|---|---|")
+        for _, row in ipairs(rows) do table.insert(lines, row) end
+    else
+        table.insert(lines, "_No public member variables._")
+    end
+
+    table.insert(lines, "")
+    table.insert(lines, "---")
+
+    return json.encode({ source = table.concat(lines, "\n") })
+end
+```
+
+## Running the rule
+
+```sh
+codegen \
+  --config .codegen/rules/MarkdownDocs/MarkdownDocs.config.yaml \
+  --input ./include \
+  --output ./generated
+```
+
+<Steps>
+1. The engine walks `./include`, finds all headers.
+2. It parses each header and collects entities annotated `[[codegen::MarkdownDocs]]`.
+3. `grouping.luau` assigns all entities to `generated/docs/api-reference.md`.
+4. `preamble.luau` runs once, emitting the document header.
+5. `MarkdownDocs.luau` runs for each entity, contributing one `##` section.
+6. The engine writes the assembled file.
+</Steps>
+
+## Extending this example
+
+**Add descriptions:** Accept a string annotation argument — `[[codegen::MarkdownDocs("Optional per-entity description")]]` — and surface it in the script via `node.annotations[1].arguments[1]`.
+
+**Sort alphabetically:** In the grouping script, sort `data.entities` by `entity.identifier.name` before building the result map. Transformation order follows the map's iteration order.
+
+**Multi-section output:** Route internal entities to `internal-api.md` and public entities to `public-api.md` by checking whether the entity's `sourceFile` contains `internal/`.
+
+<Aside type="tip" title="Key Takeaways">
+- This example demonstrates **fan-in**: N annotated structs from any number of headers → 1 output file.
+- The `grouping.luau` script is the only change needed to switch from 1:1 to fan-in routing.
+- The `preamble.luau` is called once per unique output path — the engine handles deduplication.
+- The transformation script is stateless: it sees one entity, returns one section. The engine assembles the file.
+- Namespace context (`node._namespaces`) is always available — no need to parse the qualified name yourself.
+- Extending the rule (sort order, conditional routing, annotation arguments) requires only LuaU changes — no recompilation, no plugin rebuild.
+</Aside>

@@ -1,0 +1,47 @@
+---
+title: Supply Chain
+description: How codegen's dependencies, build process, and distribution are structured to minimize supply chain risk.
+---
+
+## Dependency surface
+
+codegen ships as a statically linked binary with no runtime dependencies. The distribution artifact is:
+
+- One binary
+- One SHA-256 checksum file
+- One SLSA provenance attestation
+
+There is no package manager to run, no `npm install`, no Python environment to configure. The attack surface from dependencies is zero at runtime.
+
+## Build-time dependencies
+
+The full build-time dependency tree is documented in `vcpkg.json` at the source root. Key dependencies:
+
+| Dependency | Purpose | Pinned version |
+|---|---|---|
+| tree-sitter-cpp | C++ grammar for parsing | ✓ |
+| luau | LuaU VM and compiler | ✓ |
+| abseil | Containers, hashing | ✓ |
+| nlohmann-json | JSON serialization | ✓ |
+| gtest | Test framework (build only) | ✓ |
+
+All dependencies are version-pinned in `vcpkg.json`. The lockfile (`vcpkg-lock.json`) pins exact artifact hashes. No dependency is fetched from a mutable tag or branch.
+
+## The single-binary advantage
+
+A single static binary means:
+- No dependency confusion attacks.
+- No `LD_PRELOAD` interception of dynamic libraries.
+- No package manager scripts running with elevated privileges at install time.
+- Checksum verification covers the entire codebase, not just a thin wrapper.
+
+## Verifying your download
+
+Always verify before running:
+
+```sh
+curl -L https://releases.codegen.dev/latest/SHA256SUMS -o SHA256SUMS
+sha256sum --check SHA256SUMS
+```
+
+For SLSA provenance attestation, see [SLSA Compliance](/trust/slsa/).

@@ -1,0 +1,78 @@
+---
+title: "TypeScript Types: struct ⇒ interface"
+description: The built-in TypeScriptTypes rule generates TypeScript interface declarations from annotated C++ structs, with recursive type mapping for generics.
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+The `TypeScriptTypes` rule demonstrates attribute-based triggering and recursive type mapping. It converts C++ structs to TypeScript `export interface` declarations, handling primitive types, `std::vector<T>`, `std::optional<T>`, `std::shared_ptr<T>`, and `std::map<K,V>` recursively.
+
+## What it produces
+
+```cpp title="include/api_types.h"
+struct [[codegen::TypeScriptTypes]] UserProfile {
+    std::string              username;
+    uint32_t                 age;
+    std::vector<std::string> roles;
+    std::optional<std::string> bio;
+};
+```
+
+```typescript title="generated/api_types.ts"
+export interface UserProfile {
+  username: string;
+  age: number;
+  roles: Array<string>;
+  bio: string | undefined;
+}
+```
+
+## Type mapping
+
+| C++ type | TypeScript type |
+|---|---|
+| `bool` | `boolean` |
+| `int`, `uint32_t`, `float`, `double`, `size_t`, ... | `number` |
+| `std::string`, `path` | `string` |
+| `std::vector<T>` | `Array<T>` |
+| `std::optional<T>` | `T \| undefined` |
+| `std::shared_ptr<T>` | `T \| null` |
+| `std::map<K,V>`, `std::unordered_map<K,V>` | `Record<K, V>` |
+| Any other type | Used as-is (assumed to be a TypeScript type reference) |
+
+The mapping is implemented as a recursive `cppToTs(tSig)` function in the rule script. Adding new mappings requires editing only that function.
+
+## Extending the type map
+
+Open `TypeScriptTypes.luau` and add entries to the `primitives` table or add new `if name == "..."` branches for generics:
+
+```lua
+-- Add std::set<T> -> Set<T>
+if name == "set" then
+    local args = tSig.identifier.templateArguments or {}
+    if args[1] then return "Set<" .. cppToTs(args[1]) .. ">" end
+    return "Set<unknown>"
+end
+```
+
+## Fan-in variant
+
+By default, this rule uses 1:1 routing. To consolidate all TypeScript interfaces into a single `types.ts` file, add a grouping script:
+
+```lua title="TypeScriptTypes.grouping.luau"
+return function(input)
+    local data = json.decode(input)
+    local result = {}
+    for _, ent in ipairs(data.entities) do
+        result[tostring(ent.registryId)] = "generated/types.ts"
+    end
+    return json.encode(result)
+end
+```
+
+<Aside type="tip" title="Key Takeaways">
+- Attribute annotation (`[[codegen::TypeScriptTypes]]`) triggers attribute-based rules — no anchor comment needed.
+- Type mapping is implemented as a recursive LuaU function — extend it by adding branches.
+- The rule uses 1:1 routing by default but gains fan-in by adding a simple grouping script.
+- Unmapped C++ types pass through as-is — useful for referencing other generated interfaces.
+</Aside>

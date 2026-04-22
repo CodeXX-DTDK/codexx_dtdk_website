@@ -1,0 +1,70 @@
+---
+title: Installation
+description: Download and verify the codegen binary for your platform.
+---
+
+import { Tabs, TabItem, Aside } from '@astrojs/starlight/components';
+
+## Download
+
+codegen ships as a single self-contained binary. No runtime dependencies. No installer.
+
+<Tabs>
+  <TabItem label="Linux (x86_64)">
+    ```sh
+    curl -L https://releases.codegen.dev/latest/codegen-linux-x86_64 -o codegen
+    chmod +x codegen
+    sudo mv codegen /usr/local/bin/
+    ```
+  </TabItem>
+  <TabItem label="macOS (arm64)">
+    ```sh
+    curl -L https://releases.codegen.dev/latest/codegen-macos-arm64 -o codegen
+    chmod +x codegen
+    sudo mv codegen /usr/local/bin/
+    ```
+  </TabItem>
+  <TabItem label="Windows (x64)">
+    ```powershell
+    Invoke-WebRequest -Uri https://releases.codegen.dev/latest/codegen-windows-x64.exe -OutFile codegen.exe
+    # Move to a directory on your PATH, e.g.:
+    Move-Item codegen.exe C:\tools\codegen.exe
+    ```
+  </TabItem>
+</Tabs>
+
+## Verify the checksum
+
+Every release artifact is SHA-256 checksummed and signed. Always verify before running:
+
+```sh
+curl -L https://releases.codegen.dev/latest/SHA256SUMS -o SHA256SUMS
+sha256sum --check SHA256SUMS
+```
+
+See [Supply Chain](/trust/supply-chain/) for SLSA provenance and signature verification details.
+
+## Verify the installation
+
+```sh
+codegen --version
+# codegen 1.0.0 (linux-x86_64, LuaU 0.623)
+```
+
+## License activation
+
+The Community tier requires no activation. For Professional or Team, activate once:
+
+```sh
+codegen license activate <your-license-key>
+# License activated. Tier: Professional. Expires: never.
+```
+
+Activation stores a signed token locally. No subsequent internet access required.
+See [License Activation](/licensing/activation/) for offline and air-gapped options.
+
+<Aside type="tip" title="Key Takeaways">
+- Single binary. No runtime. No installer.
+- Always verify the SHA-256 checksum before running.
+- Community tier requires no activation. Professional and Team use offline-verifiable signed tokens.
+</Aside>

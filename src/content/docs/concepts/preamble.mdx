@@ -1,0 +1,61 @@
+---
+title: Preamble System
+description: How preamble.luau scripts emit file headers — includes, license banners, and namespace wrappers — exactly once per output file.
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+The preamble script (`RuleName.preamble.luau`) runs once per unique output file, before any transformation output is written. It is the correct place for:
+
+- `#include` directives
+- License or auto-generated banners
+- Namespace opening brackets
+- Any text that must appear exactly once at the top of the file
+
+## Signature
+
+```lua
+return function(input)
+    -- input: JSON string (reserved, currently always "{}")
+    return "text to prepend to the file"
+end
+```
+
+The return value is a raw string — not JSON. Whatever you return is written verbatim to the beginning of the output file.
+
+## Example — C++ include guard
+
+```lua title="MyRule.preamble.luau"
+return function(input)
+    return "// This file is auto-generated. Do not edit manually.\n"
+        .. "#pragma once\n"
+        .. "#include <string_view>\n\n"
+end
+```
+
+## Example — Markdown document header
+
+```lua title="MarkdownDocs.preamble.luau"
+return function(input)
+    return "# API Reference\n\n"
+        .. "> This file is auto-generated. Do not edit manually.\n\n"
+        .. "---\n\n"
+end
+```
+
+## Deduplication with fan-in grouping
+
+When a `grouping.luau` routes multiple entities to the same output file, the engine calls the preamble **once for that file** — not once per entity. This is what makes the fan-in pattern work cleanly: the document header appears exactly once regardless of how many structs contribute sections.
+
+## When to use the preamble vs the transformation script
+
+Use the preamble for content that belongs to the **file**, not the **entity**. Use the transformation script for content that belongs to the **entity**.
+
+If you find yourself conditionally guarding preamble content based on entity data — "only add this include if the entity has template parameters" — that is a signal to restructure: emit the include from the transformation script's `source` field instead, and let the engine (or a post-processor) deduplicate it.
+
+<Aside type="tip" title="Key Takeaways">
+- The preamble runs once per unique output path, regardless of how many entities write to that file.
+- The return value is a raw string — not JSON.
+- Use it for file-level content: includes, banners, namespace openers.
+- Fan-in grouping relies on this deduplication guarantee to produce correct output.
+</Aside>

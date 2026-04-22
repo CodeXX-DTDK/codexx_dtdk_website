@@ -1,0 +1,83 @@
+---
+title: Config Schema (.yaml)
+description: Complete reference for the codegen rule configuration file format.
+---
+
+## Top-level structure
+
+```yaml
+version: 1                # required — must be 1
+
+output:
+  language: cpp           # required — output language hint
+  autoDeduceIncludes: false
+  outputDirectory: ""     # optional — override default output path
+  outputNameTemplate: ""  # optional — override output filename pattern
+
+permissions:              # optional
+  http:
+    allowlist:
+      - "example.com"
+
+preamble_lib: ""          # optional — Team tier: shared preamble module path
+grouping_lib: ""          # optional — Team tier: shared grouping module path
+```
+
+## `output.language`
+
+Hint for the engine's include deduction and file extension selection.
+
+| Value | Generated extension | Include deduction |
+|---|---|---|
+| `cpp` | `.g.cpp` | Enabled by default |
+| `markdown` | `.md` | N/A |
+| `typescript` | `.ts` | N/A |
+| Any string | `.gen.<value>` | Disabled |
+
+## `output.autoDeduceIncludes`
+
+When `true` (default for `language: cpp`), the engine analyzes the generated `source` text and attempts to add `#include` directives for standard library types it detects. Set to `false` when your preamble script handles includes explicitly.
+
+## `output.outputDirectory`
+
+Overrides the `--output` CLI flag for this specific rule. Useful when multiple rules write to different root directories.
+
+## `output.outputNameTemplate`
+
+Go template string controlling the output filename. Available variables:
+
+| Variable | Description |
+|---|---|
+| `{{.InputFile}}` | Source header filename without extension |
+| `{{.InputDir}}` | Source header directory relative to `--input` |
+| `{{.RuleName}}` | The rule name |
+
+Default: `{{.InputDir}}/{{.InputFile}}.g.cpp`
+
+## `permissions.http.allowlist`
+
+List of domain names (no protocol, no path) that the rule's `http.get()` call is permitted to reach. Subdomains must be listed explicitly — there is no wildcard support.
+
+## `preamble_lib` and `grouping_lib`
+
+Team tier only. Paths to shared LuaU modules that can be `require`d from the preamble and grouping scripts respectively. Paths are relative to the config file's directory.
+
+## Full annotated example
+
+```yaml title="AdvancedRule.config.yaml"
+version: 1
+
+output:
+  language: cpp
+  autoDeduceIncludes: false
+  outputDirectory: generated/advanced
+  outputNameTemplate: "{{.InputDir}}/{{.InputFile}}.advanced.g.cpp"
+
+permissions:
+  http:
+    allowlist:
+      - "schema-registry.internal.example.com"
+
+preamble_lib: ../../lib/standard_preamble.luau
+grouping_lib: ../../lib/namespace_routing.luau
+```

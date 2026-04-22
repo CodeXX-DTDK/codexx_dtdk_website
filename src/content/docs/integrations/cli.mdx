@@ -1,0 +1,60 @@
+---
+title: CLI Reference
+description: Complete reference for the codegen command-line interface — flags, modes, and exit codes.
+---
+
+## Synopsis
+
+```sh
+codegen [OPTIONS] --config <path> --input <dir> [--output <dir>]
+```
+
+## Required flags
+
+| Flag | Description |
+|---|---|
+| `--config <path>` | Path to the rule's `config.yaml` file |
+| `--input <dir>` | Directory to search for C++ headers |
+
+## Optional flags
+
+| Flag | Default | Description |
+|---|---|---|
+| `--output <dir>` | `./generated` | Root directory for generated files |
+| `--diff` | off | Open TUI diff viewer before writing (Professional+) |
+| `--dry-run` | off | Print output to stdout; do not write files |
+| `--verbose` | off | Log each entity processed |
+| `--jobs <n>` | CPU count | Parallel parse workers |
+| `--cache-dir <path>` | `.codegen/cache` | Persistent cache directory (Professional+) |
+| `--no-cache` | off | Disable persistent cache |
+| `--version` | — | Print version and exit |
+
+## Exit codes
+
+| Code | Meaning |
+|---|---|
+| `0` | Success — all entities processed, all files written |
+| `1` | Partial failure — one or more entity transforms errored |
+| `2` | Fatal error — config invalid, input directory not found, etc. |
+| `3` | License error — feature requires a higher tier |
+
+## Examples
+
+```sh
+# Dry run — inspect output without writing
+codegen --config .codegen/rules/ToString/ToString.config.yaml \
+        --input ./include \
+        --dry-run
+
+# TUI diff before applying (Professional tier)
+codegen --config .codegen/rules/MarkdownDocs/MarkdownDocs.config.yaml \
+        --input ./include \
+        --output ./generated \
+        --diff
+
+# Verbose, explicit output directory
+codegen --config .codegen/rules/TypeScriptTypes/TypeScriptTypes.config.yaml \
+        --input ./src/api \
+        --output ./web/src/generated \
+        --verbose
+```

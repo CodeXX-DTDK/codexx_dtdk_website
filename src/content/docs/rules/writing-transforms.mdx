@@ -1,0 +1,133 @@
+---
+title: Writing Transforms
+description: Practical patterns for transformation scripts — type mapping, string building, defensive validation, and testing.
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+## Structure of a transformation script
+
+Every transformation script follows the same pattern:
+
+```lua
+return function(input)
+    -- 1. Decode the entity
+    local node = json.decode(input)
+    if not node then error("failed to decode input") end
+
+    -- 2. Extract what you need
+    local name = node.identifier and node.identifier.name
+    if not name or name == "" then error("entity has no name") end
+
+    -- 3. Build the output text
+    local source = "// generated for " .. name .. "\n"
+
+    -- 4. Return encoded result
+    return json.encode({ source = source })
+end
+```
+
+## Type mapping pattern
+
+For rules that translate C++ types to another type system (TypeScript, Rust, protobuf, SQL):
+
+```lua
+local TYPE_MAP = {
+    ["bool"]        = "boolean",
+    ["int"]         = "number",
+    ["std::string"] = "string",
+    -- add entries as needed
+}
+
+local function mapType(tSig)
+    if not tSig or not tSig.identifier then return "unknown" end
+    local name = tSig.identifier.name
+
+    if TYPE_MAP[name] then return TYPE_MAP[name] end
+
+    -- Handle generics recursively
+    if name == "vector" then
+        local args = tSig.identifier.templateArguments or {}
+        return "Array<" .. mapType(args[1]) .. ">"
+    end
+
+    -- Fall back to the C++ name
+    return name
+end
+```
+
+## Namespace qualification
+
+Always build the qualified name from `_namespaces` — do not assume the unqualified name is unique:
+
+```lua
+local function qualifiedName(node)
+    local ns = table.concat(node._namespaces or {}, "::")
+    local name = node.identifier.name
+    return ns ~= "" and (ns .. "::" .. name) or name
+end
+```
+
+## Building multi-line output
+
+Use a lines table and `table.concat` — string concatenation in a loop is O(n²) in Lua:
+
+```lua
+local lines = {}
+table.insert(lines, "void process(" .. qualifiedName(node) .. " const& v) {")
+for _, var in ipairs(node.memberVariables or {}) do
+    table.insert(lines, "    handle(v." .. var.identifier.name .. ");")
+end
+table.insert(lines, "}")
+
+local source = table.concat(lines, "\n")
+```
+
+## Testing a rule offline
+
+Rules are pure functions — test them without running the engine:
+
+```lua title="test_my_rule.luau" {1}
+-- Run with: luau test_my_rule.luau
+local rule = require("MyRule")  -- or dofile("MyRule.luau")
+
+local fixture = {
+    kind = "Struct",
+    identifier = { name = "Foo", templateArguments = {} },
+    _namespaces = { "myns" },
+    memberVariables = {
+        { kind = "Variable", identifier = { name = "x" }, typeSignature = { identifier = { name = "int" } } }
+    },
+    annotations = {}
+}
+
+local result = json.decode(rule(json.encode(fixture)))
+assert(result.source:find("Foo") ~= nil, "output must reference struct name")
+print("OK")
+```
+
+## Common mistakes
+
+**Forgetting to handle `VariableGroup`:** Declarations like `int x, y, z;` arrive as `kind = "VariableGroup"` with a `variables` array. Always handle both cases:
+
+```lua
+for _, varNode in ipairs(node.memberVariables or {}) do
+    if varNode.kind == "Variable" then
+        processVar(varNode)
+    elseif varNode.kind == "VariableGroup" then
+        for _, v in ipairs(varNode.variables or {}) do processVar(v) end
+    end
+end
+```
+
+**Returning plain text instead of JSON:** The transformation script must return `json.encode({...})`. Returning a plain string causes a parse error in the engine.
+
+**Mutating the input table:** LuaU tables are shared by reference within a single invocation. Do not mutate `node` — build new tables for your output.
+
+<Aside type="tip" title="Key Takeaways">
+- Scripts are pure functions: decode → extract → build → encode. No side effects.
+- Build qualified names from `_namespaces` — never assume uniqueness of unqualified names.
+- Use `table.concat` for multi-line output — not string concatenation in a loop.
+- Handle both `"Variable"` and `"VariableGroup"` member kinds.
+- Return value must always be `json.encode({source = "...", inline = {...}})`, never a plain string.
+</Aside>

@@ -1,0 +1,31 @@
+repos:
+  # Pre-commit hooks for general code hygiene
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+      - id: check-added-large-files
+
+  # Codespell for spellchecking commit messages
+  - repo: https://github.com/codespell-project/codespell
+    rev: v2.4.1
+    hooks:
+      - id: codespell
+        name: spellcheck commit message
+        stages: [commit-msg]
+
+  # Scan for leaked secrets
+  - repo: https://github.com/gitleaks/gitleaks
+    rev: v8.24.2
+    hooks:
+      - id: gitleaks
+
+  # Prettier and ESLint for Astro + React documentation site
+  - repo: local
+    hooks:
+      - id: prettier
+        name: Prettier
+        entry: bash -c "npx mrm@2 lint-staged"
+        language: system

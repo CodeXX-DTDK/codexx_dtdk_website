@@ -1,0 +1,79 @@
+---
+title: "ToString: enum ⇒ switch"
+description: The built-in ToString rule generates a std::string_view toString() switch statement for every annotated C++ enum.
+---
+
+import { Aside, Steps } from '@astrojs/starlight/components';
+
+The `ToString` example is the canonical demonstration of anchor-based triggering and inline injection. It generates a `std::string_view toString(EnumType e)` function for any enum you annotate, placing the implementation in a `.g.cpp` file and injecting the declaration back into the header.
+
+## What it produces
+
+Given:
+
+```cpp title="include/color.h"
+// [[codegen::generated::ToString::qualified::Color]]
+enum class Color { Red, Green, Blue };
+```
+
+The engine produces:
+
+**`include/color.h`** — anchor comment replaced by declaration:
+```cpp title="include/color.h (after generation)"
+std::string_view toString(Color e);
+enum class Color { Red, Green, Blue };
+```
+
+**`generated/include/color.g.cpp`** — implementation:
+```cpp title="color.g.cpp"
+#include <string_view>
+
+std::string_view toString(Color e)
+{
+    switch (e)
+    {
+        case Color::Red:   return "Red";
+        case Color::Green: return "Green";
+        case Color::Blue:  return "Blue";
+        default: return "<unknown>";
+    }
+}
+```
+
+## The `qualified` modifier
+
+The anchor comment path `::qualified::Color` instructs the rule to use the fully-qualified enum name (`Color`) for the generated function signature. For nested enums in namespaces:
+
+```cpp
+// [[codegen::generated::ToString::qualified::network::Status]]
+namespace network {
+    enum class Status { Ok, Timeout, Refused };
+}
+```
+
+Produces `std::string_view toString(network::Status e)`.
+
+## The rule scripts
+
+See the [Quick Start](/getting-started/quick-start/) for the full script listings. The key behaviors:
+
+- **Preamble** emits `#include <string_view>`.
+- **Transformation** collects `node.enumerators`, builds one `case` per enumerator, wraps in a switch, and returns `{ source = impl, inline = { { source = decl } } }`.
+- **Scoped vs unscoped:** `node.isScoped` controls whether case values use the `EnumName::` prefix.
+- **No grouping script** — 1:1 routing: one header → one `.g.cpp`.
+
+## Extending this rule
+
+**Add a reverse `fromString`:** Return a second item in the `inline` list and a second function body in `source`.
+
+**Handle explicit values:** `node.enumerators[].value` contains the explicit value as a source text string when set. Use it to make the switch exhaustive under `-Wswitch`.
+
+**Namespace-qualified output:** Add a grouping script that routes output to `generated/<namespace>/` subdirectories.
+
+<Aside type="tip" title="Key Takeaways">
+- Anchor comments trigger rules and control inline injection site.
+- The `::qualified::EnumName` path segment sets the generated function's qualified name.
+- `node.isScoped` distinguishes `enum class` (needs `Enum::Value` prefix) from plain `enum`.
+- `node.enumerators[].value` carries explicit enumerator values as source text.
+- No grouping script → 1:1 routing. One enum, one `.g.cpp`.
+</Aside>

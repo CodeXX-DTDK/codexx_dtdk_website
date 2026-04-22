@@ -1,0 +1,74 @@
+---
+title: Quick Start
+description: Generate your first C++ enum-to-string function in under five minutes.
+---
+
+import { Steps, Aside } from '@astrojs/starlight/components';
+
+This guide walks through the `ToString` built-in example: annotating a C++ enum and generating a `std::string_view toString()` function from it.
+
+<Steps>
+
+1. **Create the rule directory**
+
+   ```sh
+   mkdir -p .codegen/rules/ToString
+   cp -r $(codegen --builtin-path)/examples/ToString/* .codegen/rules/ToString/
+   ```
+
+2. **Annotate your enum**
+
+   Add an anchor comment immediately above the enum declaration. The comment tells codegen which rule to apply and provides the qualified name for the generated function.
+
+   ```cpp title="include/color.h"
+   // [[codegen::generated::ToString::qualified::Color]]
+   enum class Color { Red, Green, Blue };
+   ```
+
+3. **Run the engine**
+
+   ```sh
+   codegen \
+     --config .codegen/rules/ToString/ToString.config.yaml \
+     --input ./include \
+     --output ./generated
+   ```
+
+4. **Inspect the output**
+
+   ```cpp title="generated/include/color.g.cpp"
+   #include <string_view>
+
+   std::string_view toString(Color e)
+   {
+       switch (e)
+       {
+           case Color::Red:   return "Red";
+           case Color::Green: return "Green";
+           case Color::Blue:  return "Blue";
+           default: return "<unknown>";
+       }
+   }
+   ```
+
+5. **Add the generated file to your build**
+
+   ```cmake title="CMakeLists.txt"
+   target_sources(mylib PRIVATE generated/include/color.g.cpp)
+   ```
+
+</Steps>
+
+## What just happened
+
+The engine walked `./include`, found `color.h`, parsed it into a full AST, and matched the anchor comment against the `ToString` rule. It called `ToString.luau` with the enum's AST node serialized as JSON. The script returned a `source` (the switch-statement implementation) and an `inline` list (the declaration to inject). The engine wrote `color.g.cpp` and optionally patched the header.
+
+## Next step
+
+Read [Your First Rule](/getting-started/first-rule/) to write a rule from scratch instead of using a built-in.
+
+<Aside type="tip" title="Key Takeaways">
+- Anchor comments (`// [[codegen::generated::RuleName::...]]`) target anchor-based rules at a specific location.
+- Attribute annotations (`[[codegen::RuleName]]`) are the alternative trigger for struct/class-level rules.
+- The engine writes `.g.cpp` files. Add them to your build; do not edit them manually.
+</Aside>

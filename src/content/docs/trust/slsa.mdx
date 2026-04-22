@@ -1,0 +1,59 @@
+---
+title: SLSA Compliance
+description: Provenance attestation, artifact signing, and reproducible build documentation for codegen releases.
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+## Supply chain levels for software artifacts (SLSA)
+
+codegen release artifacts are built and attested according to SLSA Level 2. This means:
+
+- Every release binary is built from a pinned source commit in a verified CI environment.
+- A provenance attestation — a signed SLSA statement — accompanies every release artifact.
+- The attestation records the source commit, the build environment, and the build steps.
+
+## Verifying a release
+
+### Step 1 — Download the artifact and attestation
+
+```sh
+curl -L https://releases.codegen.dev/1.0.0/codegen-linux-x86_64 -o codegen
+curl -L https://releases.codegen.dev/1.0.0/codegen-linux-x86_64.intoto.jsonl -o attestation.jsonl
+```
+
+### Step 2 — Verify with `slsa-verifier`
+
+```sh
+slsa-verifier verify-artifact codegen \
+  --provenance-path attestation.jsonl \
+  --source-uri github.com/willy-vvu/codex \
+  --source-tag v1.0.0
+```
+
+A successful verification confirms:
+- The binary was built from the tagged source commit.
+- The build ran in the declared CI environment.
+- The binary has not been modified since signing.
+
+### Step 3 — Verify the checksum
+
+```sh
+curl -L https://releases.codegen.dev/1.0.0/SHA256SUMS -o SHA256SUMS
+sha256sum --check SHA256SUMS
+```
+
+## Reproducible builds
+
+codegen is built with a reproducible build configuration. Given the same source commit and compiler version, the binary output is byte-for-byte identical. This enables independent verification — if your organization requires it, you can rebuild from source and compare checksums against the official release.
+
+## Release signing key
+
+The release signing key is published at `https://releases.codegen.dev/signing-key.pub` (Ed25519). Pin this key in your verification tooling rather than fetching it dynamically.
+
+<Aside type="tip" title="Key Takeaways">
+- Releases are SLSA Level 2: provenance attestation, pinned source, verified CI.
+- Verify with `slsa-verifier verify-artifact` — the provenance `.intoto.jsonl` accompanies every release.
+- Builds are reproducible: rebuild from source and compare checksums for independent verification.
+- The signing key is an Ed25519 key published at a stable URL — pin it.
+</Aside>

@@ -1,0 +1,63 @@
+---
+title: LuaU Globals
+description: Complete reference for the globals injected into every codegen rule script.
+---
+
+## Default globals
+
+These are available in every rule script regardless of config.
+
+### `json.encode(value: any) -> string`
+
+Serializes a Lua value to a JSON string. Tables with integer keys become JSON arrays. Tables with string keys become JSON objects. Mixed tables are not supported.
+
+```lua
+local s = json.encode({ source = "hello", inline = {} })
+-- s = '{"source":"hello","inline":[]}'
+```
+
+### `json.decode(s: string) -> any`
+
+Parses a JSON string to a Lua value. Returns `nil` on parse error (does not raise).
+
+```lua
+local node = json.decode(input)
+if not node then error("invalid input") end
+```
+
+## Standard LuaU library
+
+The following standard libraries are available:
+
+| Library | Notable functions |
+|---|---|
+| `table` | `insert`, `remove`, `concat`, `sort`, `unpack` |
+| `string` | `format`, `find`, `gmatch`, `gsub`, `sub`, `len`, `rep` |
+| `math` | `floor`, `ceil`, `min`, `max`, `abs` |
+| Global | `ipairs`, `pairs`, `tostring`, `tonumber`, `error`, `pcall`, `xpcall`, `type`, `select` |
+
+## Permission-gated globals
+
+These are only available when the corresponding permission is declared in config.
+
+### `http.get(url: string) -> string`
+
+Makes an outbound HTTP GET request to `url`. Returns the response body as a string. Raises a runtime error if `url` is not on the configured allowlist or if the request fails.
+
+Requires:
+```yaml
+permissions:
+  http:
+    allowlist:
+      - "the-domain.com"
+```
+
+## Absent globals
+
+The following are explicitly **not** available:
+
+- `require` / module loading
+- `io` (file I/O)
+- `os` (operating system access)
+- `debug` (LuaU debug library)
+- `coroutine` (coroutine support — may be added in a future version)

@@ -1,0 +1,59 @@
+---
+title: MCP Server
+description: Expose the codegen AST and rule system to LLM agents via the Model Context Protocol.
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+## Overview
+
+codegen ships with a Python MCP (Model Context Protocol) server — `codexx-mcp-server` — that exposes the C++ AST and the codegen rule system to LLM agents. This is the substrate for LLM-driven code intelligence: an agent can query the AST of any header, inspect entity metadata, and invoke generation rules, all via standard MCP tool calls.
+
+## What it enables
+
+- **AST introspection:** An LLM agent can ask "what are the public fields of `ConnectionOptions`?" and receive structured JSON — not text parsed from a header.
+- **Rule invocation:** An agent can trigger a codegen rule run and receive the generated output for review before it is written.
+- **Schema-guided generation:** The JSON AST schema is deterministic and documented. An agent can reliably generate new codegen rules from examples without guessing at the data shape.
+
+## Starting the server
+
+```sh
+codexx-mcp-server --input ./include --port 3000
+```
+
+Or via `stdio` transport for direct LLM client integration:
+
+```sh
+codexx-mcp-server --input ./include --transport stdio
+```
+
+## Available tools
+
+| Tool | Description |
+|---|---|
+| `get_entity_schema` | Return the JSON schema for a given node kind (`Struct`, `Enum`, etc.) |
+| `run_dtdk_command` | Invoke a codegen rule and return the generated output |
+
+## Claude Code integration
+
+Add to your `mcp_servers` config:
+
+```json
+{
+  "mcpServers": {
+    "codegen": {
+      "command": "codexx-mcp-server",
+      "args": ["--input", "./include", "--transport", "stdio"]
+    }
+  }
+}
+```
+
+Claude Code can then call `get_entity_schema` to understand your codebase structure and `run_dtdk_command` to preview generated output — making the rule-writing workflow interactive.
+
+<Aside type="tip" title="Key Takeaways">
+- The MCP server exposes the codegen AST and rule system to LLM agents via standard MCP tool calls.
+- JSON AST schema is deterministic — LLMs can reliably generate new rules from examples.
+- `get_entity_schema` returns the schema for a node kind; `run_dtdk_command` invokes a rule.
+- Use `--transport stdio` for direct integration with Claude Code and other MCP-compatible clients.
+</Aside>

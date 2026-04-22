@@ -1,0 +1,46 @@
+---
+title: Diagnostic Codes
+description: Engine error and warning codes — what they mean and how to resolve them.
+---
+
+## Error codes
+
+| Code | Message | Resolution |
+|---|---|---|
+| `E001` | Config file not found | Check `--config` path |
+| `E002` | Config version unsupported | Update codegen binary — config uses a newer schema |
+| `E003` | Rule script not found | Verify script filename matches the config basename |
+| `E004` | Grouping script missing entity | Add all entity `registryId`s to the grouping output map |
+| `E005` | Grouping output path escapes output directory | Use a relative path without `..` components |
+| `E006` | LuaU runtime error in transformation | See logged error message for script line and reason |
+| `E007` | LuaU runtime error in preamble | See logged error message |
+| `E008` | LuaU runtime error in grouping | See logged error message |
+| `E009` | Transform returned invalid JSON | Rule must return `json.encode({...})`, not a plain string |
+| `E010` | HTTP allowlist violation | Add the domain to `permissions.http.allowlist` in config |
+| `E011` | Input directory not found | Check `--input` path |
+| `E012` | Output directory not writable | Check filesystem permissions |
+| `E101` | License not activated | Run `codegen license activate <key>` |
+| `E102` | Feature requires higher tier | See [Tiers & Pricing](/licensing/tiers/) |
+| `E103` | License token invalid or tampered | Re-activate with `codegen license activate <key>` |
+
+## Warning codes
+
+| Code | Message | Notes |
+|---|---|---|
+| `W001` | Entity matched but produced empty output | Rule returned `{ source = "" }` — may be intentional |
+| `W002` | Preamble returned empty string | May be intentional for some output languages |
+| `W003` | Generated file unchanged — skipping write | Informational; not an error |
+| `W004` | Anchor comment site not found for inline injection | The anchor comment may have been removed or moved |
+
+## Reading error output
+
+All diagnostics are written to `stderr`. Each line includes:
+- The error/warning code
+- The rule name
+- The entity identifier and source file (for entity-level errors)
+- A human-readable message
+
+```
+[E006] ToString | Color @ include/color.h:12
+       LuaU error: attempt to index nil with 'name' (rule line 8)
+```

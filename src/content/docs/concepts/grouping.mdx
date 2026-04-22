@@ -1,0 +1,118 @@
+---
+title: Grouping & Fan-in
+description: How grouping.luau scripts control output file routing — the feature that enables non-1:1 generation.
+---
+
+import { Aside, Steps } from '@astrojs/starlight/components';
+
+The `grouping.luau` script is the most powerful part of the codegen rule system. It controls the mapping from matched C++ entities to output files. Understanding it is the key to unlocking codegen's full capability.
+
+## The default: 1:1 routing
+
+Without a grouping script, the engine uses a default routing policy: each matched entity produces output that is written to a file derived from the input header's path. One header, one output file.
+
+For simple cases — enum-to-string functions, for example — this is correct. The `ToString` rule works this way: `color.h` produces `color.g.cpp`.
+
+## The problem with 1:1
+
+Consider generating API documentation. You have 40 structs spread across 15 headers. The 1:1 policy produces 15 separate Markdown files. But you want one file: `api-reference.md`.
+
+Or consider a serialization registry. You need a `registry.cpp` that calls `register<T>()` for every annotated type. The 1:1 policy cannot express this.
+
+Or consider a TypeScript bindings manifest. One `bindings.ts`, one `export interface` per C++ struct, sorted alphabetically. Input file topology is irrelevant.
+
+These are **fan-in** patterns. Many C++ entities, one output file.
+
+The inverse — **fan-out** — also exists: one entity, multiple output files (e.g., a header and a source file, or a C++ binding and a Python stub).
+
+## How grouping.luau works
+
+The grouping script is called **once with all matched entities** before any transformation scripts run. It returns a JSON map from `registryId` (a stable identifier for each entity) to the output file path that entity should be written to.
+
+```lua title=".codegen/rules/MyRule/MyRule.grouping.luau"
+return function(input)
+    local data = json.decode(input)
+    local result = {}
+
+    for _, entity in ipairs(data.entities) do
+        -- Route every entity to the same file (fan-in)
+        result[tostring(entity.registryId)] = "generated/docs/api-reference.md"
+    end
+
+    return json.encode(result)
+end
+```
+
+The engine then:
+
+<Steps>
+1. Calls the grouping script with the full entity list.
+2. Groups entities by their assigned output path.
+3. Calls the preamble script once per unique output path.
+4. Calls the transformation script for each entity, appending output to the correct file.
+</Steps>
+
+## Fan-in: many structs, one file
+
+The `MarkdownDocs` example ships with codegen and demonstrates this pattern. Every struct annotated `[[codegen::MarkdownDocs]]` — regardless of which header it lives in — is routed to a single `api-reference.md`.
+
+```lua title="MarkdownDocs.grouping.luau"
+return function(input)
+    local data = json.decode(input)
+    if not data then error("failed to decode input") end
+
+    local OUTPUT = "generated/docs/api-reference.md"
+
+    local result = {}
+    for _, ent in ipairs(data.entities) do
+        result[tostring(ent.registryId)] = OUTPUT
+    end
+
+    return json.encode(result)
+end
+```
+
+The preamble script runs once, emitting the `# API Reference` header. Each entity's transformation runs after, contributing one `## StructName` section. The engine deduplicates the preamble automatically.
+
+## Fan-out: one entity, multiple files
+
+Fan-out is less common but occasionally necessary. A rule that generates both a `.h` declaration and a `.cpp` implementation can use grouping to write each to a different path.
+
+The transformation script's return value supports multiple output keys. Grouping controls the primary output path; the rule itself controls the secondary outputs via the `inline` and `source` fields.
+
+## Conditional routing
+
+The grouping script has access to each entity's full metadata, including its namespace, annotation arguments, and source file path. This enables conditional routing:
+
+```lua title="Conditional routing example"
+return function(input)
+    local data = json.decode(input)
+    local result = {}
+
+    for _, entity in ipairs(data.entities) do
+        -- Route internal structs to one file, public structs to another
+        local isInternal = entity.sourceFile:find("internal/") ~= nil
+        local output = isInternal
+            and "generated/internal-api.md"
+            or  "generated/public-api.md"
+        result[tostring(entity.registryId)] = output
+    end
+
+    return json.encode(result)
+end
+```
+
+## Ordering guarantees
+
+Within a single output file, entities appear in the order they were matched. Match order follows the order of headers passed to the engine, then declaration order within each header.
+
+If you need a different order — alphabetical by struct name, for example — sort the entity list in the grouping script before assigning paths. The transformation order follows the assignment order in the returned map.
+
+<Aside type="tip" title="Key Takeaways">
+- Without `grouping.luau`, routing is 1:1 (one entity → one output file derived from the input path).
+- `grouping.luau` returns a `registryId → outputPath` map, giving full control over file topology.
+- Fan-in (many entities → one file) is the primary use case: registries, manifests, consolidated docs.
+- Fan-out (one entity → multiple files) is possible by combining grouping with multi-key rule output.
+- The grouping script can inspect any entity metadata — namespace, source path, annotations — to make routing conditional.
+- The preamble script is called once per unique output path, regardless of how many entities route there.
+</Aside>

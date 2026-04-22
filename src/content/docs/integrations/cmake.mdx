@@ -1,0 +1,62 @@
+---
+title: CMake Integration
+description: Wire codegen rules into your CMake build graph so generated files regenerate automatically when annotated headers change.
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+<Aside type="note">
+CMake integration is a **Team tier** feature.
+</Aside>
+
+## Overview
+
+The CMake integration makes generated files first-class build outputs. CMake tracks the dependency between annotated headers and generated files. When a header changes, CMake re-runs the relevant rules before compiling, eliminating the "forgot to regenerate" class of CI failure.
+
+## Finding the package
+
+```cmake
+find_package(codegen REQUIRED)
+```
+
+Set `codegen_ROOT` or add the codegen binary directory to `CMAKE_PREFIX_PATH` if CMake cannot find it automatically.
+
+## Declaring a rule target
+
+```cmake title="CMakeLists.txt"
+codegen_rule(
+    RULE       ToString
+    CONFIG     ${CMAKE_SOURCE_DIR}/.codegen/rules/ToString/ToString.config.yaml
+    INPUT_DIR  ${CMAKE_SOURCE_DIR}/include
+    OUTPUT_DIR ${CMAKE_BINARY_DIR}/generated
+)
+```
+
+This creates a custom target that runs codegen whenever any header under `INPUT_DIR` changes. Generated file paths are exposed via the `CODEGEN_OUTPUTS` variable.
+
+## Linking generated sources
+
+```cmake
+target_sources(mylib PRIVATE ${CODEGEN_OUTPUTS})
+add_dependencies(mylib codegen_ToString)
+```
+
+## Multiple rules
+
+Declare one `codegen_rule()` per rule. Generated outputs from different rules do not conflict as long as `OUTPUT_DIR` paths are distinct or the grouping scripts route to non-overlapping paths.
+
+```cmake
+codegen_rule(RULE ToString   CONFIG ... INPUT_DIR ... OUTPUT_DIR ...)
+codegen_rule(RULE MarkdownDocs CONFIG ... INPUT_DIR ... OUTPUT_DIR ...)
+```
+
+## CI usage
+
+In CI, run CMake as normal. The `codegen` binary must be on `PATH` or discoverable via `codegen_ROOT`. Generated files checked into version control will be overwritten if they are out of date — which is the intended behavior.
+
+<Aside type="tip" title="Key Takeaways">
+- `codegen_rule()` creates a CMake target that tracks header-to-generated-file dependencies.
+- Generated files are exposed via `CODEGEN_OUTPUTS` for `target_sources()`.
+- The "forgot to regenerate" CI failure class is eliminated: CMake handles it.
+- Requires Team tier license.
+</Aside>

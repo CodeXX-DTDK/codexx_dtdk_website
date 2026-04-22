@@ -1,0 +1,161 @@
+---
+title: Tiers & Pricing
+description: codegen licensing tiers — Community, Professional, and Team. Feature breakdown and guidance on which tier fits your use case.
+---
+
+import { Card, CardGrid, Aside } from '@astrojs/starlight/components';
+
+## Overview
+
+codegen is available in three tiers. All tiers use the same binary and the same rule engine — the tier controls which features are unlocked, not which version of the engine you run.
+
+---
+
+## Community — Free
+
+**For:** Open-source projects, personal experiments, evaluation.
+
+**License:** Free, no time limit. No commercial use.
+
+| Feature | Included |
+|---|---|
+| CLI interface (`codegen` binary) | ✓ |
+| Full rule engine (LuaU sandbox, grouping, preamble, inline injection) | ✓ |
+| All built-in example rules (ToString, TypeScriptTypes, MarkdownDocs) | ✓ |
+| Community support via GitHub Issues | ✓ |
+| Commercial use | ✗ |
+| TUI diff viewer | ✗ |
+| VS Code DAP debugger | ✗ |
+| CMake integration | ✗ |
+
+<Aside type="note">
+The Community tier includes the full rule engine. There are no artificial rule count limits, no watermarks in generated output, and no expiry. The only restriction is commercial use.
+</Aside>
+
+---
+
+## Professional — $7 / month
+
+**For:** Individual developers building commercial software.
+
+**License:** Per-user, non-transferable. Covers one person across all their machines.
+
+Everything in Community, plus:
+
+### TUI diff viewer
+
+Before codegen writes any file, the TUI diff viewer shows a side-by-side comparison of the current and proposed output. You approve or reject changes interactively. This is the `--dry-run` flag elevated to a first-class workflow.
+
+```sh
+codegen --config ... --input ... --diff
+```
+
+Catches regressions before they hit version control. Particularly valuable during rule development, when output shape is still being refined.
+
+### VS Code DAP debugger
+
+Step through LuaU rule scripts in VS Code using the Debug Adapter Protocol. Set breakpoints in `.luau` files, inspect `node` values, and trace execution through the `json.decode` / `json.encode` boundary.
+
+The debugger attaches to the running engine process. No external debug server. No port configuration. Works in any VS Code workspace that has the codegen extension installed.
+
+See [VS Code DAP Debugger](/integrations/vscode-debugger/) for setup instructions.
+
+### Local persistence
+
+The engine caches parsed AST data and rule outputs across runs. On a 200-header project, cold parse takes ~2s; subsequent runs that touch only changed files take ~80ms.
+
+Persistence is stored in `.codegen/cache/`. Add it to `.gitignore`. The cache is content-addressed and safe to delete at any time.
+
+**Value proposition:** If Professional saves you 10 minutes of debugging per month — one misgenerated file caught by the diff viewer, one rule bug stepped through in the debugger — it costs less than the time you saved.
+
+---
+
+## Team — $24 / seat / month
+
+**For:** Engineering organizations that ship production software.
+
+**License:** Per-seat, organization-managed. Seats are assigned via the team dashboard.
+
+Everything in Professional, plus:
+
+### CMake integration
+
+codegen integrates as a CMake target. Generated files are listed as build outputs, triggering regeneration automatically when annotated headers change:
+
+```cmake title="CMakeLists.txt"
+find_package(codegen REQUIRED)
+
+codegen_rule(
+    RULE      ToString
+    CONFIG    .codegen/rules/ToString/ToString.config.yaml
+    INPUT_DIR ${CMAKE_SOURCE_DIR}/include
+    OUTPUT    ${CMAKE_BINARY_DIR}/generated
+)
+
+target_sources(mylib PRIVATE ${CODEGEN_OUTPUTS})
+```
+
+When a header is modified, CMake detects the dependency and re-runs the relevant rules before compiling. The "forgot to regenerate" class of CI failure is eliminated.
+
+### Shared preamble and grouping libraries
+
+Teams frequently need the same grouping logic across multiple rules — e.g., "always route to the directory named after the entity's top-level namespace." The Team tier supports a `preamble_lib` and `grouping_lib` config key, pointing to shared LuaU modules that can be `require`d from any rule in the workspace:
+
+```yaml title=".codegen/rules/MyRule/MyRule.config.yaml"
+version: 1
+
+output:
+  language: cpp
+
+preamble_lib: .codegen/lib/standard_preamble.luau
+grouping_lib: .codegen/lib/namespace_routing.luau
+```
+
+Version-control these libraries alongside your rules. Code review them. Reuse them across every rule in the repo.
+
+### Priority support
+
+Direct response SLA. Bug reports from Team customers are triaged within one business day.
+
+---
+
+## Comparison table
+
+| Feature | Community | Professional | Team |
+|---|:---:|:---:|:---:|
+| Full rule engine | ✓ | ✓ | ✓ |
+| Commercial use | ✗ | ✓ | ✓ |
+| TUI diff viewer | ✗ | ✓ | ✓ |
+| VS Code DAP debugger | ✗ | ✓ | ✓ |
+| Local persistence / caching | ✗ | ✓ | ✓ |
+| CMake integration | ✗ | ✗ | ✓ |
+| Shared preamble/grouping libs | ✗ | ✗ | ✓ |
+| Priority support | ✗ | ✗ | ✓ |
+| **Price** | **Free** | **$7/mo** | **$24/seat/mo** |
+
+---
+
+## Frequently asked questions
+
+**Can I evaluate the Professional features before buying?**
+Yes. A 14-day trial of Professional is available from the license activation page. No credit card required.
+
+**Does a Team seat cover the same person across multiple machines?**
+Yes. A seat is per-person, not per-machine.
+
+**What happens if I stop paying?**
+The engine reverts to Community-tier behavior. Your rules, configs, and generated files are unaffected.
+
+**Is there an academic or OSS project discount?**
+OSS projects (public repository, OSI-approved license) can request a Professional license at no cost. Contact [support] with a link to your repository.
+
+**Can the Team tier be used in air-gapped environments?**
+Yes. See [License Activation](/licensing/activation/) for the offline activation protocol.
+
+<Aside type="tip" title="Key Takeaways">
+- All tiers use the same binary and the same rule engine. Tiers unlock features, not capabilities.
+- Community is free forever but excludes commercial use.
+- Professional ($7/mo) adds the diff viewer and VS Code debugger — the tools that make rule development fast.
+- Team ($24/seat/mo) adds CMake integration (eliminates "forgot to regenerate" CI failures) and shared grouping/preamble libraries.
+- Licenses are verified offline via a cryptographically signed local token. No internet required at runtime.
+</Aside>

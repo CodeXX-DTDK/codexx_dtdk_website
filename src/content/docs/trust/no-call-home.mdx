@@ -1,0 +1,102 @@
+---
+title: No-Call-Home Guarantee
+description: codegen makes zero network requests during rule execution. This page formalizes the guarantee, explains how it is enforced, and documents the permission model for rules that legitimately need network access.
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+## The guarantee
+
+**codegen makes zero outbound network requests during rule execution by default.**
+
+This is not a policy. It is enforced by the LuaU sandbox. The sandbox has no `http`, `socket`, or `io` library unless the rule's config explicitly grants it. A rule that attempts a network call without permission raises a runtime error and aborts the generation step for that entity.
+
+Your source code, your AST, and your type information never leave your machine unless you write a rule that explicitly sends them somewhere — and approve that in config.
+
+---
+
+## Why this matters
+
+Code generation rules have privileged access. They receive the full parsed AST of your headers: every type, every field name, every annotation, every namespace. In a commercial codebase, this is sensitive intellectual property.
+
+A rule distributed as part of a third-party library — a serialization framework, an RPC toolkit, a documentation generator — could, in a naive system, exfiltrate this data. codegen's sandbox closes that attack surface by default.
+
+---
+
+## How the sandbox is implemented
+
+The LuaU VM embedded in codegen starts with an empty global environment. The engine selectively injects the following globals before calling your rule:
+
+| Global | Type | Description |
+|---|---|---|
+| `json.encode` | function | Serialize a Lua value to a JSON string |
+| `json.decode` | function | Parse a JSON string to a Lua value |
+
+That is the complete standard environment. No `os`, no `io`, no `require`, no `http`.
+
+The `json` globals are pure functions with no side effects and no I/O.
+
+---
+
+## The permissions model
+
+Rules that legitimately need network access — fetching an OpenAPI spec, querying an internal schema registry — can request it explicitly in `config.yaml`:
+
+```yaml title=".codegen/rules/MyRule/MyRule.config.yaml"
+version: 1
+
+output:
+  language: cpp
+
+permissions:
+  http:
+    allowlist:
+      - "schema-registry.internal.example.com"
+      - "api.example.com"
+```
+
+When this config is present, the engine injects an `http.get(url)` function into the sandbox. The function enforces the allowlist — any URL not on the list raises a runtime error.
+
+<Aside type="caution">
+Rules with HTTP permissions must be reviewed with the same scrutiny as any code that handles sensitive data. If you are using a third-party rule with an HTTP allowlist, verify that the allowlisted domains are legitimate before running.
+</Aside>
+
+**The allowlist is mandatory.** There is no `permissions.http.allowAll` flag. Every domain must be explicitly named. This is intentional: it prevents a rule from using a single high-entropy subdomain to exfiltrate data.
+
+---
+
+## License verification
+
+The engine validates your license on startup against a locally-stored token. **This check is fully offline.** The token is cryptographically signed; the engine verifies the signature without contacting a server.
+
+For air-gapped environments, this means codegen works without any internet access after the initial license activation step.
+
+See [License Activation](/licensing/activation/) for the activation protocol.
+
+---
+
+## Audit trail
+
+Every rule invocation is logged locally with:
+
+- The rule name and config path
+- The entity identifier and source file
+- Whether any HTTP permission was exercised
+- The output file written
+
+Logs are written to a local file only. They are never transmitted.
+
+---
+
+## SLSA compliance
+
+See [SLSA Compliance](/trust/slsa/) for provenance attestation, artifact signing, and reproducible build documentation.
+
+<Aside type="tip" title="Key Takeaways">
+- The no-call-home guarantee is enforced by the LuaU sandbox, not by policy. Rules cannot make network calls unless explicitly granted permission in config.
+- The sandbox injects only `json.encode` and `json.decode` by default — no `os`, `io`, `http`, or `require`.
+- HTTP permissions require an explicit domain allowlist. There is no allow-all flag.
+- License verification is fully offline: cryptographic signature check against a local token.
+- Logs are written locally only, never transmitted.
+- For full provenance documentation, see the [SLSA page](/trust/slsa/).
+</Aside>

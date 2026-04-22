@@ -1,0 +1,69 @@
+---
+title: Inline Injection
+description: How the inline field injects declarations back into original C++ headers at anchor comment sites.
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+## The problem it solves
+
+For rules that generate function implementations (`.g.cpp`), you typically also need the declaration in the original header. Without inline injection, you must manually add the declaration — which defeats the purpose of generation and breaks whenever the generated signature changes.
+
+Inline injection lets the rule emit both the implementation and the declaration, keeping them in sync automatically.
+
+## How it works
+
+The `inline` field in the transformation return value is a list of objects:
+
+```lua
+return json.encode({
+    source = "std::string_view toString(Color e) { ... }",
+    inline = {
+        { source = "std::string_view toString(Color e);" }
+    }
+})
+```
+
+The engine looks for the anchor comment that triggered this rule invocation in the original header. It replaces the anchor comment line with the `inline[1].source` text.
+
+## Anchor comment format
+
+```cpp
+// [[codegen::generated::RuleName::qualified::EntityName]]
+enum class Color { Red, Green, Blue };
+```
+
+The anchor comment must appear on its own line, immediately above or at the declaration site.
+
+## Multiple inline items
+
+The `inline` list can contain multiple items. They are injected in order, replacing the single anchor comment line with multiple lines:
+
+```lua
+inline = {
+    { source = "std::string_view toString(Color e);" },
+    { source = "Color fromString(std::string_view s);" },
+}
+```
+
+## What gets replaced
+
+The entire anchor comment line is replaced. The declaration it annotates is preserved — the engine only modifies the comment line itself.
+
+## Without inline injection
+
+Rules that do not need to patch headers simply omit the `inline` field or return an empty list:
+
+```lua
+return json.encode({ source = impl })
+-- or
+return json.encode({ source = impl, inline = {} })
+```
+
+<Aside type="tip" title="Key Takeaways">
+- The `inline` field injects text into the original header at the anchor comment site.
+- The anchor comment line is replaced by the injected text.
+- The declaration the anchor annotates is preserved.
+- Multiple `inline` items replace the single anchor line with multiple lines in order.
+- Omit `inline` or return `{}` for rules that write to `.g.cpp` only.
+</Aside>

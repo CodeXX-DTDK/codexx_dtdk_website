@@ -1,0 +1,124 @@
+---
+title: Your First Rule
+description: Write a rule from scratch — a struct-to-JSON-serializer generator.
+---
+
+import { Steps, Aside, FileTree } from '@astrojs/starlight/components';
+
+This guide writes a new rule — `JsonSerializer` — that generates a `toJson()` function for each annotated struct. It covers the three script files every rule needs and the config that ties them together.
+
+## Goal
+
+Given:
+
+```cpp title="include/config.h"
+struct [[codegen::JsonSerializer]] AppConfig {
+    std::string  host;
+    uint16_t     port;
+    bool         enableTls;
+};
+```
+
+Produce:
+
+```cpp title="generated/config.g.cpp"
+#include <nlohmann/json.hpp>
+
+nlohmann::json toJson(const AppConfig& v) {
+    return {
+        {"host",      v.host},
+        {"port",      v.port},
+        {"enableTls", v.enableTls},
+    };
+}
+```
+
+## Rule file layout
+
+<FileTree>
+- .codegen/rules/JsonSerializer/
+  - JsonSerializer.config.yaml
+  - JsonSerializer.preamble.luau
+  - JsonSerializer.luau
+</FileTree>
+
+No `grouping.luau` — this rule uses 1:1 routing (one struct → one `.g.cpp` file).
+
+## Step 1 — config
+
+```yaml title="JsonSerializer.config.yaml"
+version: 1
+
+output:
+  language: cpp
+  autoDeduceIncludes: false
+```
+
+`autoDeduceIncludes: false` means the engine will not attempt to infer `#include` lines. The preamble handles that explicitly.
+
+## Step 2 — preamble
+
+```lua title="JsonSerializer.preamble.luau"
+return function(input)
+    return "#include <nlohmann/json.hpp>\n\n"
+end
+```
+
+The preamble runs once per output file. With 1:1 routing (no grouping script), "once per output file" means once per input header — which is what you want.
+
+## Step 3 — transformation
+
+```lua title="JsonSerializer.luau"
+return function(input)
+    local node = json.decode(input)
+    if not node then error("failed to decode input") end
+
+    local structName = node.identifier and node.identifier.name
+    if not structName then error("struct has no name") end
+
+    -- Collect field initializer list entries
+    local entries = {}
+    for _, varNode in ipairs(node.memberVariables or {}) do
+        if varNode.kind == "Variable" then
+            local fname = varNode.identifier and varNode.identifier.name
+            if fname then
+                table.insert(entries, '        {"' .. fname .. '", v.' .. fname .. '},')
+            end
+        end
+    end
+
+    local body = table.concat(entries, "\n")
+
+    local impl = "nlohmann::json toJson(const " .. structName .. "& v) {\n"
+              .. "    return {\n"
+              .. body .. "\n"
+              .. "    };\n"
+              .. "}"
+
+    local decl = "nlohmann::json toJson(const " .. structName .. "& v);"
+
+    return json.encode({
+        source = impl,
+        inline = { { source = decl } }
+    })
+end
+```
+
+The `inline` list injects `decl` at the anchor site in the original header — keeping the declaration in the header and the implementation in the `.g.cpp` file.
+
+## Step 4 — run
+
+```sh
+codegen \
+  --config .codegen/rules/JsonSerializer/JsonSerializer.config.yaml \
+  --input ./include \
+  --output ./generated
+```
+
+<Aside type="tip" title="Key Takeaways">
+- Every rule has three files: `config.yaml`, `preamble.luau`, and the transformation `.luau` script.
+- The transformation script receives one AST node as JSON and returns `{ source, inline }`.
+- `source` goes to the `.g.cpp` file. `inline` items are injected at anchor sites in the original header.
+- No grouping script = 1:1 routing: one annotated entity → one output file derived from the input path.
+- The LuaU sandbox provides only `json.encode` and `json.decode`. All logic is explicit and auditable.
+</Aside>

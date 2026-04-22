@@ -1,0 +1,114 @@
+---
+title: The AST Schema
+description: The JSON structure your rule scripts receive — fields, node kinds, and how to navigate namespace and type information.
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+Every rule script receives one AST node serialized as a JSON string. Call `json.decode(input)` to get a Lua table. This page documents the fields available on the most common node kinds.
+
+## Struct / class node
+
+```json
+{
+  "kind": "Struct",
+  "identifier": {
+    "name": "ConnectionOptions",
+    "templateArguments": []
+  },
+  "_namespaces": ["network", "internal"],
+  "memberVariables": [ /* see below */ ],
+  "annotations": [
+    { "name": "MarkdownDocs", "arguments": [] }
+  ]
+}
+```
+
+| Field | Type | Description |
+|---|---|---|
+| `kind` | string | `"Struct"` or `"Class"` |
+| `identifier.name` | string | Unqualified struct name |
+| `identifier.templateArguments` | array | Template parameter nodes (if templated) |
+| `_namespaces` | string[] | Enclosing namespace stack, outermost first |
+| `memberVariables` | array | Member variable nodes (see below) |
+| `annotations` | array | `[[codegen::...]]` annotations on this declaration |
+
+### Building the qualified name
+
+```lua
+local ns = table.concat(node._namespaces, "::")
+local qualified = ns ~= "" and (ns .. "::" .. node.identifier.name) or node.identifier.name
+-- result: "network::internal::ConnectionOptions"
+```
+
+## Enum node
+
+```json
+{
+  "kind": "Enum",
+  "identifier": { "name": "Color" },
+  "_namespaces": [],
+  "isScoped": true,
+  "enumerators": [
+    { "name": "Red",   "value": null },
+    { "name": "Green", "value": null },
+    { "name": "Blue",  "value": "2" }
+  ]
+}
+```
+
+| Field | Type | Description |
+|---|---|---|
+| `isScoped` | bool | `true` for `enum class`, `false` for unscoped `enum` |
+| `enumerators` | array | Enumerator nodes |
+| `enumerators[].name` | string | Enumerator identifier |
+| `enumerators[].value` | string\|null | Explicit value as source text, or `null` |
+
+## Member variable node
+
+```json
+{
+  "kind": "Variable",
+  "identifier": { "name": "port" },
+  "typeSignature": {
+    "identifier": {
+      "name": "uint16_t",
+      "templateArguments": []
+    },
+    "isConst": false,
+    "isPointer": false,
+    "isReference": false
+  }
+}
+```
+
+For groups of variables sharing a type (`int x, y, z;`), the kind is `"VariableGroup"` with a `variables` array.
+
+## Type signatures
+
+```lua
+local function typeName(tSig)
+    if not tSig or not tSig.identifier then return "?" end
+    local name = tSig.identifier.name
+    local args = tSig.identifier.templateArguments or {}
+    -- e.g. name="vector", args=[{identifier:{name="string"}}]
+    return name
+end
+```
+
+Template arguments are themselves type signature nodes — navigate them recursively.
+
+## Inspecting with `jq`
+
+Use the `ast-dump` tool to serialize any header to JSON and inspect it before writing a rule:
+
+```sh
+ast-dump --mode codex --input include/color.h | jq '.entities[0]'
+```
+
+<Aside type="tip" title="Key Takeaways">
+- Structs carry `_namespaces` (outermost-first stack), `memberVariables`, and `annotations`.
+- Enums carry `isScoped` and `enumerators[]` with optional explicit `value` as source text.
+- Member variables have a `typeSignature` with nested `templateArguments` for generic types.
+- Use `ast-dump --mode codex` to inspect the exact JSON your rule will receive before writing it.
+</Aside>

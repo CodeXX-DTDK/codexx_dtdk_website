@@ -1,0 +1,47 @@
+---
+title: Permissions Model
+description: How to grant rules access to HTTP — and why the default is to grant nothing.
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+## Default: zero permissions
+
+Every rule runs with zero permissions by default. The LuaU sandbox provides only `json.encode` and `json.decode`. No filesystem, no network, no process execution.
+
+## Granting HTTP access
+
+```yaml title="MyRule.config.yaml"
+version: 1
+
+output:
+  language: cpp
+
+permissions:
+  http:
+    allowlist:
+      - "schema-registry.example.com"
+      - "api.example.com"
+```
+
+When an HTTP allowlist is present, the engine injects `http.get(url) -> string` into the sandbox. Calls to URLs not on the allowlist raise a runtime error.
+
+## Future permission types
+
+The permissions model is extensible. Planned future capabilities:
+
+| Permission | Status | Description |
+|---|---|---|
+| `http` | Available | Outbound HTTP GET |
+| `fs.read` | Planned | Read-only access to specific paths |
+| `subprocess` | Not planned | Will never be added |
+
+<Aside type="caution">
+Only grant HTTP permissions to rules you have written and audited. An HTTP allowlist gives that rule the ability to send your AST data to the allowlisted domain.
+</Aside>
+
+<Aside type="tip" title="Key Takeaways">
+- Default: zero permissions. No way to reach the network or filesystem without explicit config.
+- HTTP access requires a named domain allowlist — there is no allow-all.
+- The permissions model is opt-in and declared in the config file, making security review straightforward: look at the config, not the script.
+</Aside>
