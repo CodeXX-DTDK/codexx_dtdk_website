@@ -1,0 +1,45 @@
+[allowlist]
+description = "Global allowlist for language-specific artifacts"
+paths = [
+    # General
+    '''node_modules''',
+    # Dart / Flutter
+    '''\.dart_tool/''',
+    '''pubspec\.lock''',
+    # Python
+    '''__pycache__/''',
+    '''venv/''',
+    '''poetry\.lock''',
+    # C# / .NET
+    '''obj/''',
+    '''bin/''',
+    '''\.suo$''',
+    '''\.user$''',
+]
+
+[[rules]]
+description = "Python/Django Secret Key"
+id = "python-secret-key"
+regex = '''(?i)SECRET_KEY\s*[:=]\s*['"][a-z0-9%&!@#\^\*\(\)-_+]{30,}['"]'''
+keywords = ["secret_key"]
+
+[[rules]]
+description = "C# Connection String"
+id = "csharp-conn-string"
+regex = '''(?i)Password\s*=\s*[^;]+|User\s+ID\s*=\s*[^;]+'''
+path = '''\.(config|json|cs)$'''
+keywords = ["password", "connectionstring"]
+
+[[rules]]
+description = "LuaU/Roblox Security Cookie"
+id = "luau-roblox-cookie"
+regex = '''_|WARNING:-DO-NOT-SHARE-.*_'''
+keywords = ["do-not-share"]
+
+[[rules]]
+description = "Generic High-Entropy Token"
+id = "generic-token"
+# Scans for high-entropy strings in assignments - common in C++ headers or Dart constants
+regex = '''(?i)(?:key|token|secret|auth|pwd|password|pass)\s*[:=]\s*["']([0-9a-zA-Z-_]{16,128})["']'''
+entropy = 3.5
+secretGroup = 1
