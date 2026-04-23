@@ -1,0 +1,37 @@
+{
+  "mappings": [
+    {
+      "name": "list-users-empty",
+      "request": {
+        "method": "GET",
+        "urlPattern": "/v1/accounts/[^/]+/users.*"
+      },
+      "response": {
+        "status": 200,
+        "headers": { "Content-Type": "application/vnd.api+json" },
+        "jsonBody": { "data": [], "meta": { "count": 0 } }
+      }
+    },
+    {
+      "name": "create-user",
+      "request": {
+        "method": "POST",
+        "urlPattern": "/v1/accounts/[^/]+/users"
+      },
+      "response": {
+        "status": 201,
+        "headers": { "Content-Type": "application/vnd.api+json" },
+        "jsonBody": {
+          "data": {
+            "id": "usr_mock_{{randomValue type='UUID'}}",
+            "type": "users",
+            "attributes": {
+              "email": "{{jsonPath request.body '$.data.attributes.email'}}",
+              "status": "ACTIVE"
+            }
+          }
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,63 @@
+{
+  "mappings": [
+    {
+      "name": "list-licenses-empty",
+      "request": {
+        "method": "GET",
+        "urlPattern": "/v1/accounts/[^/]+/licenses.*"
+      },
+      "response": {
+        "status": 200,
+        "headers": { "Content-Type": "application/vnd.api+json" },
+        "jsonBody": { "data": [], "meta": { "count": 0 } }
+      }
+    },
+    {
+      "name": "create-license",
+      "request": {
+        "method": "POST",
+        "urlPattern": "/v1/accounts/[^/]+/licenses"
+      },
+      "response": {
+        "status": 201,
+        "headers": { "Content-Type": "application/vnd.api+json" },
+        "jsonBody": {
+          "data": {
+            "id": "lic_mock_{{randomValue type='UUID'}}",
+            "type": "licenses",
+            "attributes": {
+              "key": "CODEGEN-TEST-MOCK-{{randomValue type='ALPHANUMERIC' uppercase=true length=8}}",
+              "status": "ACTIVE",
+              "expiry": null,
+              "metadata": {}
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "suspend-license",
+      "request": {
+        "method": "POST",
+        "urlPattern": "/v1/accounts/[^/]+/licenses/[^/]+/actions/suspend"
+      },
+      "response": {
+        "status": 200,
+        "headers": { "Content-Type": "application/vnd.api+json" },
+        "jsonBody": { "data": { "id": "lic_mock", "type": "licenses" } }
+      }
+    },
+    {
+      "name": "reinstate-license",
+      "request": {
+        "method": "POST",
+        "urlPattern": "/v1/accounts/[^/]+/licenses/[^/]+/actions/reinstate"
+      },
+      "response": {
+        "status": 200,
+        "headers": { "Content-Type": "application/vnd.api+json" },
+        "jsonBody": { "data": { "id": "lic_mock", "type": "licenses" } }
+      }
+    }
+  ]
+}

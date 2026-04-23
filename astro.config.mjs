@@ -2,9 +2,12 @@
 import { defineConfig } from "astro/config";
 import starlight from "@astrojs/starlight";
 import mermaid from "astro-mermaid";
+import vercel from "@astrojs/vercel";
 
 // https://astro.build/config
 export default defineConfig({
+  output: "static",
+  adapter: vercel(),
   integrations: [
     mermaid({
       theme: "forest",

@@ -1,0 +1,26 @@
+services:
+  # Keygen API mock — WireMock with pre-loaded stubs
+  keygen-mock:
+    image: wiremock/wiremock:3.10.0
+    ports:
+      - "4010:8080"
+    volumes:
+      - ./dev/wiremock:/home/wiremock
+    command: >
+      --root-dir /home/wiremock
+      --verbose
+      --global-response-templating
+
+  # Webhook test sender (one-shot; run manually)
+  # docker compose run --rm webhook-sender
+  webhook-sender:
+    image: node:22-alpine
+    working_dir: /app
+    volumes:
+      - ./dev:/app
+    profiles:
+      - tools
+    command: node send-webhook.mjs
+    environment:
+      WEBHOOK_URL: http://host.docker.internal:4321/api/webhooks/polar
+      POLAR_WEBHOOK_SECRET: whsec_dGVzdHNlY3JldGZvcmxvY2FsZGV2dGVzdGluZw==
