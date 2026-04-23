@@ -1,9 +1,14 @@
 /**
  * Sends a mock Polar `order.paid` webhook with a valid Standard Webhooks signature.
- * Usage (from website root):
- *   WEBHOOK_URL=http://localhost:4321/api/webhooks/polar \
- *   POLAR_WEBHOOK_SECRET=whsec_... \
+ *
+ * Local WireMock (default):
  *   node dev/send-webhook.mjs [community|professional|team]
+ *
+ * Sandbox (pass secret explicitly — shell env, not .env.sandbox.local):
+ *   POLAR_WEBHOOK_SECRET=polar_whs_xxx \
+ *   POLAR_PRODUCT_ID_PROFESSIONAL=e194eec3-... \
+ *   POLAR_PRODUCT_ID_TEAM=acce8699-... \
+ *   node dev/send-webhook.mjs professional
  */
 import { createHmac, randomUUID } from 'node:crypto'
 
@@ -31,7 +36,7 @@ const body = JSON.stringify(event)
 const webhookId = `msg_${randomUUID()}`
 const webhookTimestamp = String(Math.floor(Date.now() / 1000))
 
-const key = Buffer.from(SECRET.replace(/^whsec_/, ''), 'base64')
+const key = Buffer.from(SECRET.replace(/^(?:whsec_|polar_whs_)/, ''), 'base64')
 const toSign = `${webhookId}.${webhookTimestamp}.${body}`
 const sig = `v1,${createHmac('sha256', key).update(toSign).digest('base64')}`
 

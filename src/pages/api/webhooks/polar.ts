@@ -27,7 +27,8 @@ function verifySignature(
   // Reject payloads older than 5 minutes
   if (Math.abs(Date.now() / 1000 - Number(ts)) > 300) return false
 
-  const key = Buffer.from(secret.replace(/^whsec_/, ''), 'base64')
+  // Strip any known Polar/Standard-Webhooks prefix before base64-decoding the raw key.
+  const key = Buffer.from(secret.replace(/^(?:whsec_|polar_whs_)/, ''), 'base64')
   const expected = createHmac('sha256', key)
     .update(`${id}.${ts}.${rawBody}`)
     .digest('base64')
@@ -102,6 +103,17 @@ async function handleOrderPaid(order: any): Promise<void> {
   )
 }
 
+async function handleOrderRefunded(order: any): Promise<void> {
+  const polarOrderId: string = order.id
+  const license = await findLicenseByOrderId(polarOrderId)
+  if (!license) {
+    console.warn(`[polar-webhook] order.refunded: no license found for order ${polarOrderId}`)
+    return
+  }
+  await suspendLicense(license.id)
+  console.log(`[polar-webhook] suspended license ${license.id} (refund)`)
+}
+
 async function handleSubscriptionRevoked(sub: any): Promise<void> {
   const polarOrderId: string = sub.order_id ?? sub.orderId ?? sub.id
   const license = await findLicenseByOrderId(polarOrderId)
@@ -146,6 +158,9 @@ export const POST: APIRoute = async ({ request }) => {
     switch (event.type) {
       case 'order.paid':
         await handleOrderPaid(event.data)
+        break
+      case 'order.refunded':
+        await handleOrderRefunded(event.data)
         break
       case 'subscription.revoked':
         await handleSubscriptionRevoked(event.data)
