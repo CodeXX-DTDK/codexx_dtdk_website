@@ -13,6 +13,70 @@
       }
     },
     {
+      "name": "validate-key",
+      "request": {
+        "method": "POST",
+        "urlPattern": "/v1/accounts/[^/]+/licenses/actions/validate-key"
+      },
+      "response": {
+        "status": 200,
+        "headers": { "Content-Type": "application/vnd.api+json" },
+        "jsonBody": {
+          "meta": {
+            "valid": true,
+            "code": "VALID",
+            "detail": "is valid"
+          },
+          "data": {
+            "id": "lic_mock_local",
+            "type": "licenses",
+            "attributes": {
+              "key": "{{jsonPath request.body '$.meta.key'}}",
+              "status": "ACTIVE",
+              "expiry": null,
+              "metadata": {
+                "schema": 1,
+                "tier": "professional",
+                "features": {
+                  "commercialUse": true,
+                  "tuiDiffViewer": true,
+                  "vscodeDapDebugger": true,
+                  "localPersistence": true,
+                  "cmakeIntegration": false,
+                  "sharedPreambleLibs": false,
+                  "prioritySupport": false
+                },
+                "seat": {
+                  "userId": "usr_mock_local",
+                  "email": "dev@example.com",
+                  "orgId": null
+                },
+                "subscription": {
+                  "polarOrderId": "ord_mock_local",
+                  "polarProductId": "prod_professional_mock",
+                  "interval": "month",
+                  "trialEnd": null
+                },
+                "limits": { "maxMachines": 5 }
+              }
+            },
+            "relationships": {
+              "policy": { "data": { "id": "pol_mock_professional", "type": "policies" } }
+            }
+          },
+          "included": [
+            {
+              "type": "machines",
+              "attributes": {
+                "fingerprint": "{{jsonPath request.body '$.meta.scope.fingerprint'}}",
+                "platform": "linux"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
       "name": "create-license",
       "request": {
         "method": "POST",

@@ -15,7 +15,11 @@ pnpm-debug.log*
 
 # environment variables
 .env
+.env.local
 .env.production
+
+# local test keypair (never commit private keys)
+dev/test-private.pem
 
 # macOS-specific files
 .DS_Store
