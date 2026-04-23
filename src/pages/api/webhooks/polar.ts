@@ -8,6 +8,7 @@ import {
   suspendLicense,
   reinstateLicense,
 } from '../../../lib/licensing/keygen'
+import { sendActivationEmail } from '../../../lib/email'
 
 export const prerender = false
 
@@ -96,7 +97,9 @@ async function handleOrderPaid(order: any): Promise<void> {
   })
 
   console.log(`[polar-webhook] provisioned ${tier} license ${license.key} for ${email}`)
-  // TODO: send activation email via Resend/Postmark with license.key
+  sendActivationEmail({ to: email, key: license.key, tier }).catch(err =>
+    console.error('[polar-webhook] activation email failed (non-fatal):', err),
+  )
 }
 
 async function handleSubscriptionRevoked(sub: any): Promise<void> {

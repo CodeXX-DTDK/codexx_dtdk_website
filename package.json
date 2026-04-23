@@ -17,6 +17,7 @@
     "astro": "^6.0.1",
     "astro-mermaid": "^2.0.1",
     "mermaid": "^11.14.0",
+    "resend": "^6.12.2",
     "sharp": "^0.34.2"
   },
   "devDependencies": {
