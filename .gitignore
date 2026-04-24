@@ -24,3 +24,6 @@ dev/test-private.pem
 
 # macOS-specific files
 .DS_Store
+
+# Vercel build output for deployment configuration
+.vercel
