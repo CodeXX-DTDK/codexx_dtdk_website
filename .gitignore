@@ -17,6 +17,7 @@ pnpm-debug.log*
 .env.local
 .env.*.local
 .env.production
+.env.preview
 
 # local test keypair (never commit private keys)
 dev/test-private.pem
