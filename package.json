@@ -8,7 +8,10 @@
     "start": "astro dev",
     "build": "astro build",
     "preview": "astro preview",
-    "astro": "astro"
+    "astro": "astro",
+    "test": "node dev/test-suite.mjs",
+    "test:webhook": "node dev/test-suite.mjs --group W",
+    "test:cli": "node dev/test-suite.mjs --group L"
   },
   "dependencies": {
     "@astrojs/starlight": "^0.38.4",

@@ -67,6 +67,7 @@
           "included": [
             {
               "type": "machines",
+              "id": "mach_mock_local",
               "attributes": {
                 "fingerprint": "{{jsonPath request.body '$.meta.scope.fingerprint'}}",
                 "platform": "linux"
@@ -109,6 +110,17 @@
         "status": 200,
         "headers": { "Content-Type": "application/vnd.api+json" },
         "jsonBody": { "data": { "id": "lic_mock", "type": "licenses" } }
+      }
+    },
+    {
+      "name": "delete-machine",
+      "request": {
+        "method": "DELETE",
+        "urlPattern": "/v1/accounts/[^/]+/machines/[^/]+"
+      },
+      "response": {
+        "status": 204,
+        "headers": { "Content-Type": "application/vnd.api+json" }
       }
     },
     {
