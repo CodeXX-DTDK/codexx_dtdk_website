@@ -11,15 +11,15 @@
     "astro": "astro"
   },
   "dependencies": {
-    "@astrojs/starlight": "^0.38.3",
-    "@astrojs/vercel": "^8.0.0",
+    "@astrojs/starlight": "^0.38.4",
+    "@astrojs/vercel": "^10.0.5",
     "@pelagornis/page": "^1.2.5",
     "@refineui/web-icons": "^0.3.32",
-    "astro": "^6.0.1",
+    "astro": "^6.1.9",
     "astro-mermaid": "^2.0.1",
     "mermaid": "^11.14.0",
     "resend": "^6.12.2",
-    "sharp": "^0.34.2"
+    "sharp": "^0.34.5"
   },
   "devDependencies": {
     "@typescript-eslint/parser": "^8.59.0",
