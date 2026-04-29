@@ -27,8 +27,9 @@ function verifySignature(
   // Reject payloads older than 5 minutes
   if (Math.abs(Date.now() / 1000 - Number(ts)) > 300) return false
 
-  // Strip any known Polar/Standard-Webhooks prefix before base64-decoding the raw key.
-  const key = Buffer.from(secret.replace(/^(?:whsec_|polar_whs_)/, ''), 'base64')
+  // Polar SDK base64-encodes the raw secret then standardwebhooks base64-decodes it,
+  // so the HMAC key is the UTF-8 bytes of the post-prefix string — not base64-decoded.
+  const key = Buffer.from(secret.replace(/^(?:whsec_|polar_whs_)/, ''), 'utf8')
   const expected = createHmac('sha256', key)
     .update(`${id}.${ts}.${rawBody}`)
     .digest('base64')
