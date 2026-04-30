@@ -3,6 +3,7 @@ import StandaloneLayout from '../layouts/StandaloneLayout.astro'
 export const prerender = false
 
 const justPurchased = Astro.url.searchParams.get('success') === '1'
+const prefillKey = Astro.url.searchParams.get('key') ?? ''
 ---
 <StandaloneLayout
   title="Activate License — codegen"
@@ -198,7 +199,8 @@ const justPurchased = Astro.url.searchParams.get('success') === '1'
           type="text"
           id="license-key"
           name="key"
-          placeholder="XXXX-XXXX-XXXX-XXXX"
+          placeholder="key/eyJhY2NvdW50…"
+          value={prefillKey}
           autocomplete="off"
           autocorrect="off"
           spellcheck="false"
@@ -286,9 +288,7 @@ const justPurchased = Astro.url.searchParams.get('success') === '1'
       result.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
     }
 
-    form.addEventListener('submit', async (e) => {
-      e.preventDefault()
-      const key = keyInput.value.trim()
+    async function submitKey(key: string) {
       if (!key) { setError('Please enter a license key.'); return }
 
       validateBtn.setAttribute('aria-busy', 'true')
@@ -312,7 +312,15 @@ const justPurchased = Astro.url.searchParams.get('success') === '1'
         validateBtn.disabled = false
         validateBtn.textContent = 'Validate'
       }
+    }
+
+    form.addEventListener('submit', (e) => {
+      e.preventDefault()
+      submitKey(keyInput.value.trim())
     })
+
+    // Auto-validate when /activate?key=… is opened from the activation email.
+    if (keyInput.value.trim()) submitKey(keyInput.value.trim())
 
     copyBtn.addEventListener('click', async () => {
       const text = cmdText.textContent ?? ''
