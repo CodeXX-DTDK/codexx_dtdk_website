@@ -20,10 +20,9 @@ interface ImportMetaEnv {
   readonly POLAR_PRODUCT_ID_PROFESSIONAL: string
   readonly POLAR_PRODUCT_ID_TEAM: string
 
-  // Vercel KV — for rate limiting (auto-injected when a KV store is linked)
-  readonly KV_REST_API_URL: string | undefined
-  readonly KV_REST_API_TOKEN: string | undefined
-  readonly KV_URL: string | undefined
+  // Upstash Redis (Vercel Marketplace) — for rate limiting
+  readonly UPSTASH_REDIS_REST_URL: string | undefined
+  readonly UPSTASH_REDIS_REST_TOKEN: string | undefined
 }
 
 interface ImportMeta {

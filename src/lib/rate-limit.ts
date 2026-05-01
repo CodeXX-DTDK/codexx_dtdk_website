@@ -1,22 +1,34 @@
-// Rate limiting backed by Vercel KV (provisioned via Vercel Dashboard →
-// Storage). Fixed-window counter: cheap, ~accurate enough for our use case
-// (one-shot abuse, not precise QPS shaping).
+// Rate limiting backed by Upstash Redis. The "Vercel KV" product was
+// deprecated; the canonical replacement is Upstash Redis, provisioned via the
+// Vercel Marketplace. Fixed-window counter: cheap, ~accurate enough for our
+// use case (one-shot abuse, not precise QPS shaping).
 //
-// Required env (auto-injected when a KV store is linked to the project):
-//   KV_REST_API_URL
-//   KV_REST_API_TOKEN
+// Required env (auto-injected when the Upstash integration is provisioned):
+//   UPSTASH_REDIS_REST_URL
+//   UPSTASH_REDIS_REST_TOKEN
 //
 // If either is missing OR the network call fails, we FAIL-OPEN (allow the
 // request) and log loudly. Rate limiting is defense-in-depth here — outages
 // must not take checkout / activation offline.
 
-import { kv } from '@vercel/kv'
+import { Redis } from '@upstash/redis'
 
 const env = (k: string): string | undefined =>
   (import.meta.env as Record<string, string | undefined>)[k] ?? process.env[k]
 
-function kvAvailable(): boolean {
-  return !!(env('KV_REST_API_URL') && env('KV_REST_API_TOKEN'))
+let cached: Redis | null | undefined
+
+function client(): Redis | null {
+  if (cached !== undefined) return cached
+  const url = env('UPSTASH_REDIS_REST_URL')
+  const token = env('UPSTASH_REDIS_REST_TOKEN')
+  if (!url || !token) {
+    console.warn('[rate-limit] Upstash env vars missing — failing open')
+    cached = null
+    return null
+  }
+  cached = new Redis({ url, token })
+  return cached
 }
 
 export interface RateLimitResult {
@@ -36,17 +48,15 @@ export async function rateLimit(params: {
   const { bucket, id, limit, windowSec } = params
   const fallback: RateLimitResult = { allowed: true, remaining: limit, resetSec: windowSec }
 
-  if (!kvAvailable()) {
-    console.warn('[rate-limit] KV env vars missing — failing open')
-    return fallback
-  }
+  const redis = client()
+  if (!redis) return fallback
 
   const key = `rl:${bucket}:${id}`
   try {
-    const count = await kv.incr(key)
+    const count = await redis.incr(key)
     if (count === 1) {
       // Best-effort; if EXPIRE fails the key just lives until manually evicted.
-      await kv.expire(key, windowSec)
+      await redis.expire(key, windowSec)
     }
     return {
       allowed: count <= limit,
@@ -54,7 +64,7 @@ export async function rateLimit(params: {
       resetSec: windowSec,
     }
   } catch (err) {
-    console.error('[rate-limit] KV error — failing open:', err)
+    console.error('[rate-limit] Upstash error — failing open:', err)
     return fallback
   }
 }
