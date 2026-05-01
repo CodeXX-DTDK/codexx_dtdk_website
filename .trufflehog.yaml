@@ -1,0 +1,40 @@
+# Custom detectors for the codegen licensing service. TruffleHog's built-in
+# detectors already cover well-known APIs (AWS, GitHub, Stripe, Slack, …);
+# these add patterns specific to our stack so leaks land as `unknown`-status
+# findings (no verify endpoint — we don't want to live-probe Keygen/Polar).
+
+detectors:
+  - name: keygen-env-token
+    keywords: ["env-"]
+    regex:
+      raw: 'env-[a-f0-9]{64}v3'
+
+  - name: keygen-admin-token
+    keywords: ["admi-", "prod-"]
+    regex:
+      raw: '(admi|prod)-[a-f0-9]{64}v3'
+
+  - name: polar-oat
+    keywords: ["polar_oat_"]
+    regex:
+      raw: 'polar_oat_[A-Za-z0-9_-]{16,}'
+
+  - name: polar-whs
+    keywords: ["polar_whs_"]
+    regex:
+      raw: 'polar_whs_[A-Za-z0-9_-]{16,}'
+
+  - name: standard-webhooks-secret
+    keywords: ["whsec_"]
+    regex:
+      raw: 'whsec_[A-Za-z0-9+/=_-]{20,}'
+
+  - name: resend-api-key
+    keywords: ["re_"]
+    regex:
+      raw: 're_[A-Za-z0-9]{20,}'
+
+  - name: upstash-redis-token
+    keywords: ["UPSTASH_REDIS_REST_TOKEN"]
+    regex:
+      raw: 'UPSTASH_REDIS_REST_TOKEN\s*[:=]\s*["'']?([A-Za-z0-9_-]{20,})'
