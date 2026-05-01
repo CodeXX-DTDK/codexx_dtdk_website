@@ -144,8 +144,24 @@ async function handleSubscriptionActive(sub: any): Promise<void> {
 }
 
 // ── Route ─────────────────────────────────────────────────────────────────────
+// Real Polar payloads are <8KB. Cap conservatively to bound CPU/memory under
+// abuse — signature verification reads the full body, so the cap goes BEFORE
+// any signature work.
+const MAX_BODY_BYTES = 64 * 1024
+
 export const POST: APIRoute = async ({ request }) => {
+  const declared = Number(request.headers.get('content-length') ?? 0)
+  if (declared > MAX_BODY_BYTES) {
+    return new Response('payload too large', { status: 413 })
+  }
+
   const rawBody = await request.text()
+  // Re-check after reading: content-length header is advisory; chunked encoding
+  // or a lying client could send more bytes than declared.
+  if (rawBody.length > MAX_BODY_BYTES) {
+    return new Response('payload too large', { status: 413 })
+  }
+
   const secret = env('POLAR_WEBHOOK_SECRET')
 
   if (!secret) {
