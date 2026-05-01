@@ -4,9 +4,11 @@ import starlight from "@astrojs/starlight";
 import mermaid from "astro-mermaid";
 import vercel from "@astrojs/vercel";
 import pagePlugin from "@pelagornis/page";
+import starlightLlmsTxt from "starlight-llms-txt";
 
 // https://astro.build/config
 export default defineConfig({
+  site: "https://www.codexx-dtdk.com",
   output: "static",
   adapter: vercel(),
   integrations: [
@@ -18,7 +20,13 @@ export default defineConfig({
       title: "codegen",
       description:
         "A C++ code generation engine. LuaU rules, sandboxed execution, deterministic output.",
-      plugins: [pagePlugin()],
+      plugins: [pagePlugin(), starlightLlmsTxt({exclude: ['trust/**'],})],
+      social: [
+        { icon: "seti:markdown", label: "llms.txt (for AI agents)", href: "/llms-full.txt" },
+      ],
+      components: {
+        SocialIcons: "./src/components/HeaderNav.astro",
+      },
       sidebar: [
         // Getting Started
         {
@@ -105,7 +113,10 @@ export default defineConfig({
             { label: "Config Schema (.yaml)", slug: "reference/config-schema" },
             { label: "LuaU Globals", slug: "reference/luau-globals" },
             { label: "Diagnostic Codes", slug: "reference/diagnostics" },
-            { label: "AST Schemas", autogenerate: { directory: "reference/schemas" } },
+            {
+              label: "AST Schemas",
+              autogenerate: { directory: "reference/schemas" },
+            },
           ],
         },
       ],
