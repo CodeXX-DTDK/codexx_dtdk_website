@@ -1,4 +1,5 @@
 import type { APIRoute } from 'astro'
+import { rateLimit, clientIp } from '../../lib/rate-limit'
 
 export const prerender = false
 
@@ -6,6 +7,16 @@ export const prerender = false
 // process.env at runtime. Read both as a safety net.
 const env = (k: string): string | undefined =>
   (import.meta.env as Record<string, string | undefined>)[k] ?? process.env[k]
+
+// Two-tier rate limit:
+//   per-ip  — 30 validations/min/IP   (deters distributed brute force from
+//             a single host and burns less Keygen quota)
+//   per-key — 10 validations/min/key  (deters distributed enumeration on a
+//             single guessed key, even from many IPs)
+const PER_IP_LIMIT = 30
+const PER_IP_WINDOW_SEC = 60
+const PER_KEY_LIMIT = 10
+const PER_KEY_WINDOW_SEC = 60
 
 // Validates a license key against Keygen without machine registration.
 // Returns tier + features for display on the /activate page.
@@ -20,6 +31,27 @@ export const POST: APIRoute = async ({ request }) => {
   }
 
   if (!key) return json({ error: 'key required' }, 400)
+
+  const ip = clientIp(request.headers)
+  const ipBucket = await rateLimit({
+    bucket: 'activate:ip', id: ip,
+    limit: PER_IP_LIMIT, windowSec: PER_IP_WINDOW_SEC,
+  })
+  if (!ipBucket.allowed) {
+    return json({ error: 'Too many requests. Please wait a moment and try again.' }, 429)
+  }
+
+  // Per-key bucket uses a hash so we don't store full license keys in Redis.
+  // The key itself is high-entropy, but a key collision in the rate-limit
+  // bucket is harmless — we just want a stable identifier.
+  const keyId = await sha256Hex(key)
+  const keyBucket = await rateLimit({
+    bucket: 'activate:key', id: keyId,
+    limit: PER_KEY_LIMIT, windowSec: PER_KEY_WINDOW_SEC,
+  })
+  if (!keyBucket.allowed) {
+    return json({ error: 'Too many requests. Please wait a moment and try again.' }, 429)
+  }
 
   const accountId = env('KEYGEN_ACCOUNT_ID')
   if (!accountId) return json({ error: 'KEYGEN_ACCOUNT_ID not set' }, 500)
@@ -65,12 +97,18 @@ export const POST: APIRoute = async ({ request }) => {
   const attrs = body.data?.attributes ?? {}
   const md = attrs.metadata ?? {}
 
+  // NOTE: deliberately do NOT return seat.email — turns a leaked key into an
+  // email-discovery oracle. The /activate page only needs tier + features.
   return json({
     key,
     tier: md.tier ?? 'community',
-    email: md.seat?.email ?? '',
     features: md.features ?? {},
   })
+}
+
+async function sha256Hex(input: string): Promise<string> {
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(input))
+  return [...new Uint8Array(buf)].map(b => b.toString(16).padStart(2, '0')).join('')
 }
 
 function json(data: unknown, status = 200): Response {

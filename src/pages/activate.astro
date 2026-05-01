@@ -95,11 +95,6 @@ const prefillKey = Astro.url.searchParams.get('key') ?? ''
       gap: var(--page-space-3);
       margin-bottom: var(--page-space-6);
     }
-    .result-email {
-      color: var(--page-text-muted);
-      font-size: var(--page-font-size-xs);
-      margin-left: auto;
-    }
 
     /*CLI command block */
     .cmd-label {
@@ -216,7 +211,6 @@ const prefillKey = Astro.url.searchParams.get('key') ?? ''
     <div id="result" role="region" aria-label="License details">
       <div class="result-header">
         <span id="tier-badge" class="page-badge page-badge-default"></span>
-        <span id="result-email" class="result-email"></span>
       </div>
 
       <p class="cmd-label">Run this on each machine you want to activate</p>
@@ -242,7 +236,6 @@ const prefillKey = Astro.url.searchParams.get('key') ?? ''
     const errorMsg = document.getElementById('error-msg')!
     const result = document.getElementById('result')!
     const tierBadge = document.getElementById('tier-badge')!
-    const resultEmail = document.getElementById('result-email')!
     const cmdText = document.getElementById('cmd-text')!
     const copyBtn = document.getElementById('copy-btn') as HTMLButtonElement
     const featuresGrid = document.getElementById('features-grid')!
@@ -275,7 +268,6 @@ const prefillKey = Astro.url.searchParams.get('key') ?? ''
       tierBadge.className = tier === 'professional' || tier === 'team'
         ? 'page-badge page-badge-primary'
         : 'page-badge page-badge-default'
-      resultEmail.textContent = data.email ?? ''
       cmdText.textContent = `codegen license activate ${data.key}`
       featuresGrid.innerHTML = Object.entries(FEATURE_LABELS)
         .map(([key, label]) => {

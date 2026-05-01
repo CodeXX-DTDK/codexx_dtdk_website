@@ -1,4 +1,6 @@
 import type { APIRoute } from 'astro'
+import { rateLimit, clientIp } from '../../lib/rate-limit'
+import { sendPortalLinkEmail } from '../../lib/email'
 
 export const prerender = false
 
@@ -7,24 +9,18 @@ export const prerender = false
 const env = (k: string): string | undefined =>
   (import.meta.env as Record<string, string | undefined>)[k] ?? process.env[k]
 
-// In-memory rate limit: one portal-link request per email per 60s.
-// TODO: migrate to Vercel KV / Upstash so the limit holds across function instances.
-const RATE_WINDOW_MS = 60_000
-const recentRequests = new Map<string, number>()
+// Redact PII so we don't leak full emails into logs that may be screenshotted
+// or shared in incident postmortems.
+const redact = (e: string) => e.replace(/(.{2}).*(@.*)/, '$1***$2')
 
-function rateLimited(email: string): boolean {
-  const now = Date.now()
-  const last = recentRequests.get(email)
-  if (last && now - last < RATE_WINDOW_MS) return true
-  recentRequests.set(email, now)
-  // Opportunistic cleanup so the map doesn't grow unbounded on a hot lambda.
-  if (recentRequests.size > 1024) {
-    for (const [k, t] of recentRequests) {
-      if (now - t > RATE_WINDOW_MS) recentRequests.delete(k)
-    }
-  }
-  return false
-}
+// Two-tier rate limit:
+//   per-email — one portal-link per email per 60s   (legitimate users)
+//   per-ip    — at most 30 portal-link calls/min/IP (deters scrapers spraying
+//               many emails to enumerate Polar customers via timing).
+const PER_EMAIL_LIMIT = 1
+const PER_EMAIL_WINDOW_SEC = 60
+const PER_IP_LIMIT = 30
+const PER_IP_WINDOW_SEC = 60
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
@@ -45,7 +41,18 @@ export const POST: APIRoute = async ({ request }) => {
   // whether the email matched a Polar customer or hit the rate limit.
   const ok = () => json({ ok: true })
 
-  if (rateLimited(email)) return ok()
+  const ip = clientIp(request.headers)
+  const ipBucket = await rateLimit({
+    bucket: 'portal-link:ip', id: ip,
+    limit: PER_IP_LIMIT, windowSec: PER_IP_WINDOW_SEC,
+  })
+  if (!ipBucket.allowed) return ok()
+
+  const emailBucket = await rateLimit({
+    bucket: 'portal-link:email', id: email,
+    limit: PER_EMAIL_LIMIT, windowSec: PER_EMAIL_WINDOW_SEC,
+  })
+  if (!emailBucket.allowed) return ok()
 
   const token = env('POLAR_ACCESS_TOKEN')
   if (!token) {
@@ -77,7 +84,7 @@ export const POST: APIRoute = async ({ request }) => {
   }
 
   if (!customerId) {
-    console.log(`[portal-link] no Polar customer for ${email} — silent ok`)
+    console.log(`[portal-link] no Polar customer for ${redact(email)} — silent ok`)
     return ok()
   }
 
@@ -106,9 +113,8 @@ export const POST: APIRoute = async ({ request }) => {
   }
 
   try {
-    const { sendPortalLinkEmail } = await import('../../lib/email')
     await sendPortalLinkEmail({ to: email, url: portalUrl, expiresAt })
-    console.log(`[portal-link] portal email sent to ${email}`)
+    console.log(`[portal-link] portal email sent to ${redact(email)}`)
   } catch (err) {
     console.error('[portal-link] email send failed (non-fatal):', err)
   }
