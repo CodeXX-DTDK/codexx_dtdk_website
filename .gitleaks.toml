@@ -43,3 +43,52 @@ id = "generic-token"
 regex = '''(?i)(?:key|token|secret|auth|pwd|password|pass)\s*[:=]\s*["']([0-9a-zA-Z-_]{16,128})["']'''
 entropy = 3.5
 secretGroup = 1
+
+# ── Codex licensing-service tokens ────────────────────────────────────────────
+# These match anywhere in the file (incl. comments / docs), so leaks like the
+# `.env.example` "sandbox: env-…v3" comments cannot slip past the assignment-
+# anchored generic-token rule.
+
+[[rules]]
+description = "Keygen Environment Token (env-…v3)"
+id = "keygen-env-token"
+regex = '''env-[a-f0-9]{64}v3'''
+keywords = ["env-"]
+
+[[rules]]
+description = "Keygen Admin / Product Token (admi-… / prod-…)"
+id = "keygen-admin-token"
+regex = '''(admi|prod)-[a-f0-9]{64}v3'''
+keywords = ["admi-", "prod-"]
+
+[[rules]]
+description = "Polar Organization Access Token (polar_oat_…)"
+id = "polar-oat"
+regex = '''polar_oat_[A-Za-z0-9_-]{16,}'''
+keywords = ["polar_oat_"]
+
+[[rules]]
+description = "Polar Webhook Signing Secret (polar_whs_…)"
+id = "polar-whs"
+regex = '''polar_whs_[A-Za-z0-9_-]{16,}'''
+keywords = ["polar_whs_"]
+
+[[rules]]
+description = "Standard Webhooks Signing Secret (whsec_…)"
+id = "standard-webhooks-secret"
+regex = '''whsec_[A-Za-z0-9+/=_-]{20,}'''
+keywords = ["whsec_"]
+
+[[rules]]
+description = "Resend API Key (re_…)"
+id = "resend-api-key"
+regex = '''re_[A-Za-z0-9]{20,}'''
+keywords = ["re_"]
+
+[[rules]]
+description = "Vercel Personal / OIDC Token"
+id = "vercel-token"
+# Vercel tokens are 24-char alphanumeric; restrict context so we don't match generic identifiers.
+regex = '''(?i)vercel[_-]?(?:token|api[_-]?key)\s*[:=]\s*["']?([A-Za-z0-9]{24})["']?'''
+secretGroup = 1
+keywords = ["vercel_token", "vercel-token", "vercel_api_key"]
