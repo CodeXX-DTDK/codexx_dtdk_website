@@ -127,6 +127,13 @@ const currentYear = new Date().getFullYear()
       }
       footer a { color: var(--page-text-muted); text-decoration: none; }
       footer a:hover { color: var(--page-text); }
+      footer .footer-line { margin: 0; }
+      footer .footer-credit {
+        margin: 0.5rem 0 0;
+        font-size: var(--page-font-size-xs);
+        font-style: italic;
+        opacity: 0.85;
+      }
     </style>
     <slot name="head" />
   </head>
@@ -150,7 +157,19 @@ const currentYear = new Date().getFullYear()
     <slot />
 
     <footer>
-      <p>© {currentYear} codegen · <a href="/">Docs</a> · <a href="/pricing">Pricing</a> · <a href="/portal">Manage subscription</a> · <a href="/llms-full.txt">llms.txt</a></p>
+      <p class="footer-line">
+        © {currentYear} codegen ·
+        <a href="/">Docs</a> ·
+        <a href="/pricing">Pricing</a> ·
+        <a href="/activate">Activate</a> ·
+        <a href="/portal">Manage subscription</a> ·
+        <a href="/llms-full.txt">llms.txt</a> ·
+        <a href="/trust/no-call-home">Trust</a>
+      </p>
+      <p class="footer-credit">
+        Theme: <a href="https://github.com/pelagornis/page" rel="noopener">Pelagornis Page</a>
+        · Built with <a href="https://starlight.astro.build" rel="noopener">Starlight</a>
+      </p>
     </footer>
   </body>
 </html>

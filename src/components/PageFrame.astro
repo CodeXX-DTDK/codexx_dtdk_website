@@ -1,0 +1,153 @@
+---
+// Override of @pelagornis/page/overrides/PageFrame.astro.
+// Same layout as upstream (header + scroll-wrap + bottom footer, optional chat
+// pane), but the bottom strip renders codegen's own copyright + nav. The
+// upstream theme credit is kept as a small italic line.
+import ChatPane from '@pelagornis/page/components/ChatPane.astro'
+
+const currentYear = new Date().getFullYear()
+
+const chatProvider = (import.meta.env.PUBLIC_DOC_CHAT_PROVIDER ?? 'openai') as
+  | 'openai'
+  | 'claude'
+  | 'gemini'
+const chatModel = import.meta.env.PUBLIC_DOC_CHAT_MODEL
+const showChat = process.env.PAGE_DOC_CHAT_ENABLED === '1'
+const chatBase = (process.env.PAGE_BASE ?? '').replace(/\/$/, '') || ''
+const locale =
+  (Astro.locals.starlightRoute as { locale?: string } | undefined)?.locale ?? 'en'
+---
+
+{
+  showChat ? (
+    <div class="page page-has-chat sl-flex">
+      <div class="page-nav-wrap">
+        <header class="header">
+          <slot name="header" />
+        </header>
+        <div class="page-scroll-wrap">
+          <main class="main-frame">
+            <slot />
+          </main>
+          <footer class="page-footer">
+            <p class="page-footer-line">
+              © {currentYear} codegen ·
+              <a href="/">Docs</a> ·
+              <a href="/pricing">Pricing</a> ·
+              <a href="/activate">Activate</a> ·
+              <a href="/portal">Manage subscription</a> ·
+              <a href="/llms-full.txt">llms.txt</a> ·
+              <a href="/trust/no-call-home">Trust</a>
+            </p>
+            <p class="page-footer-credit">
+              Theme: <a href="https://github.com/pelagornis/page" rel="noopener">Pelagornis Page</a>
+              · Built with <a href="https://starlight.astro.build" rel="noopener">Starlight</a>
+            </p>
+          </footer>
+        </div>
+      </div>
+      <ChatPane
+        basePath={chatBase}
+        provider={chatProvider}
+        model={chatModel}
+        locale={locale}
+      />
+    </div>
+  ) : (
+    <div class="page sl-flex">
+      <header class="header">
+        <slot name="header" />
+      </header>
+      <div class="page-scroll-wrap">
+        <main class="main-frame">
+          <slot />
+        </main>
+        <footer class="page-footer">
+          <p class="page-footer-line">
+            © {currentYear} codegen ·
+            <a href="/">Docs</a> ·
+            <a href="/pricing">Pricing</a> ·
+            <a href="/activate">Activate</a> ·
+            <a href="/portal">Manage subscription</a> ·
+            <a href="/llms-full.txt">llms.txt</a> ·
+            <a href="/trust/no-call-home">Trust</a>
+          </p>
+          <p class="page-footer-credit">
+            Theme: <a href="https://github.com/pelagornis/page" rel="noopener">Pelagornis Page</a>
+            · Built with <a href="https://starlight.astro.build" rel="noopener">Starlight</a>
+          </p>
+        </footer>
+      </div>
+    </div>
+  )
+}
+
+<style>
+  .page { height: 100vh; width: 100%; display: flex; flex-direction: column; overflow: hidden; }
+  .page-has-chat { flex-direction: row; flex-wrap: nowrap; overflow-x: hidden; }
+  .page-nav-wrap {
+    flex: 1 1 auto; min-width: 0; min-height: 0;
+    width: 100%; max-width: 100%;
+    display: flex; flex-direction: column; box-sizing: border-box; overflow: hidden;
+  }
+  :global(body.page-chat-open) .page-nav-wrap { overflow-x: auto; min-width: 0; }
+  @media (min-width: 1025px) {
+    :global(body.page-chat-open) .page-nav-wrap {
+      width: calc(100% - var(--page-chat-pane-width, 360px)) !important;
+      max-width: calc(100% - var(--page-chat-pane-width, 360px)) !important;
+      flex: 0 0 auto;
+    }
+  }
+
+  .page-scroll-wrap {
+    flex: 1 1 auto; min-height: 0; min-width: 0;
+    overflow-y: auto; display: flex; flex-direction: column;
+  }
+
+  .main-frame {
+    width: 100% !important; margin-left: 0 !important; padding-left: 0 !important;
+    flex: 1 1 auto; min-width: 0;
+  }
+
+  @media (max-width: 1024px) {
+    :global(body.page-chat-open) .page-nav-wrap { padding-bottom: 70vh; }
+  }
+
+  .header {
+    position: relative; top: 0; left: 0; z-index: 100;
+    flex-shrink: 0; width: 100%; max-width: 100%; min-width: 0;
+  }
+  @media (min-width: 1025px) {
+    :global(body.page-chat-open) .header {
+      width: calc(100vw - var(--page-chat-pane-width, 360px));
+      max-width: calc(100vw - var(--page-chat-pane-width, 360px));
+    }
+  }
+
+  .page-footer {
+    margin-top: auto;
+    border-top: 1px solid var(--page-border-light, var(--page-border));
+    text-align: center;
+    padding: var(--page-space-8);
+    font-size: var(--page-font-size-sm);
+    color: var(--page-text-muted);
+  }
+  .page-footer a {
+    color: var(--page-text-muted);
+    text-decoration: none;
+  }
+  .page-footer a:hover {
+    color: var(--page-text);
+  }
+  .page-footer-line { margin: 0; }
+  .page-footer-credit {
+    margin: 0.5rem 0 0;
+    font-size: var(--page-font-size-xs);
+    font-style: italic;
+    opacity: 0.85;
+  }
+
+  @media (max-width: 768px) {
+    .page-footer { padding: var(--page-space-6) var(--page-space-4); }
+  }
+</style>

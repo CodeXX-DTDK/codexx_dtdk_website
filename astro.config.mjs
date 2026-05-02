@@ -26,6 +26,7 @@ export default defineConfig({
       ],
       components: {
         SocialIcons: "./src/components/HeaderNav.astro",
+        PageFrame: "./src/components/PageFrame.astro",
       },
       sidebar: [
         // Getting Started
