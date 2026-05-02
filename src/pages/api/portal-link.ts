@@ -41,18 +41,26 @@ export const POST: APIRoute = async ({ request }) => {
   // whether the email matched a Polar customer or hit the rate limit.
   const ok = () => json({ ok: true })
 
+  console.log(`[portal-link] received request for ${redact(email)}`)
+
   const ip = clientIp(request.headers)
   const ipBucket = await rateLimit({
     bucket: 'portal-link:ip', id: ip,
     limit: PER_IP_LIMIT, windowSec: PER_IP_WINDOW_SEC,
   })
-  if (!ipBucket.allowed) return ok()
+  if (!ipBucket.allowed) {
+    console.warn(`[portal-link] IP rate-limited (${ip}) — silent ok`)
+    return ok()
+  }
 
   const emailBucket = await rateLimit({
     bucket: 'portal-link:email', id: email,
     limit: PER_EMAIL_LIMIT, windowSec: PER_EMAIL_WINDOW_SEC,
   })
-  if (!emailBucket.allowed) return ok()
+  if (!emailBucket.allowed) {
+    console.warn(`[portal-link] email rate-limited (${redact(email)}) — silent ok`)
+    return ok()
+  }
 
   const token = env('POLAR_ACCESS_TOKEN')
   if (!token) {
