@@ -38,13 +38,15 @@ Everything in Community, plus:
 
 ### TUI diff viewer
 
-`codegen --dry-run` opens a side-by-side diff of the existing and proposed contents of every output file (and every inline-edit target) before anything is written. You approve or reject the apply step interactively.
+`codegen --dry-run --show-tui` opens a side-by-side FTXUI diff of the existing and proposed contents of every output file (and every inline-edit target) before anything is written. You approve or reject the apply step interactively.
 
 ```sh
-codegen -i ./include -a ToString --dry-run
+codegen -i ./include -a ToString --dry-run --show-tui
 ```
 
-**Today:** enforced. Without the Professional flag set on the cached licence, `--dry-run` emits `E102` and prints the count of would-be files instead of opening the viewer.
+**Today:** enforced. Without the Professional flag on the cached licence, `--show-tui` emits `E102` and prints the count of would-be files instead of opening the viewer.
+
+> Note: plain `--dry-run` (without `--show-tui`) is **available on every tier** — it emits a unified diff (zero context) to stdout. The Professional gate covers only the interactive viewer.
 
 ### VS Code DAP debugger
 

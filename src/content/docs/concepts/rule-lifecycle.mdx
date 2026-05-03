@@ -73,7 +73,7 @@ For each output path:
 4. For C++ outputs: a self-include of the input header (rebased when the output is relocated), followed by the union of `includes` from all contributing entities. When `autoDeduceIncludes: true`, project includes already covered by the input header's transitive include graph are filtered out.
 5. Each entity's `source`, in match order.
 
-Files are written via a temp-file-and-rename pattern. Under `--dry-run`, contents are collected for the TUI diff viewer instead (Professional+; the gate emits `E102` otherwise).
+Files are written via a temp-file-and-rename pattern. Under `--dry-run`, contents are collected and emitted as a unified diff (zero context) to stdout — works on every tier, suitable for CI and LLM pipelines. With `--dry-run --show-tui`, the FTXUI viewer opens instead (Professional+; the gate emits `E102` on Community).
 
 ## Phase 11: Inline edits
 
@@ -91,7 +91,7 @@ Under `--dry-run`, edits are collected (not applied) and shown alongside the ass
 | Handler internal/VM error | Exit 2 (`E006`, fatal). |
 | Preamble error | Exit 1 (`E007`). The whole run aborts. |
 | Inline anchor missing | Plain stderr warning, continue. |
-| License `E102` (e.g. dry-run TUI on Community) | Exit 0 with the count of would-be files; no diff shown. |
+| License `E102` (`--show-tui` on Community) | Exit 0 with the count of would-be files; falls back to a filename list. The default `--dry-run` plain output is unaffected. |
 
 <Alert type="info" title="Key Takeaways">
 - Order: rule load → anchor scan + parse → match → **collect candidates → grouping → handler → preamble** (per output file) → assemble → inline edits.

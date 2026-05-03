@@ -53,7 +53,8 @@ When `--use-workspace` is active, includes and defines from the build-system con
 
 | Flag | Default | Description |
 |---|---|---|
-| `--dry-run` | off | Don't write outputs. With a Professional+ licence, opens the TUI diff viewer; otherwise emits `E102` and prints the count of files that would be affected. |
+| `--dry-run` | off | Don't write outputs. Emits a unified diff (zero context, `--- a/... / +++ b/... / @@`) of every would-be file change to stdout. Available on every licence tier; intended for CI and LLM-driven workflows. |
+| `--show-tui` | off | With `--dry-run`, opens the interactive FTXUI diff viewer instead of printing plain output. Requires a Professional+ licence; on Community tier emits `E102` and falls back to a filename list. |
 | `-v, --verbose` | off | Per-entity progress log. |
 | `-c, --config <path>` | (unused) | Generic profile-config slot inherited from the support CLI; codegen does not currently consume this value. |
 | `-p, --profile <name>` | (unused) | Generic named-profile slot inherited from the support CLI; not currently consumed. |
@@ -121,8 +122,11 @@ codegen -i ./include -a ToString -a MarkdownDocs
 # Build-system integration: pull includes/defines from CMake or workspace YAML
 codegen --use-workspace --workspace-dir . -i src/api.hpp -a TypeScriptTypes
 
-# Dry-run preview (TUI diff viewer with a Professional licence)
+# Dry-run preview (unified diff to stdout — works on every tier, ideal for CI / LLMs)
 codegen -i ./include -a ToString --dry-run
+
+# Interactive TUI diff viewer (Professional+ licence)
+codegen -i ./include -a ToString --dry-run --show-tui
 
 # Manual preprocessor flags + HTTP allowlist override
 codegen -i ./include -a SchemaSync \
