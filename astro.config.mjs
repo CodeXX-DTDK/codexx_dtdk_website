@@ -11,7 +11,11 @@ import starlightVersions from "starlight-versions";
 export default defineConfig({
   site: "https://www.codexx-dtdk.com",
   output: "static",
-  adapter: vercel(),
+  adapter: vercel({
+    webAnalytics: {
+      enabled: true,
+    },
+  }),
   integrations: [
     mermaid({
       theme: "forest",
