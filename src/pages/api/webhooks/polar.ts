@@ -4,6 +4,7 @@ import { buildLicenseMetadata, type Tier } from '../../../lib/licensing/schema'
 import {
   upsertUser,
   findLicenseByOrderId,
+  findLicenseBySubscriptionId,
   createLicense,
   suspendLicense,
   reinstateLicense,
@@ -46,12 +47,27 @@ function verifySignature(
 }
 
 // ── Tier resolution ───────────────────────────────────────────────────────────
+// Astro+Vercel SSR: process.env is authoritative at runtime; import.meta.env
+// is a build-time snapshot that can carry stale or empty values. `||` (not
+// `??`) so empty strings fall through.
 const env = (k: string): string | undefined =>
-  (import.meta.env as Record<string, string | undefined>)[k] ?? process.env[k]
+  process.env[k] || (import.meta.env as Record<string, string | undefined>)[k] || undefined
 
 function productToTier(productId: string): Tier {
-  if (productId === env('POLAR_PRODUCT_ID_PROFESSIONAL')) return 'professional'
-  if (productId === env('POLAR_PRODUCT_ID_TEAM')) return 'team'
+  if (
+    productId === env('POLAR_PRODUCT_ID_PROFESSIONAL_MONTHLY') ||
+    productId === env('POLAR_PRODUCT_ID_PROFESSIONAL_YEARLY')
+  ) {
+    return 'professional'
+  }
+  if (
+    productId === env('POLAR_PRODUCT_ID_TEAM_MONTHLY') ||
+    productId === env('POLAR_PRODUCT_ID_TEAM_YEARLY')
+  ) {
+    return 'team'
+  }
+  // Community product ID falls through here; the explicit equality check is
+  // kept so unknown IDs still map to community (least-privilege default).
   return 'community'
 }
 
@@ -67,18 +83,26 @@ function policyIdForTier(tier: Tier): string {
 }
 
 // ── Handlers ─────────────────────────────────────────────────────────────────
-async function handleOrderPaid(order: any): Promise<void> {
-  const productId: string =
-    order.product?.id ?? order.product_id ?? order.items?.[0]?.product_id ?? ''
-  const email: string = order.customer?.email ?? order.billing_email ?? ''
-  const polarOrderId: string = order.id
+// Shared provisioning path. Caller passes whatever ids it has; we dedupe by
+// subscriptionId first (renewals/conversions emit a new orderId per cycle),
+// then by orderId (one-time orders without a subscription).
+async function provisionLicense(params: {
+  productId: string
+  email: string
+  polarOrderId: string
+  polarSubscriptionId: string | null
+  interval: 'month' | 'year' | null
+  trialEnd: string | null
+}): Promise<void> {
+  const { productId, email, polarOrderId, polarSubscriptionId, interval, trialEnd } = params
+  if (!email) throw new Error('provisionLicense: missing customer email')
 
-  if (!email) throw new Error('order.paid: missing customer email')
-
-  // Idempotency guard
-  const existing = await findLicenseByOrderId(polarOrderId)
+  // Idempotency: subscription-first, fall back to order
+  const existing =
+    (polarSubscriptionId && (await findLicenseBySubscriptionId(polarSubscriptionId))) ||
+    (await findLicenseByOrderId(polarOrderId))
   if (existing) {
-    console.log(`[polar-webhook] order ${polarOrderId} already provisioned → ${existing.key}`)
+    console.log(`[polar-webhook] license already exists for sub=${polarSubscriptionId ?? '-'} order=${polarOrderId} → ${existing.key}`)
     return
   }
 
@@ -90,9 +114,10 @@ async function handleOrderPaid(order: any): Promise<void> {
     email,
     orgId: null,
     polarOrderId,
+    polarSubscriptionId,
     polarProductId: productId,
-    interval: order.subscription?.recurringInterval ?? null,
-    trialEnd: null,
+    interval,
+    trialEnd,
   })
 
   const license = await createLicense({
@@ -102,20 +127,77 @@ async function handleOrderPaid(order: any): Promise<void> {
     maxMachines: metadata.limits.maxMachines,
   })
 
-  console.log(`[polar-webhook] provisioned ${tier} license ${license.key} for ${email}`)
+  console.log(`[polar-webhook] provisioned ${tier} license ${license.key} for ${email}${trialEnd ? ` (trial → ${trialEnd})` : ''}`)
   // Must await — Vercel lambda terminates on response, killing in-flight fetches.
-  // If Resend errors, log but don't fail the webhook (license already exists).
   try {
-    await sendActivationEmail({ to: email, key: license.key, tier })
+    await sendActivationEmail({ to: email, key: license.key, tier, trialEnd })
     console.log(`[polar-webhook] activation email sent to ${email}`)
   } catch (err) {
     console.error('[polar-webhook] activation email failed (non-fatal):', err)
   }
 }
 
+async function handleSubscriptionCreated(sub: any): Promise<void> {
+  // Trial-start (status='trialing') or paid subscription start. Either way we
+  // provision the license here so the user can activate immediately; trialing
+  // subs carry a `current_period_end` we treat as the trial end date.
+  const productId: string =
+    sub.product?.id ?? sub.product_id ?? sub.items?.[0]?.product_id ?? ''
+  const email: string =
+    sub.customer?.email ?? sub.user?.email ?? sub.billing_email ?? ''
+  const polarSubscriptionId: string = sub.id
+  // Best-effort: subscription.created may not carry an order ref. Use sub.id as
+  // a stable placeholder so by-order lookups still work for legacy paths.
+  const polarOrderId: string =
+    sub.order_id ?? sub.orderId ?? sub.latest_order_id ?? sub.id
+  const interval: 'month' | 'year' | null =
+    sub.recurring_interval ?? sub.recurringInterval ?? null
+  const isTrialing = sub.status === 'trialing'
+  const trialEnd: string | null = isTrialing
+    ? sub.trial_ends_at ?? sub.trialEndsAt ?? sub.current_period_end ?? null
+    : null
+
+  await provisionLicense({
+    productId,
+    email,
+    polarOrderId,
+    polarSubscriptionId,
+    interval,
+    trialEnd,
+  })
+}
+
+async function handleOrderPaid(order: any): Promise<void> {
+  // Renewal or trial conversion: provisionLicense dedupes by subscriptionId,
+  // so this is a no-op when the license was already created at subscription.created.
+  // Genuine first-time provisioning still works (one-time orders or webhooks
+  // arriving out of order).
+  const productId: string =
+    order.product?.id ?? order.product_id ?? order.items?.[0]?.product_id ?? ''
+  const email: string = order.customer?.email ?? order.billing_email ?? ''
+  const polarOrderId: string = order.id
+  const polarSubscriptionId: string | null =
+    order.subscription?.id ?? order.subscription_id ?? null
+  const interval: 'month' | 'year' | null =
+    order.subscription?.recurringInterval ?? order.subscription?.recurring_interval ?? null
+
+  await provisionLicense({
+    productId,
+    email,
+    polarOrderId,
+    polarSubscriptionId,
+    interval,
+    trialEnd: null,
+  })
+}
+
 async function handleOrderRefunded(order: any): Promise<void> {
   const polarOrderId: string = order.id
-  const license = await findLicenseByOrderId(polarOrderId)
+  const polarSubscriptionId: string | null =
+    order.subscription?.id ?? order.subscription_id ?? null
+  const license =
+    (polarSubscriptionId && (await findLicenseBySubscriptionId(polarSubscriptionId))) ||
+    (await findLicenseByOrderId(polarOrderId))
   if (!license) {
     console.warn(`[polar-webhook] order.refunded: no license found for order ${polarOrderId}`)
     return
@@ -125,10 +207,13 @@ async function handleOrderRefunded(order: any): Promise<void> {
 }
 
 async function handleSubscriptionRevoked(sub: any): Promise<void> {
+  const polarSubscriptionId: string = sub.id
   const polarOrderId: string = sub.order_id ?? sub.orderId ?? sub.id
-  const license = await findLicenseByOrderId(polarOrderId)
+  const license =
+    (await findLicenseBySubscriptionId(polarSubscriptionId)) ||
+    (await findLicenseByOrderId(polarOrderId))
   if (!license) {
-    console.warn(`[polar-webhook] subscription.revoked: no license found for order ${polarOrderId}`)
+    console.warn(`[polar-webhook] subscription.revoked: no license found for sub ${polarSubscriptionId}`)
     return
   }
   await suspendLicense(license.id)
@@ -136,8 +221,11 @@ async function handleSubscriptionRevoked(sub: any): Promise<void> {
 }
 
 async function handleSubscriptionActive(sub: any): Promise<void> {
+  const polarSubscriptionId: string = sub.id
   const polarOrderId: string = sub.order_id ?? sub.orderId ?? sub.id
-  const license = await findLicenseByOrderId(polarOrderId)
+  const license =
+    (await findLicenseBySubscriptionId(polarSubscriptionId)) ||
+    (await findLicenseByOrderId(polarOrderId))
   if (!license) return
   await reinstateLicense(license.id)
   console.log(`[polar-webhook] reinstated license ${license.id}`)
@@ -182,6 +270,11 @@ export const POST: APIRoute = async ({ request }) => {
 
   try {
     switch (event.type) {
+      case 'subscription.created':
+        // Trial start or paid subscription start — provision license here so
+        // trialing users can activate immediately.
+        await handleSubscriptionCreated(event.data)
+        break
       case 'order.paid':
         await handleOrderPaid(event.data)
         break

@@ -5,7 +5,7 @@ export const prerender = false
 // Creates a Polar checkout session for the given tier and returns a redirect.
 // JSON callers receive { url } instead of a redirect.
 export const POST: APIRoute = async ({ request }) => {
-  const accessToken = import.meta.env.POLAR_ACCESS_TOKEN
+  const accessToken = process.env.POLAR_ACCESS_TOKEN || import.meta.env.POLAR_ACCESS_TOKEN
   if (!accessToken) {
     return new Response(JSON.stringify({ error: 'POLAR_ACCESS_TOKEN not set' }), {
       status: 500,
@@ -13,25 +13,44 @@ export const POST: APIRoute = async ({ request }) => {
     })
   }
 
-  // Accept both JSON { tier } and HTML form submissions.
+  // Accept both JSON { tier, interval } and HTML form submissions.
   const contentType = request.headers.get('content-type') ?? ''
   let tier: string
+  let interval: string
   if (contentType.includes('application/json')) {
-    const body = (await request.json()) as { tier?: string }
+    const body = (await request.json()) as { tier?: string; interval?: string }
     tier = body.tier ?? 'professional'
+    interval = body.interval ?? 'month'
   } else {
     const formData = await request.formData()
     tier = (formData.get('tier') as string) ?? 'professional'
+    interval = (formData.get('interval') as string) ?? 'month'
   }
 
+  if (tier !== 'professional' && tier !== 'team') {
+    return new Response(
+      JSON.stringify({ error: `unsupported tier: ${tier}` }),
+      { status: 400, headers: { 'Content-Type': 'application/json' } },
+    )
+  }
+  if (interval !== 'month' && interval !== 'year') {
+    return new Response(
+      JSON.stringify({ error: `unsupported interval: ${interval}` }),
+      { status: 400, headers: { 'Content-Type': 'application/json' } },
+    )
+  }
+
+  const envKey = `POLAR_PRODUCT_ID_${tier.toUpperCase()}_${interval === 'year' ? 'YEARLY' : 'MONTHLY'}`
+  // process.env first — import.meta.env can carry stale/empty build-time values
+  // on Vercel server runtime, and Vite cannot statically replace dynamic keys.
   const productId =
-    tier === 'team'
-      ? import.meta.env.POLAR_PRODUCT_ID_TEAM
-      : import.meta.env.POLAR_PRODUCT_ID_PROFESSIONAL
+    process.env[envKey] ||
+    (import.meta.env as Record<string, string | undefined>)[envKey] ||
+    undefined
 
   if (!productId) {
     return new Response(
-      JSON.stringify({ error: `POLAR_PRODUCT_ID_${tier.toUpperCase()} not set` }),
+      JSON.stringify({ error: `${envKey} not set` }),
       { status: 500, headers: { 'Content-Type': 'application/json' } },
     )
   }
@@ -39,8 +58,14 @@ export const POST: APIRoute = async ({ request }) => {
   const origin = new URL(request.url).origin
   const successUrl = `${origin}/activate?success=1`
 
+  // Polar API base — sandbox vs production. Defaults to production for back-compat.
+  const polarApiBase =
+    process.env.POLAR_API_BASE ||
+    import.meta.env.POLAR_API_BASE ||
+    'https://api.polar.sh'
+
   // Polar checkout session creation — https://docs.polar.sh/api/reference
-  const res = await fetch('https://api.polar.sh/v1/checkouts/', {
+  const res = await fetch(`${polarApiBase}/v1/checkouts/`, {
     method: 'POST',
     headers: {
       Authorization: `Bearer ${accessToken}`,

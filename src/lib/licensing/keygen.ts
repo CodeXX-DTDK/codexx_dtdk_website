@@ -1,7 +1,9 @@
-// Astro+Vercel SSR: env vars may only be injected via process.env at runtime
-// (especially ones added after the first build). Read both as a safety net.
+// Astro+Vercel SSR: process.env is authoritative at runtime. import.meta.env
+// is a build-time snapshot and can carry stale or empty values if a variable
+// changed after the bundle was produced. Use `||` (not `??`) so an empty
+// string in either source falls through rather than shadowing the other.
 const env = (k: string): string | undefined =>
-  (import.meta.env as Record<string, string | undefined>)[k] ?? process.env[k]
+  process.env[k] || (import.meta.env as Record<string, string | undefined>)[k] || undefined
 
 const BASE = () =>
   `${env('KEYGEN_API_BASE') ?? 'https://api.keygen.sh'}/v1/accounts/${env('KEYGEN_ACCOUNT_ID')}`
@@ -83,6 +85,17 @@ export async function findLicenseByOrderId(
   // Keygen metadata filter: ?metadata[key]=value
   const list = await apiFetch<any>(
     `/licenses?metadata[polarOrderId]=${encodeURIComponent(polarOrderId)}&limit=1`,
+  )
+  if (!list.data?.length) return null
+  const l = list.data[0]
+  return { id: l.id as string, key: l.attributes.key as string }
+}
+
+export async function findLicenseBySubscriptionId(
+  polarSubscriptionId: string,
+): Promise<KeygenLicense | null> {
+  const list = await apiFetch<any>(
+    `/licenses?metadata[polarSubscriptionId]=${encodeURIComponent(polarSubscriptionId)}&limit=1`,
   )
   if (!list.data?.length) return null
   const l = list.data[0]

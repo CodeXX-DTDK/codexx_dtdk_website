@@ -38,7 +38,10 @@ const SECRET      = process.env.POLAR_WEBHOOK_SECRET
   ?? 'whsec_dGVzdHNlY3JldGZvcmxvY2FsZGV2dGVzdGluZw=='
 
 const binaryFlagIdx = process.argv.indexOf('--binary')
-const groupFlag     = process.argv[process.argv.indexOf('--group') + 1]?.toUpperCase()
+const groupFlagIdx  = process.argv.indexOf('--group')
+const groupFlag     = groupFlagIdx !== -1
+  ? process.argv[groupFlagIdx + 1]?.toUpperCase()
+  : undefined
 
 const BINARY_CANDIDATES = [
   binaryFlagIdx !== -1 ? process.argv[binaryFlagIdx + 1] : null,
@@ -91,7 +94,9 @@ function signedWebhookRequest(event, secretOverride) {
   const body = JSON.stringify(event)
   const id   = `msg_${randomUUID()}`
   const ts   = String(Math.floor(Date.now() / 1000))
-  const key  = Buffer.from(sec.replace(/^(?:whsec_|polar_whs_)/, ''), 'base64')
+  // Mirror the handler: HMAC key is the raw UTF-8 of the full secret (incl. prefix)
+  // — Polar `polar_whs_` convention, not standardwebhooks base64-after-strip.
+  const key  = Buffer.from(sec, 'utf8')
   const sig  = `v1,${createHmac('sha256', key).update(`${id}.${ts}.${body}`).digest('base64')}`
   return fetch(WEBHOOK_URL, {
     method: 'POST',
@@ -114,6 +119,41 @@ const orderPaid = (orderId, productId = 'prod_professional_mock') => ({
     subscription: { recurringInterval: 'month' },
   },
 })
+
+const subscriptionCreatedTrialing = (subId, productId = 'prod_professional_mock', trialDays = 14) => ({
+  type: 'subscription.created',
+  data: {
+    id: subId,
+    status: 'trialing',
+    trial_ends_at: new Date(Date.now() + trialDays * 86400_000).toISOString(),
+    product: { id: productId },
+    customer: { email: `test+${subId}@example.com` },
+    recurring_interval: 'month',
+  },
+})
+
+const orderPaidLinkedToSub = (orderId, subId, productId = 'prod_professional_mock') => ({
+  type: 'order.paid',
+  data: {
+    id: orderId,
+    product: { id: productId },
+    customer: { email: `test+${orderId}@example.com` },
+    subscription: { id: subId, recurringInterval: 'month' },
+  },
+})
+
+// Inspect bodies of license-create POSTs to verify metadata propagation.
+async function wmFindLicenseCreates() {
+  const res = await fetch(`${ADMIN}/requests/find`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ method: 'POST', urlPattern: '/v1/accounts/.*/licenses$' }),
+  })
+  const json = await res.json()
+  return (json.requests ?? []).map(r => {
+    try { return JSON.parse(r.body) } catch { return null }
+  }).filter(Boolean)
+}
 
 // ── WireMock admin helpers ────────────────────────────────────────────────────
 
@@ -296,13 +336,79 @@ async function runWebhookTests() {
              `status=${res.status} "${text}", reinstate calls=${reinstates}`)
   }
 
-  // W07 — unknown event type → 200 (acknowledged, not handled)
+  // W07 — subscription.created (trialing) → 200 + license created with trialEnd
+  {
+    await wmResetJournal()
+    const subId = `sub_w07_${Date.now()}`
+    const res  = await signedWebhookRequest(subscriptionCreatedTrialing(subId))
+    const text = await res.text()
+    const creates = await wmCount({ method: 'POST', urlPattern: '/v1/accounts/.*/licenses$' })
+    const bodies  = await wmFindLicenseCreates()
+    const meta    = bodies[0]?.data?.attributes?.metadata ?? {}
+    const okMeta  = meta.tier === 'professional'
+                 && typeof meta.subscription?.trialEnd === 'string'
+                 && meta.polarSubscriptionId === subId
+    res.status === 200 && creates >= 1 && okMeta
+      ? pass('W07', 'subscription.created trialing → 200, license created with trialEnd + polarSubscriptionId')
+      : fail('W07', 'subscription.created trialing → 200, license created with trialEnd + polarSubscriptionId',
+             `status=${res.status} "${text}", creates=${creates}, meta=${JSON.stringify(meta)}`)
+  }
+
+  // W08 — subscription.created idempotency by polarSubscriptionId → no duplicate
+  {
+    const subId = 'sub_w08_idem'
+    const sid  = await wmAddStub(licenseExistsStub(subId))
+    await wmResetJournal()
+    const res  = await signedWebhookRequest(subscriptionCreatedTrialing(subId))
+    const text = await res.text()
+    const creates = await wmCount({ method: 'POST', urlPattern: '/v1/accounts/.*/licenses$' })
+    await wmRemoveStub(sid)
+    res.status === 200 && creates === 0
+      ? pass('W08', 'subscription.created idempotency (sub-id dedup) → no duplicate')
+      : fail('W08', 'subscription.created idempotency (sub-id dedup) → no duplicate',
+             `status=${res.status} "${text}", createLicense calls=${creates} (expected 0)`)
+  }
+
+  // W09 — order.paid carrying subscription_id of existing license → no duplicate
+  // (trial → paid conversion path: the license was already created at trial start)
+  {
+    const subId   = 'sub_w09_existing'
+    const orderId = `ord_w09_${Date.now()}`
+    const sid     = await wmAddStub(licenseExistsStub(subId))
+    await wmResetJournal()
+    const res  = await signedWebhookRequest(orderPaidLinkedToSub(orderId, subId))
+    const text = await res.text()
+    const creates = await wmCount({ method: 'POST', urlPattern: '/v1/accounts/.*/licenses$' })
+    await wmRemoveStub(sid)
+    res.status === 200 && creates === 0
+      ? pass('W09', 'order.paid for existing subscription → no duplicate (sub-id dedup)')
+      : fail('W09', 'order.paid for existing subscription → no duplicate (sub-id dedup)',
+             `status=${res.status} "${text}", createLicense calls=${creates} (expected 0)`)
+  }
+
+  // W10 — subscription.revoked → suspend by sub-id lookup (no orderId in payload)
+  {
+    const subId = 'sub_w10_revoke', licId = 'lic_mock_w10'
+    const sid   = await wmAddStub(licenseExistsStub(subId, licId))
+    await wmResetJournal()
+    const res  = await signedWebhookRequest({ type: 'subscription.revoked', data: { id: subId } })
+    const text = await res.text()
+    const suspends = await wmCount({ method: 'POST',
+      urlPattern: `/v1/accounts/.*/licenses/${licId}/actions/suspend` })
+    await wmRemoveStub(sid)
+    res.status === 200 && suspends >= 1
+      ? pass('W10', 'subscription.revoked (sub-id lookup) → 200, license suspended')
+      : fail('W10', 'subscription.revoked (sub-id lookup) → 200, license suspended',
+             `status=${res.status} "${text}", suspend calls=${suspends}`)
+  }
+
+  // W11 — unknown event type → 200 (acknowledged, not handled)
   {
     const res  = await signedWebhookRequest({ type: 'checkout.completed', data: { id: 'chk_test' } })
     const text = await res.text()
     res.status === 200
-      ? pass('W07', 'unknown event type → 200 (acknowledged, not handled)')
-      : fail('W07', 'unknown event type → 200 (acknowledged, not handled)',
+      ? pass('W11', 'unknown event type → 200 (acknowledged, not handled)')
+      : fail('W11', 'unknown event type → 200 (acknowledged, not handled)',
              `got ${res.status} "${text}"`)
   }
 }

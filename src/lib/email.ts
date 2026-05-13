@@ -5,19 +5,33 @@ const FROM = 'Codegen <noreply@codexx-dtdk.com>'
 const SITE = 'https://www.codexx-dtdk.com'
 
 function resend() {
-  return new Resend(import.meta.env.RESEND_API_KEY)
+  return new Resend(process.env.RESEND_API_KEY || import.meta.env.RESEND_API_KEY)
 }
 
 export async function sendActivationEmail(params: {
   to: string
   key: string
   tier: Tier
+  trialEnd?: string | null
 }): Promise<void> {
-  const { to, key, tier } = params
+  const { to, key, tier, trialEnd } = params
   const tierLabel = tier === 'team' ? 'Team' : tier === 'professional' ? 'Professional' : 'Community'
   const machinesNote = tier === 'community' ? 'unlimited machines' : 'up to 5 machines'
   const activateUrl = `${SITE}/activate?key=${encodeURIComponent(key)}`
   const cmd = `codegen license activate ${key}`
+
+  // Trial-aware copy. trialEnd is an ISO-8601 string from Polar; render it as
+  // a plain calendar date in the user's locale-agnostic format (YYYY-MM-DD).
+  const trialDate = trialEnd ? trialEnd.slice(0, 10) : null
+  const trialBanner = trialDate
+    ? `<div style="background:#0d0d0d;border:1px solid #2a2a2a;border-left:3px solid #a8e6cf;border-radius:6px;padding:12px 16px;margin:0 0 24px;font-size:13px;line-height:1.55;color:#cfd6cf">
+        <strong style="color:#a8e6cf">Your free trial has started.</strong> Full ${tierLabel} access through <strong style="color:#fff">${trialDate}</strong>. Your card is charged when the trial ends; cancel anytime before then for no charge.
+      </div>`
+    : ''
+  const headline = trialDate ? 'Your trial is ready' : 'Your license is ready'
+  const subject = trialDate
+    ? `Your Codegen ${tierLabel} trial has started`
+    : `Your Codegen ${tierLabel} license key`
 
   // Note: HTML email cannot run JS, so true click-to-copy buttons don't work
   // cross-client. Instead the CTA links to /activate?key=… on the website
@@ -26,7 +40,7 @@ export async function sendActivationEmail(params: {
   const { error } = await resend().emails.send({
     from: FROM,
     to,
-    subject: `Your Codegen ${tierLabel} license key`,
+    subject,
     html: `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -56,7 +70,7 @@ export async function sendActivationEmail(params: {
 <body style="margin:0;padding:0;background:#0f0f0f;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif;color:#e0e0e0">
   <!-- preheader (hidden) -->
   <div style="display:none;max-height:0;overflow:hidden;opacity:0;color:transparent">
-    Your ${tierLabel} license key is ready. Activate on ${machinesNote}.
+    ${trialDate ? `Your ${tierLabel} trial has started — full access through ${trialDate}.` : `Your ${tierLabel} license key is ready. Activate on ${machinesNote}.`}
   </div>
 
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#0f0f0f">
@@ -71,10 +85,12 @@ export async function sendActivationEmail(params: {
 
         <!-- body -->
         <tr><td class="px py" style="padding:32px">
-          <h1 class="h1" style="margin:0 0 6px;font-size:22px;font-weight:700;color:#fff;letter-spacing:-0.02em">Your license is ready</h1>
+          <h1 class="h1" style="margin:0 0 6px;font-size:22px;font-weight:700;color:#fff;letter-spacing:-0.02em">${headline}</h1>
           <p style="margin:0 0 24px;font-size:14px;line-height:1.6;color:#999">
             Tap and hold the key below to copy on mobile, or use the activate button to open it on the website with one-click copy.
           </p>
+
+          ${trialBanner}
 
           <p style="margin:0 0 8px;font-size:12px;color:#888;text-transform:uppercase;letter-spacing:0.06em">License key</p>
           <div class="key-block" style="background:#0d0d0d;border:1px solid #2a2a2a;border-radius:8px;padding:16px 20px;margin-bottom:20px;font-family:ui-monospace,'SF Mono',Menlo,Consolas,monospace;font-size:13px;line-height:1.5;color:#a8e6cf;word-break:break-all;-webkit-user-select:all;user-select:all">${key}</div>

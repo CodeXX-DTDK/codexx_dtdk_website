@@ -18,7 +18,6 @@ export interface LicenseSeat {
 }
 
 export interface LicenseSubscription {
-  polarOrderId: string
   polarProductId: string
   interval: 'month' | 'year' | null
   trialEnd: string | null
@@ -28,10 +27,15 @@ export interface LicenseLimits {
   maxMachines: number | null
 }
 
-// Root schema — lives in Keygen license.metadata and in the cached .lic file
+// Root schema — lives in Keygen license.metadata and in the cached .lic file.
+// `polarOrderId` and `polarSubscriptionId` are intentionally top-level so they
+// can be queried via Keygen's metadata filter (`?metadata[polarOrderId]=…`),
+// which is flat-key only — it does not traverse nested objects.
 export interface LicenseMetadata {
   schema: 1
   tier: Tier
+  polarOrderId: string
+  polarSubscriptionId: string | null
   features: LicenseFeatures
   seat: LicenseSeat
   subscription: LicenseSubscription
@@ -83,6 +87,7 @@ export function buildLicenseMetadata(params: {
   email: string
   orgId: string | null
   polarOrderId: string
+  polarSubscriptionId: string | null
   polarProductId: string
   interval: 'month' | 'year' | null
   trialEnd: string | null
@@ -90,10 +95,11 @@ export function buildLicenseMetadata(params: {
   return {
     schema: 1,
     tier: params.tier,
+    polarOrderId: params.polarOrderId,
+    polarSubscriptionId: params.polarSubscriptionId,
     features: FEATURES_BY_TIER[params.tier],
     seat: { userId: params.userId, email: params.email, orgId: params.orgId },
     subscription: {
-      polarOrderId: params.polarOrderId,
       polarProductId: params.polarProductId,
       interval: params.interval,
       trialEnd: params.trialEnd,
