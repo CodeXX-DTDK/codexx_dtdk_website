@@ -86,6 +86,53 @@ import StandaloneLayout from '../layouts/StandaloneLayout.astro'
       color: var(--page-text);
     }
     .price-period { color: var(--page-text-muted); font-size: 0.9rem; }
+    .price-prefix { color: var(--page-text-muted); font-size: 1rem; font-weight: 600; margin-right: 2px; }
+    .price-secondary { color: var(--page-text-muted); font-size: 0.8rem; margin-top: var(--page-space-1); }
+    .volume-hint {
+      font-size: 0.75rem;
+      color: var(--page-text-muted);
+      margin-top: calc(-1 * var(--page-space-2));
+      line-height: 1.5;
+    }
+
+    /* Billing toggle */
+    .billing-toggle {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--page-space-2);
+      margin: 0 auto var(--page-space-8);
+      padding: var(--page-space-1);
+      background: var(--page-bg-secondary);
+      border: 1px solid var(--page-border);
+      border-radius: var(--page-radius-full);
+    }
+    .billing-toggle button {
+      background: transparent;
+      border: none;
+      padding: var(--page-space-2) var(--page-space-5);
+      border-radius: var(--page-radius-full);
+      font-size: 0.875rem;
+      font-weight: 600;
+      color: var(--page-text-muted);
+      cursor: pointer;
+      transition: background 0.15s, color 0.15s;
+    }
+    .billing-toggle button[aria-pressed="true"] {
+      background: var(--page-bg-elevated);
+      color: var(--page-text);
+      box-shadow: var(--page-shadow-sm);
+    }
+    .billing-toggle .save-badge {
+      background: var(--page-success);
+      color: #fff;
+      font-size: 0.65rem;
+      font-weight: 700;
+      padding: 0.1rem 0.4rem;
+      border-radius: var(--page-radius-full);
+      margin-left: var(--page-space-1);
+      letter-spacing: 0.04em;
+    }
+    .billing-toggle-wrap { display: flex; justify-content: center; }
 
     .tier-desc { color: var(--page-text-muted); font-size: 0.875rem; line-height: 1.5; }
 
@@ -208,6 +255,13 @@ import StandaloneLayout from '../layouts/StandaloneLayout.astro'
     <p>Free for open-source projects. Upgrade when you need commercial use, the diff TUI, or team tooling.</p>
   </section>
 
+  <div class="billing-toggle-wrap">
+    <div class="billing-toggle" role="group" aria-label="Billing interval">
+      <button id="toggle-month" aria-pressed="true" data-interval="month">Monthly</button>
+      <button id="toggle-year"  aria-pressed="false" data-interval="year">Yearly <span class="save-badge">SAVE ~20%</span></button>
+    </div>
+  </div>
+
   <div class="tiers">
 
     <!-- Community -->
@@ -217,7 +271,7 @@ import StandaloneLayout from '../layouts/StandaloneLayout.astro'
         <span class="page-badge page-badge-default">Community</span>
       </div>
       <div class="tier-price">
-        <span class="price-amount">$0</span>
+        <span class="price-amount">€0</span>
         <span class="price-period">/ forever</span>
       </div>
       <p class="tier-desc">For open-source projects and personal exploration.</p>
@@ -242,9 +296,10 @@ import StandaloneLayout from '../layouts/StandaloneLayout.astro'
         <span class="page-badge" style="background:var(--blue-500);border-color:var(--blue-500);color:#fff;">Professional</span>
       </div>
       <div class="tier-price">
-        <span class="price-amount">$7</span>
-        <span class="price-period">/ month</span>
+        <span class="price-amount" data-price="pro-month">€12</span>
+        <span class="price-period" data-period="pro-month">/ month</span>
       </div>
+      <p class="price-secondary" data-secondary="pro" style="display:none;">€8.25 / month effective · billed annually</p>
       <p class="tier-desc">For individuals shipping commercial products with codegen.</p>
       <ul class="features-list">
         <li><span class="check">✓</span> Everything in Community</li>
@@ -256,9 +311,9 @@ import StandaloneLayout from '../layouts/StandaloneLayout.astro'
         <li><span class="dash">–</span> CMake integration</li>
       </ul>
       <button class="page-button page-button-lg" id="btn-professional" style="background:var(--blue-500);border-color:var(--blue-500);color:#fff;">
-        Buy Professional
+        Start 14-day free trial
       </button>
-      <p class="tier-note">Billed monthly · cancel anytime</p>
+      <p class="tier-note" data-note="pro-month">14 days free, then billed monthly · cancel anytime</p>
     </article>
 
     <!-- Team -->
@@ -268,9 +323,12 @@ import StandaloneLayout from '../layouts/StandaloneLayout.astro'
         <span class="page-badge page-badge-default">Team</span>
       </div>
       <div class="tier-price">
-        <span class="price-amount">$24</span>
-        <span class="price-period">/ seat / month</span>
+        <span class="price-prefix">from</span>
+        <span class="price-amount" data-price="team-month">€24</span>
+        <span class="price-period" data-period="team-month">/ seat / month</span>
       </div>
+      <p class="price-secondary" data-secondary="team" style="display:none;">€19.17 / seat / month effective · billed annually</p>
+      <p class="volume-hint">Save 15% at 5+ seats, 25% at 20+ seats.</p>
       <p class="tier-desc">For teams that want CMake integration, shared preamble libs, and priority support.</p>
       <ul class="features-list">
         <li><span class="check">✓</span> Everything in Professional</li>
@@ -280,9 +338,9 @@ import StandaloneLayout from '../layouts/StandaloneLayout.astro'
         <li><span class="check">✓</span> Up to 5 machines per seat</li>
       </ul>
       <button class="page-button page-button-default page-button-lg" id="btn-team">
-        Buy Team
+        Start 30-day free trial
       </button>
-      <p class="tier-note">Billed monthly · cancel anytime</p>
+      <p class="tier-note" data-note="team-month">30 days free, then billed monthly · cancel anytime</p>
     </article>
 
   </div>
@@ -327,13 +385,18 @@ import StandaloneLayout from '../layouts/StandaloneLayout.astro'
     </details>
 
     <details>
-      <summary>Can I upgrade or cancel?</summary>
-      <p>Yes — both tiers are billed monthly and can be cancelled at any time. Upgrades take effect immediately. Cancellations run until the end of the billing period.</p>
+      <summary>How does the free trial work?</summary>
+      <p>Professional includes a 14-day free trial; Team includes a 30-day free trial. A card is required at checkout but no charge happens during the trial — cancel before it ends and you're not billed. The trial covers every gated feature of the tier, on every machine you activate.</p>
     </details>
 
     <details>
-      <summary>Do you offer annual pricing or discounts?</summary>
-      <p>Annual billing and team discounts are available — <a href="/contact">contact us</a> and we'll sort you out.</p>
+      <summary>Can I upgrade or cancel?</summary>
+      <p>Yes — monthly plans cancel at any time; annual plans cancel at renewal. Upgrades take effect immediately. Cancelling during a trial costs nothing.</p>
+    </details>
+
+    <details>
+      <summary>Do you offer volume discounts on Team?</summary>
+      <p>Yes — Team is €24 / seat / month at 1–4 seats, €20.40 / seat / month at 5–19 seats (save 15%), and €18 / seat / month at 20+ seats (save 25%). Annual billing stacks ~20% on top. For larger orgs or air-gapped deployments, <a href="/contact?type=enterprise">talk to us</a>.</p>
     </details>
   </section>
 
@@ -348,6 +411,49 @@ import StandaloneLayout from '../layouts/StandaloneLayout.astro'
       setTimeout(() => { errorEl.style.display = 'none' }, 5000)
     }
 
+    // ── Billing-interval toggle ─────────────────────────────────────────────
+    type Interval = 'month' | 'year'
+    let currentInterval: Interval = 'month'
+
+    const PRICES: Record<string, { month: { amount: string; period: string }; year: { amount: string; period: string } }> = {
+      pro:  { month: { amount: '€12', period: '/ month' },          year: { amount: '€99',  period: '/ year' } },
+      team: { month: { amount: '€24', period: '/ seat / month' },   year: { amount: '€230', period: '/ seat / year' } },
+    }
+    const NOTES: Record<Interval, { pro: string; team: string }> = {
+      month: {
+        pro:  '14 days free, then billed monthly · cancel anytime',
+        team: '30 days free, then billed monthly · cancel anytime',
+      },
+      year: {
+        pro:  '14 days free, then €99/year · ~31% off vs monthly',
+        team: '30 days free, then €230/seat/year · ~20% off vs monthly',
+      },
+    }
+
+    function applyInterval(interval: Interval) {
+      currentInterval = interval
+
+      const monthBtn = document.getElementById('toggle-month') as HTMLButtonElement
+      const yearBtn = document.getElementById('toggle-year') as HTMLButtonElement
+      monthBtn.setAttribute('aria-pressed', String(interval === 'month'))
+      yearBtn.setAttribute('aria-pressed',  String(interval === 'year'))
+
+      for (const tier of ['pro', 'team'] as const) {
+        const amount = document.querySelector<HTMLElement>(`[data-price="${tier}-month"]`)
+        const period = document.querySelector<HTMLElement>(`[data-period="${tier}-month"]`)
+        const note   = document.querySelector<HTMLElement>(`[data-note="${tier}-month"]`)
+        const sec    = document.querySelector<HTMLElement>(`[data-secondary="${tier}"]`)
+        if (amount) amount.textContent = PRICES[tier][interval].amount
+        if (period) period.textContent = PRICES[tier][interval].period
+        if (note)   note.textContent   = NOTES[interval][tier]
+        if (sec)    sec.style.display  = interval === 'year' ? 'block' : 'none'
+      }
+    }
+
+    document.getElementById('toggle-month')!.addEventListener('click', () => applyInterval('month'))
+    document.getElementById('toggle-year')!.addEventListener('click',  () => applyInterval('year'))
+
+    // ── Checkout ───────────────────────────────────────────────────────────
     async function handleCheckout(tier: string, btn: HTMLButtonElement) {
       btn.setAttribute('aria-busy', 'true')
       btn.disabled = true
@@ -358,7 +464,7 @@ import StandaloneLayout from '../layouts/StandaloneLayout.astro'
         const res = await fetch('/api/checkout', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ tier }),
+          body: JSON.stringify({ tier, interval: currentInterval }),
         })
         const data = await res.json() as { url?: string; error?: string }
         if (!res.ok || !data.url) throw new Error(data.error ?? 'Checkout failed. Please try again.')

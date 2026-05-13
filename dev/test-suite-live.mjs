@@ -6,12 +6,12 @@
 // (uses a per-run synthetic order ID so it never collides with real orders).
 //
 // Required env:
-//   WEBHOOK_URL                  full URL, e.g. https://www.codexx-dtdk.com/api/webhooks/polar
-//   POLAR_WEBHOOK_SECRET         polar_whs_…  (matches the signing secret on that deployment)
-//   KEYGEN_ACCOUNT_ID            Keygen account UUID
-//   KEYGEN_TOKEN                 env-…  admin/env token for cleanup + status reads
-//   KEYGEN_POLICY_ID_PROFESSIONAL  policy UUID expected on Professional licenses
-//   POLAR_PRODUCT_ID_PROFESSIONAL  product UUID the deployment maps to Professional
+//   WEBHOOK_URL                          full URL, e.g. https://www.codexx-dtdk.com/api/webhooks/polar
+//   POLAR_WEBHOOK_SECRET                 polar_whs_…  (matches the signing secret on that deployment)
+//   KEYGEN_ACCOUNT_ID                    Keygen account UUID
+//   KEYGEN_TOKEN                         env-…  admin/env token for cleanup + status reads
+//   KEYGEN_POLICY_ID_PROFESSIONAL        policy UUID expected on Professional licenses
+//   POLAR_PRODUCT_ID_PROFESSIONAL_MONTHLY  product UUID the deployment maps to Professional/month
 //
 // Optional env:
 //   KEYGEN_API_BASE              default https://api.keygen.sh
@@ -30,7 +30,7 @@ const required = [
   'KEYGEN_ACCOUNT_ID',
   'KEYGEN_TOKEN',
   'KEYGEN_POLICY_ID_PROFESSIONAL',
-  'POLAR_PRODUCT_ID_PROFESSIONAL',
+  'POLAR_PRODUCT_ID_PROFESSIONAL_MONTHLY',
 ]
 const missing = required.filter(k => !process.env[k])
 if (missing.length) {
@@ -44,7 +44,7 @@ const KEYGEN_BASE    = process.env.KEYGEN_API_BASE ?? 'https://api.keygen.sh'
 const KEYGEN_ACCOUNT = process.env.KEYGEN_ACCOUNT_ID
 const KEYGEN_TOKEN   = process.env.KEYGEN_TOKEN
 const POLICY_PRO     = process.env.KEYGEN_POLICY_ID_PROFESSIONAL
-const PRODUCT_PRO    = process.env.POLAR_PRODUCT_ID_PROFESSIONAL
+const PRODUCT_PRO    = process.env.POLAR_PRODUCT_ID_PROFESSIONAL_MONTHLY
 
 const BYPASS         = process.env.VERCEL_PROTECTION_BYPASS ?? ''
 
@@ -52,6 +52,10 @@ const RUN_ID         = randomUUID().slice(0, 8)
 const TEST_EMAIL     = process.env.TEST_EMAIL ?? `e2e+${RUN_ID}@codexx-dtdk.com`
 const ORDER_ID       = `ord_live_${RUN_ID}`
 const SUB_ID         = `sub_live_${RUN_ID}`
+// Trial-flow uses a separate subscription to avoid collision with E02-E05's
+// non-trial order.paid → license flow.
+const TRIAL_SUB_ID   = `sub_trial_${RUN_ID}`
+const TRIAL_ORDER_ID = `ord_trial_${RUN_ID}`
 
 const c = {
   reset: '\x1b[0m', bold: '\x1b[1m', gray: '\x1b[90m',
@@ -106,6 +110,28 @@ const subActive = () => ({
   data: { id: SUB_ID, customer: { email: TEST_EMAIL } },
 })
 
+const subCreatedTrialing = (trialDays = 14) => ({
+  type: 'subscription.created',
+  data: {
+    id: TRIAL_SUB_ID,
+    status: 'trialing',
+    trial_ends_at: new Date(Date.now() + trialDays * 86400_000).toISOString(),
+    product: { id: PRODUCT_PRO },
+    customer: { email: TEST_EMAIL },
+    recurring_interval: 'month',
+  },
+})
+
+const trialOrderPaid = () => ({
+  type: 'order.paid',
+  data: {
+    id: TRIAL_ORDER_ID,
+    product: { id: PRODUCT_PRO },
+    customer: { email: TEST_EMAIL },
+    subscription: { id: TRIAL_SUB_ID, recurringInterval: 'month' },
+  },
+})
+
 // ── Keygen API helpers ───────────────────────────────────────────────────────
 
 const kgHeaders = {
@@ -113,6 +139,8 @@ const kgHeaders = {
   Accept:         'application/vnd.api+json',
   'Content-Type': 'application/vnd.api+json',
   'Keygen-Version': '1.7',
+  // env-scoped tokens (env-…) require this. Match what the webhook handler sends.
+  ...(process.env.KEYGEN_ENVIRONMENT ? { 'Keygen-Environment': process.env.KEYGEN_ENVIRONMENT } : {}),
 }
 
 async function kgGet(path) {
@@ -130,6 +158,16 @@ async function kgDelete(path) {
 // Find license by polarOrderId metadata. Returns null if none yet.
 async function findLicenseByOrder(orderId, { retries = 6, delayMs = 500 } = {}) {
   const path = `/licenses?metadata%5BpolarOrderId%5D=${encodeURIComponent(orderId)}&limit=5`
+  for (let i = 0; i < retries; i++) {
+    const { status, body } = await kgGet(path)
+    if (status === 200 && Array.isArray(body?.data) && body.data.length > 0) return body.data
+    await new Promise(r => setTimeout(r, delayMs))
+  }
+  return null
+}
+
+async function findLicenseBySubscription(subId, { retries = 6, delayMs = 500 } = {}) {
+  const path = `/licenses?metadata%5BpolarSubscriptionId%5D=${encodeURIComponent(subId)}&limit=5`
   for (let i = 0; i < retries; i++) {
     const { status, body } = await kgGet(path)
     if (status === 200 && Array.isArray(body?.data) && body.data.length > 0) return body.data
@@ -229,17 +267,56 @@ async function E06_unknownEventIgnored() {
   } catch (e) { fail(id, label, e.message) }
 }
 
-async function cleanup() {
-  if (!createdLicenseId || process.env.KEEP_LICENSE) return
-  group('Cleanup')
+let trialLicenseId = null
+
+async function E07_subscriptionCreatedTrialingProvisions() {
+  const id = 'E07', label = `subscription.created trialing → license created with trialEnd (subId=${TRIAL_SUB_ID})`
   try {
-    const status = await kgDelete(`/licenses/${createdLicenseId}`)
-    if (status === 204 || status === 200)
-      console.log(`  ${c.green}✓${c.reset} deleted license ${createdLicenseId.slice(0, 8)}…`)
-    else
-      console.log(`  ${c.yellow}!${c.reset} license delete returned ${status} — clean up manually`)
-  } catch (e) {
-    console.log(`  ${c.yellow}!${c.reset} cleanup error: ${e.message}`)
+    const res = await signedWebhookRequest(subCreatedTrialing(14))
+    if (res.status !== 200) return fail(id, label, `webhook returned ${res.status}: ${await res.text()}`)
+    const licenses = await findLicenseBySubscription(TRIAL_SUB_ID)
+    if (!licenses) return fail(id, label, 'no license found by polarSubscriptionId after retries')
+    if (licenses.length !== 1) return fail(id, label, `expected 1 license, got ${licenses.length}`)
+    const lic = licenses[0]
+    if (licensePolicy(lic) !== POLICY_PRO)
+      return fail(id, label, `policy mismatch: got ${licensePolicy(lic)}, expected ${POLICY_PRO}`)
+    const trialEnd = lic.attributes?.metadata?.subscription?.trialEnd
+    if (typeof trialEnd !== 'string' || !trialEnd.length)
+      return fail(id, label, `expected metadata.subscription.trialEnd string, got ${JSON.stringify(trialEnd)}`)
+    trialLicenseId = lic.id
+    ok(id, `${label} (license=${lic.id.slice(0, 8)}…, trialEnd=${trialEnd.slice(0, 10)})`)
+  } catch (e) { fail(id, label, e.message) }
+}
+
+async function E08_orderPaidLinkedToTrialNoDuplicate() {
+  const id = 'E08', label = 'order.paid linked to trialing sub → no duplicate (sub-id dedup)'
+  if (!trialLicenseId) return fail(id, label, 'skipped: E07 did not create a trial license')
+  try {
+    const res = await signedWebhookRequest(trialOrderPaid())
+    if (res.status !== 200) return fail(id, label, `webhook returned ${res.status}: ${await res.text()}`)
+    const licenses = await findLicenseBySubscription(TRIAL_SUB_ID, { retries: 2, delayMs: 300 })
+    if (licenses?.length !== 1) return fail(id, label, `expected 1 license after order.paid, got ${licenses?.length}`)
+    if (licenses[0].id !== trialLicenseId)
+      return fail(id, label, `license id changed: ${licenses[0].id} vs ${trialLicenseId} (created a new license instead of reusing)`)
+    ok(id, label)
+  } catch (e) { fail(id, label, e.message) }
+}
+
+async function cleanup() {
+  if (process.env.KEEP_LICENSE) return
+  const ids = [createdLicenseId, trialLicenseId].filter(Boolean)
+  if (ids.length === 0) return
+  group('Cleanup')
+  for (const lid of ids) {
+    try {
+      const status = await kgDelete(`/licenses/${lid}`)
+      if (status === 204 || status === 200)
+        console.log(`  ${c.green}✓${c.reset} deleted license ${lid.slice(0, 8)}…`)
+      else
+        console.log(`  ${c.yellow}!${c.reset} license ${lid.slice(0, 8)}… delete returned ${status} — clean up manually`)
+    } catch (e) {
+      console.log(`  ${c.yellow}!${c.reset} cleanup error for ${lid.slice(0, 8)}…: ${e.message}`)
+    }
   }
 }
 
@@ -259,6 +336,8 @@ await E03_idempotency()
 await E04_subscriptionRevokedSuspends()
 await E05_subscriptionActiveReinstates()
 await E06_unknownEventIgnored()
+await E07_subscriptionCreatedTrialingProvisions()
+await E08_orderPaidLinkedToTrialNoDuplicate()
 
 await cleanup()
 
