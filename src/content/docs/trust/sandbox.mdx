@@ -9,7 +9,7 @@ See [LuaU Sandbox](/rules/luau-sandbox/) for the technical details of what is an
 
 When you add a third-party codegen rule as a dependency, you are running code that has full access to your parsed C++ AST, every field name, type, namespace, and annotation in your headers.
 
-In a naive system (shell scripts, Python plugins, Clang plugins), this code runs with your process's full permissions. A malicious or compromised rule could read arbitrary files, exfiltrate data, or modify your build outputs.
+In a conventional system (shell scripts, Python plugins, Clang plugins), this code runs with your process's full permissions. A malicious or compromised rule could read arbitrary files, exfiltrate data, or modify your build outputs.
 
 The LuaU sandbox eliminates this attack surface. A rule, regardless of source, cannot:
 
