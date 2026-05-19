@@ -19,7 +19,7 @@ Your source code, your AST, and your type information never leave your machine u
 
 Code generation rules have privileged access. They receive the full parsed AST of your headers: every type, every field name, every annotation, every namespace. In a commercial codebase, this is sensitive intellectual property.
 
-A rule distributed as part of a third-party library, a serialization framework, an RPC toolkit, a documentation generator, could, in a naive system, exfiltrate this data. codegen's sandbox closes that attack surface by default.
+A rule distributed as part of a third-party library — a serialization framework, an RPC toolkit, a documentation generator — could, in a conventional system, exfiltrate this data. codegen's sandbox closes that attack surface by default.
 
 ---
 
