@@ -82,12 +82,17 @@ export const POST: APIRoute = async ({ request }) => {
 
   const body = (await res.json()) as any
   const valid: boolean = body?.meta?.valid ?? false
+  const code: string = body?.meta?.code ?? 'INVALID'
 
-  if (!valid) {
-    const code: string = body?.meta?.code ?? 'INVALID'
+  // A freshly-issued key is not yet bound to a machine — for this display-only
+  // check that is success, not failure. Machine binding happens later, in the
+  // DTDK manager. Keygen still returns the license `data` for these codes, so
+  // tier + features below resolve correctly.
+  const UNBOUND_BUT_VALID = new Set(['NO_MACHINE', 'NO_MACHINES'])
+
+  if (!valid && !UNBOUND_BUT_VALID.has(code)) {
     const messages: Record<string, string> = {
       NOT_FOUND: 'License key not found.',
-      NO_MACHINES: 'License key not found.',
       SUSPENDED: 'License suspended — subscription may have lapsed.',
       EXPIRED: 'License has expired.',
     }
