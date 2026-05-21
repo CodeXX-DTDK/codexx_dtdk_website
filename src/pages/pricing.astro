@@ -284,9 +284,9 @@ import StandaloneLayout from '../layouts/StandaloneLayout.astro'
         <li><span class="dash">–</span> VS Code DAP debugger</li>
         <li><span class="dash">–</span> Local persistence</li>
       </ul>
-      <a href="/getting-started/installation" class="page-button page-button-default page-button-lg">
+      <button id="btn-community" class="page-button page-button-default page-button-lg">
         Get started free
-      </a>
+      </button>
     </article>
 
     <!-- Professional -->
@@ -477,6 +477,11 @@ import StandaloneLayout from '../layouts/StandaloneLayout.astro'
       }
     }
 
+    document.getElementById('btn-community')!.addEventListener('click', (e) => {
+      // Community is free; checkout still runs so Polar collects an email and
+      // the webhook provisions a Community license (needed for release access).
+      handleCheckout('community', e.currentTarget as HTMLButtonElement)
+    })
     document.getElementById('btn-professional')!.addEventListener('click', (e) => {
       handleCheckout('professional', e.currentTarget as HTMLButtonElement)
     })

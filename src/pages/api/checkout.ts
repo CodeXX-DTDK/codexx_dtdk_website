@@ -27,20 +27,26 @@ export const POST: APIRoute = async ({ request }) => {
     interval = (formData.get('interval') as string) ?? 'month'
   }
 
-  if (tier !== 'professional' && tier !== 'team') {
+  if (tier !== 'community' && tier !== 'professional' && tier !== 'team') {
     return new Response(
       JSON.stringify({ error: `unsupported tier: ${tier}` }),
       { status: 400, headers: { 'Content-Type': 'application/json' } },
     )
   }
-  if (interval !== 'month' && interval !== 'year') {
+  // Community is a free, non-recurring product — billing interval does not apply.
+  if (tier !== 'community' && interval !== 'month' && interval !== 'year') {
     return new Response(
       JSON.stringify({ error: `unsupported interval: ${interval}` }),
       { status: 400, headers: { 'Content-Type': 'application/json' } },
     )
   }
 
-  const envKey = `POLAR_PRODUCT_ID_${tier.toUpperCase()}_${interval === 'year' ? 'YEARLY' : 'MONTHLY'}`
+  // Community resolves to a single free product with no interval suffix;
+  // paid tiers resolve to a monthly/yearly product variant.
+  const envKey =
+    tier === 'community'
+      ? 'POLAR_PRODUCT_ID_COMMUNITY'
+      : `POLAR_PRODUCT_ID_${tier.toUpperCase()}_${interval === 'year' ? 'YEARLY' : 'MONTHLY'}`
   // process.env first — import.meta.env can carry stale/empty build-time values
   // on Vercel server runtime, and Vite cannot statically replace dynamic keys.
   const productId =
