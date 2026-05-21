@@ -20,7 +20,7 @@ const PER_KEY_WINDOW_SEC = 60
 
 // Validates a license key against Keygen without machine registration.
 // Returns tier + features for display on the /activate page.
-// The actual machine binding happens locally via `codegen license activate <key>`.
+// The actual machine binding happens later, in the CodeXX DTDK manager.
 export const POST: APIRoute = async ({ request }) => {
   let key: string
   try {
