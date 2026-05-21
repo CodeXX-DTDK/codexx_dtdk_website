@@ -4,7 +4,6 @@
 // pane), but the bottom strip renders codegen's own copyright + nav. The
 // upstream theme credit is kept as a small italic line.
 import ChatPane from '@pelagornis/page/components/ChatPane.astro'
-import VersionSelect from 'starlight-versions/components/VersionSelect.astro'
 
 const currentYear = new Date().getFullYear()
 
@@ -25,7 +24,6 @@ const locale =
       <div class="page-nav-wrap">
         <header class="header">
           <slot name="header" />
-          <div class="version-select-portal" data-version-select-portal><VersionSelect /></div>
         </header>
         <div class="page-scroll-wrap">
           <main class="main-frame">
@@ -59,7 +57,6 @@ const locale =
     <div class="page sl-flex">
       <header class="header">
         <slot name="header" />
-        <div class="version-select-portal" data-version-select-portal><VersionSelect /></div>
       </header>
       <div class="page-scroll-wrap">
         <main class="main-frame">
@@ -120,8 +117,6 @@ const locale =
     position: relative; top: 0; left: 0; z-index: 100;
     flex-shrink: 0; width: 100%; max-width: 100%; min-width: 0;
   }
-  .version-select-portal { display: none; }
-  .version-select-portal.mounted { display: contents; }
   @media (min-width: 1025px) {
     :global(body.page-chat-open) .header {
       width: calc(100vw - var(--page-chat-pane-width, 360px));
@@ -156,25 +151,3 @@ const locale =
     .page-footer { padding: var(--page-space-6) var(--page-space-4); }
   }
 </style>
-
-<script>
-  function moveVersionSelect() {
-    const portal = document.querySelector('[data-version-select-portal]') as HTMLElement | null
-    const target = document.querySelector('.page-header-right') as HTMLElement | null
-    if (!portal || !target) return
-    const select = portal.querySelector('starlight-version-select') as HTMLElement | null
-    if (!select) return
-    if (select.parentElement !== target) {
-      const themeSelect = target.querySelector('starlight-theme-select') as HTMLElement | null
-      if (themeSelect) target.insertBefore(select, themeSelect)
-      else target.prepend(select)
-    }
-    portal.classList.add('mounted')
-  }
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', moveVersionSelect)
-  } else {
-    moveVersionSelect()
-  }
-  document.addEventListener('astro:page-load', moveVersionSelect)
-</script>
