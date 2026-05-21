@@ -35,9 +35,9 @@ The fields after the code are: rule name, entity name, source path, detail. Any 
 | `E017` | Engine init failure (LuaU environment could not be created) | Fatal (exit 2). Indicates an internal bug — file an issue with the detail line. |
 | `E018` | Source analysis pipeline failed before any rule fired | Check the input headers parse cleanly with `ast_dump`. |
 | `E019` | Two or more rules' default output paths collide | Set `outputNameTemplate` or a `grouping.luau` to disambiguate. |
-| `E101` | License invalid key (no signed token, malformed activation key) | Run `codegen license activate <key>`. |
+| `E101` | License invalid key (no signed token, malformed activation key) | Activate the component in `codexx_dtdk_manager`. |
 | `E102` | Feature requires a higher tier (e.g. `--dry-run` TUI viewer is Professional+) | See [Tiers & Pricing](/licensing/tiers/). |
-| `E103` | Cached license token failed signature, machine-mismatch, expired, suspended, or corrupt | Re-activate with `codegen license activate <key>`. |
+| `E103` | Cached license token failed signature, machine-mismatch, expired, suspended, or corrupt | Re-activate the component in `codexx_dtdk_manager`. |
 
 ## Warning codes
 
