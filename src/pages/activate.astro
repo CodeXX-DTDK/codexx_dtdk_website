@@ -7,7 +7,7 @@ const prefillKey = Astro.url.searchParams.get('key') ?? ''
 ---
 <StandaloneLayout
   title="Activate License — codegen"
-  description="Validate your codegen license key and get the activation command."
+  description="Validate your codegen license key and see your plan tier and features."
   activeNav="activate"
 >
   <style>
@@ -113,7 +113,17 @@ const prefillKey = Astro.url.searchParams.get('key') ?? ''
       border: 1px solid var(--page-border);
       border-radius: var(--page-radius-lg);
       padding: var(--page-space-3) var(--page-space-4);
+      margin-bottom: var(--page-space-3);
+    }
+    .activate-hint {
+      font-size: var(--page-font-size-sm);
+      color: var(--page-text-muted);
+      line-height: 1.55;
       margin-bottom: var(--page-space-6);
+    }
+    .activate-hint strong {
+      color: var(--page-text-secondary);
+      font-weight: var(--page-font-weight-semibold);
     }
     .cmd-text {
       flex: 1;
@@ -178,14 +188,14 @@ const prefillKey = Astro.url.searchParams.get('key') ?? ''
         <span class="banner-icon">🎉</span>
         <div>
           <strong>Purchase complete — thank you!</strong>
-          <p>Your license key has been emailed to you. Paste it below to verify and get the activation command.</p>
+          <p>Your license key has been emailed to you. Paste it below to verify your plan, then activate it in the CodeXX DTDK manager.</p>
           <p style="margin-top:0.5rem;">Need to manage billing later? Request a one-time portal link at <a href="/portal" style="color:inherit;text-decoration:underline;">/portal</a>.</p>
         </div>
       </div>
     )}
 
     <h1>Activate your license</h1>
-    <p class="subtitle">Paste your license key to verify it and get the CLI command to run on each machine.</p>
+    <p class="subtitle">Paste your license key to verify it and see your tier and features. Activation itself happens in the CodeXX DTDK manager.</p>
 
     <div id="error-msg" class="status-error" role="alert" aria-live="polite"></div>
 
@@ -213,11 +223,17 @@ const prefillKey = Astro.url.searchParams.get('key') ?? ''
         <span id="tier-badge" class="page-badge page-badge-default"></span>
       </div>
 
-      <p class="cmd-label">Run this on each machine you want to activate</p>
+      <p class="cmd-label">Your license key</p>
       <div class="cmd-block">
         <code class="cmd-text" id="cmd-text"></code>
-        <button class="copy-btn" id="copy-btn" type="button" aria-label="Copy command">Copy</button>
+        <button class="copy-btn" id="copy-btn" type="button" aria-label="Copy license key">Copy</button>
       </div>
+
+      <p class="activate-hint">
+        To activate, open the <strong>CodeXX DTDK manager</strong>, select the
+        <strong>codegen</strong> component and press Enter, then paste this key
+        into the activation pane.
+      </p>
 
       <div id="features-grid" class="features-grid"></div>
 
@@ -268,7 +284,7 @@ const prefillKey = Astro.url.searchParams.get('key') ?? ''
       tierBadge.className = tier === 'professional' || tier === 'team'
         ? 'page-badge page-badge-primary'
         : 'page-badge page-badge-default'
-      cmdText.textContent = `codegen license activate ${data.key}`
+      cmdText.textContent = data.key
       featuresGrid.innerHTML = Object.entries(FEATURE_LABELS)
         .map(([key, label]) => {
           const on = !!data.features?.[key]
