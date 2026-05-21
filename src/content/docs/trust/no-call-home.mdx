@@ -15,6 +15,12 @@ Your source code, your AST, and your type information never leave your machine u
 
 ---
 
+## codegen versus the DTDK Manager
+
+The no-call-home guarantee covers **codegen** — the code generation engine that runs your rules. It is a distinct tool from the **DTDK Manager**, which installs, updates, and license-activates components and is, by design, a network client. Nothing the manager does affects codegen's runtime: once codegen is installed, running it executes rules with no network access. The guarantee on this page is about the engine, not the installer.
+
+---
+
 ## Why this matters
 
 Code generation rules have privileged access. They receive the full parsed AST of your headers: every type, every field name, every annotation, every namespace. In a commercial codebase, this is sensitive intellectual property.
@@ -67,9 +73,9 @@ Rules with HTTP permissions must be reviewed with the same scrutiny as any code 
 
 ## License verification
 
-The engine validates your license on startup against a locally-stored token. **This check is fully offline.** The token is cryptographically signed; the engine verifies the signature without contacting a server.
+codegen validates your license on startup against a locally-stored token. **This check is fully offline.** The token is cryptographically signed; codegen verifies the signature against a built-in public key without contacting a server.
 
-For air-gapped environments, this means codegen works without any internet access after the initial license activation step.
+License *activation* — the one step that does contact the licence service — is performed once in the DTDK Manager, not by codegen itself. After activation, codegen runs without any internet access for as long as the cached token holds, which makes it suitable for air-gapped environments.
 
 See [License Activation](/licensing/activation/) for the activation protocol.
 
@@ -88,9 +94,9 @@ Logs are written to a local file only. They are never transmitted.
 
 ---
 
-## SLSA compliance
+## Supply chain attestation
 
-See [SLSA Compliance](/trust/slsa/) for provenance attestation, artifact signing, and reproducible build documentation.
+See [Supply Chain](/trust/supply-chain/) for provenance attestation, artifact signing, and reproducible build documentation.
 
 <Alert type="info" title="Key Takeaways">
 - The no-call-home guarantee is enforced by the LuaU sandbox, not by policy. Rules cannot make network calls unless explicitly granted permission in config.
@@ -98,5 +104,5 @@ See [SLSA Compliance](/trust/slsa/) for provenance attestation, artifact signing
 - HTTP permissions require an explicit domain allowlist. There is no allow-all flag.
 - License verification is fully offline: cryptographic signature check against a local token.
 - Logs are written locally only, never transmitted.
-- For full provenance documentation, see the [SLSA page](/trust/slsa/).
+- For full provenance documentation, see the [Supply Chain page](/trust/supply-chain/).
 </Alert>

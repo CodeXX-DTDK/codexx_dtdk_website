@@ -1,53 +1,101 @@
 ---
 title: Installation
-description: Download and verify the codegen binary for your platform.
+description: Install the CodeXX DTDK Manager — the single entry point that installs, updates, licenses, and verifies codegen and every other DTDK component.
 ---
 
 import Alert from '@pelagornis/page/components/Alert.astro';
 import Tabs from "@pelagornis/page/components/Tabs.astro";
+import { LinkButton } from '@astrojs/starlight/components';
 
-## Download
+## How CodeXX DTDK is installed
 
-codegen ships as a single self-contained binary. No runtime dependencies. No installer.
+codegen ships as one component of the **CodeXX Dev-Tool Development Kit (DTDK)**. You don't download `codegen` directly. You install the **DTDK Manager** once — a small terminal app — and use it to install, update, license-activate, and verify codegen and every other component.
+
+The manager keeps each component in a versioned, side-by-side layout under `~/.codexx` and exposes one binary per tool on your `PATH`. No `sudo`, no system package manager, no admin rights.
+
+## Install
+
+One command downloads the latest stable manager, verifies its checksum, extracts it under `~/.codexx`, and adds `~/.codexx/bin` to your shell profile. No GitHub account or token required.
 
 <Tabs tabs={[
-  { id: "tab1", label: "Linux (x64)" },
-  { id: "tab2", label: "macOS (arm64)" },
-  { id: "tab3", label: "Windows (x64)" }
+  { id: "tab1", label: "Linux" },
+  { id: "tab2", label: "Windows" },
+  { id: "tab3", label: "macOS" }
 ]} defaultTab="tab1">
   <div>
     ```sh
-    curl -L https://releases.codegen.dev/latest/codegen-linux-x86_64 -o codegen
-    chmod +x codegen
-    sudo mv codegen /usr/local/bin/
+    curl -fsSL https://www.codexx-dtdk.com/install.sh | bash
     ```
-  </div>
-  <div>
-    ```sh
-    curl -L https://releases.codegen.dev/latest/codegen-macos-arm64 -o codegen
-    chmod +x codegen
-    sudo mv codegen /usr/local/bin/
-    ```
+
+    Open a new shell afterwards so the `PATH` change takes effect. To also verify the release signature, append `-s -- --verify` (requires `cosign` on `PATH`).
   </div>
   <div>
     ```powershell
-    Invoke-WebRequest -Uri https://releases.codegen.dev/latest/codegen-windows-x64.exe -OutFile codegen.exe
-    # Move to a directory on your PATH, e.g.:
-    Move-Item codegen.exe C:\tools\codegen.exe
+    iex ((New-Object System.Net.WebClient).DownloadString('https://www.codexx-dtdk.com/install.ps1'))
+    ```
+
+    Installs under `%USERPROFILE%\.codexx` and prepends `%USERPROFILE%\.codexx\bin` to your user `PATH`. Open a new shell afterwards.
+  </div>
+  <div>
+    <Alert type="info">
+    macOS builds are temporarily paused while the release pipeline is validated on Apple hardware. Until macOS archives ship, build from source on macOS — see the project `README` — or run the Linux build in an x86-64 environment.
+    </Alert>
+  </div>
+</Tabs>
+
+The installer fetches the manager through a download proxy that holds a read-only token server-side — the releases live in a private repository, but you never need credentials. To pin a specific version or install a pre-release channel, download `install.sh` / `install.ps1` and pass `--tag` or `--channel`; those paths read the private repo directly and require a GitHub token.
+
+## Manual download
+
+Prefer to inspect the archive before running anything? Download it directly and set things up yourself.
+
+<Tabs tabs={[
+  { id: "m1", label: "Linux (x64)" },
+  { id: "m2", label: "Windows (x64)" }
+]} defaultTab="m1">
+  <div>
+    <LinkButton href="/api/download?platform=linux&arch=x64" variant="primary">Download DTDK Manager — Linux x64</LinkButton>
+
+    Extract it into your install root and add its `bin/` to your `PATH`:
+
+    ```sh
+    mkdir -p ~/.codexx
+    tar -xzf codexx_dtdk_manager-*-linux-*.tar.gz -C ~/.codexx
+    echo 'export PATH="$HOME/.codexx/bin:$PATH"' >> ~/.bashrc
+    export PATH="$HOME/.codexx/bin:$PATH"
+    ```
+  </div>
+  <div>
+    <LinkButton href="/api/download?platform=windows&arch=x64" variant="primary">Download DTDK Manager — Windows x64</LinkButton>
+
+    Extract the archive into `%USERPROFILE%\.codexx` and add `%USERPROFILE%\.codexx\bin` to your user `PATH`:
+
+    ```powershell
+    $root = "$env:USERPROFILE\.codexx"
+    Expand-Archive codexx_dtdk_manager-*-windows-*.zip -DestinationPath $root -Force
+    $userPath = [Environment]::GetEnvironmentVariable('Path', 'User')
+    [Environment]::SetEnvironmentVariable('Path', "$root\bin;$userPath", 'User')
     ```
   </div>
 </Tabs>
 
-## Verify the checksum
+Each archive carries a `.sha256` checksum and a Sigstore signature bundle — fetch them with `&asset=sha256` / `&asset=sigstore` on the same URL. See [Supply Chain](/trust/supply-chain/) for how releases are attested and verified.
 
-Every release artifact is SHA-256 checksummed and signed. Always verify before running:
+## Run the manager
+
+Open a new shell so the `PATH` change takes effect, then launch:
 
 ```sh
-curl -L https://releases.codegen.dev/latest/SHA256SUMS -o SHA256SUMS
-sha256sum --check SHA256SUMS
+codexx_dtdk_manager
 ```
 
-See [Supply Chain](/trust/supply-chain/) for SLSA provenance and signature verification details.
+The manager is a terminal UI. Move with the arrow keys; press `Enter` on the **codegen** row to install and activate it. `q` quits. The manager handles the download, checksum verification, and side-by-side version management for you.
+
+## Activate your license
+
+The Community tier requires no activation. For Professional or Team, activation happens **inside the manager** — not through a `codegen` CLI command. Select the codegen row, and the manager shows an activation prompt in place of the version list. Paste your license key there; the manager validates it, stores a signed offline token, and unlocks the component.
+
+See [License Activation](/licensing/activation/) for the cached-token model and the air-gapped path.
 
 ## Verify the installation
 
@@ -55,24 +103,11 @@ See [Supply Chain](/trust/supply-chain/) for SLSA provenance and signature verif
 codegen --help
 ```
 
-Should print the option list with the `-i`, `-r`, `-a` flags and the `license` subcommand group.
-
-## License activation
-
-The Community tier requires no activation. For Professional or Team:
-
-```sh
-codegen license activate <your-license-key>
-# License activated.
-#   Tier:    Professional
-#   Email:   user@example.com
-#   Key:     XXXX-XXXX-XXXX-XXXX
-```
-
-Activation contacts the licence service once, verifies the response signature, and stores a signed token locally. No subsequent internet access is required while the cache TTL holds. See [License Activation](/licensing/activation/) for the cached-licence model and the air-gapped path.
+Should print the codegen option list. If the command isn't found, confirm `~/.codexx/bin` (or `%USERPROFILE%\.codexx\bin`) is on your `PATH` and that you opened a new shell.
 
 <Alert type="info" title="Key Takeaways">
-- Single binary. No runtime. No installer.
-- Always verify the SHA-256 checksum before running.
-- Community tier requires no activation. Professional and Team activate once and verify offline thereafter.
+- codegen is installed through the DTDK Manager, not downloaded directly.
+- One PAT-free command installs the manager — download, checksum, extract, and `PATH` are all automatic.
+- The manager installs, updates, verifies, and license-activates every component into `~/.codexx`.
+- License activation is done in the manager TUI; Community needs none. Professional and Team paste a key into the activation prompt.
 </Alert>
