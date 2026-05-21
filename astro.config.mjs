@@ -112,7 +112,6 @@ export default defineConfig({
           items: [
             { label: "No-Call-Home Guarantee", slug: "trust/no-call-home" },
             { label: "Sandboxed Execution", slug: "trust/sandbox" },
-            { label: "SLSA Compliance", slug: "trust/slsa" },
             { label: "Supply Chain", slug: "trust/supply-chain" },
           ],
         },

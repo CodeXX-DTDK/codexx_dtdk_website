@@ -1,47 +1,54 @@
 ---
 title: Supply Chain
-description: How codegen's dependencies, build process, and distribution are structured to minimize supply chain risk.
+description: How CodeXX DTDK components are built, attested, and distributed to minimize supply chain risk.
 ---
 
-## Dependency surface
+import Alert from '@pelagornis/page/components/Alert.astro';
 
-codegen ships as a statically linked binary with no runtime dependencies. The distribution artifact is:
+## Distribution model
 
-- One binary
-- One SHA-256 checksum file
-- One SLSA provenance attestation
+CodeXX DTDK is distributed as **independently versioned components** on GitHub Releases. You install and update them through the **DTDK Manager**, which downloads each component, verifies it, and stages it into a versioned, side-by-side layout under `~/.codexx`.
 
-There is no package manager to run, no `npm install`, no Python environment to configure. The attack surface from dependencies is zero at runtime.
+There is no system package manager, no `npm install`, no Python environment to configure, and no install-time script running with elevated privileges. Each component archive is a self-contained, relocatable FHS tree (`bin/`, `lib/`, `include/`) — moving the install root never breaks library resolution.
+
+## Every release is attested
+
+Each component release is a four-part **Package Bundle**: the binary archive, an SPDX SBOM, a SLSA Build L3 provenance record, and a Sigstore signature bundle — plus a SHA-256 sidecar on the archive. The release pipeline structurally rejects incomplete bundles.
+
+The manager verifies the SHA-256 of every archive before it installs it; full Sigstore signature verification is available on demand.
 
 ## Build-time dependencies
 
-The full build-time dependency tree is documented in `vcpkg.json` at the source root. Key dependencies:
+The build-time dependency tree is pinned end to end:
 
-| Dependency | Purpose | Pinned version |
-|---|---|---|
-| tree-sitter-cpp | C++ grammar for parsing | ✓ |
-| luau | LuaU VM and compiler | ✓ |
-| abseil | Containers, hashing | ✓ |
-| nlohmann-json | JSON serialization | ✓ |
-| gtest | Test framework (build only) | ✓ |
+| Source | Pinned by |
+|---|---|
+| vcpkg ports (tree-sitter-cpp, luau, abseil, nlohmann-json, …) | `vcpkg.json` plus the vcpkg baseline commit; resolved versions captured under `vcpkg_installed/` |
+| Vendored submodules (`vendor/*`) | exact commit SHAs in `.gitmodules` / the recorded submodule state |
 
-All dependencies are version-pinned in `vcpkg.json`. The lockfile (`vcpkg-lock.json`) pins exact artifact hashes. No dependency is fetched from a mutable tag or branch.
+No dependency is fetched from a mutable tag or branch. The SBOM shipped with each release (`.spdx.json`) inlines every resolved vcpkg per-port package and every `vendor/*` submodule SHA, so the bill of materials reflects exactly what was linked.
 
-## The single-binary advantage
+## Release security gates
 
-A single static binary means:
-- No dependency confusion attacks.
-- No `LD_PRELOAD` interception of dynamic libraries.
-- No package manager scripts running with elevated privileges at install time.
-- Checksum verification covers the entire codebase, not just a thin wrapper.
+Before any archive is publishable, the pipeline enforces hard gates:
 
-## Verifying your download
+- **Header allowlist** — the distributed `include/codexx/` tree may contain only public API headers; any unrecognized file blocks the release.
+- **Symbol stripping** — released binaries are checked (`nm` on Linux/macOS, `dumpbin` on Windows) against a symbol allowlist so internal symbols are not exposed.
+- **Apple Notarization** — all macOS binaries are notarized via `notarytool`.
+- **Authenticode** — all Windows binaries carry a valid Authenticode signature.
 
-Always verify before running:
+A build that fails any gate is never published.
 
-```sh
-curl -L https://releases.codegen.dev/latest/SHA256SUMS -o SHA256SUMS
-sha256sum --check SHA256SUMS
-```
+## Why this shape
 
-For SLSA provenance attestation, see [SLSA Compliance](/trust/slsa/).
+- **No dependency confusion** — there is nothing to resolve at install time; the manager pulls exact, attested archives.
+- **No install-time code execution** — extraction places files; it does not run scripts.
+- **Pre-extraction verification** — the detached `.sigstore` and `.sha256` siblings let you verify an archive before unpacking it.
+- **Auditable** — every release signature is recorded in the public Rekor transparency log.
+
+<Alert type="info" title="Key Takeaways">
+- Components are distributed as independently versioned, attested archives and installed through the DTDK Manager — no system package manager, no privileged install scripts.
+- Build-time dependencies are fully pinned (vcpkg ports plus vendored submodule SHAs) and enumerated in a shipped SPDX SBOM.
+- Release gates enforce a header allowlist, symbol stripping, macOS notarization, and Windows Authenticode signing.
+- Every archive carries a SHA-256 sidecar and a Sigstore bundle; the manager verifies checksums automatically.
+</Alert>
