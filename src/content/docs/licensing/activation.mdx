@@ -1,35 +1,37 @@
 ---
 title: License Activation
-description: How to activate Professional and Team licenses, including the offline check path.
+description: How to activate a CodeXX license in the DTDK manager, and the offline verification path.
 ---
 
 import Alert from '@pelagornis/page/components/Alert.astro';
 
-## Online activation
+## Where activation happens
 
-```sh
-codegen license activate <your-license-key>
-```
+Licenses are activated in the **CodeXX DTDK manager** (`codexx_dtdk_manager`), not in the `codegen` CLI. The manager owns activation for every licensed component, so individual tools no longer ship their own activation flow.
 
-On success the engine prints:
+<Alert type="info" title="Moved in a recent release">
+Earlier builds activated with `codegen license activate <key>`. That subcommand has been removed — `codegen` now prints a pointer to the manager and exits. See [Tiers &amp; Pricing](/licensing/tiers/) for what each tier unlocks.
+</Alert>
 
-```
-License activated.
-  Tier:    Professional
-  Email:   user@example.com
-  Key:     XXXX-XXXX-XXXX-XXXX
-```
+## Activating a component
 
-This contacts the Keygen API once, receives a signed token, verifies the Ed25519 signature against the embedded public key, binds the token to this machine's fingerprint, and writes it to disk:
+1. Launch the manager: `codexx_dtdk_manager`.
+2. Use **↑ / ↓** to select a licensed component (e.g. **codegen**).
+3. Press **Enter** — for an unactivated licensed component this opens the activation pane in place of the version list.
+4. Paste your license key and confirm.
 
-- Linux/macOS: `$XDG_CONFIG_HOME/codexx/licensing/license.token` (default `~/.config/codexx/licensing/license.token`)
-- Windows: `%APPDATA%\CodeXX\licensing\license.token`
+The manager verifies the key, binds it to this machine's fingerprint, and writes a per-product signed token to disk:
 
-A pre-`ADR-025` token at `codegen/license.token` is auto-migrated on first call.
+- Linux/macOS: `$XDG_CONFIG_HOME/codexx/licensing/<product>.token` (default `~/.config/codexx/licensing/<product>.token`)
+- Windows: `%APPDATA%\CodeXX\licensing\<product>.token`
 
-All subsequent verification is local — no internet access required.
+Each licensed component caches its own token (`codegen.token`, …). A legacy single-file `license.token` from an earlier release is auto-migrated to the per-product name on first read.
+
+Until a licensed component is activated the manager will not query its release channels; activation unlocks them.
 
 ## Checking the cached licence
+
+`codegen` keeps two read-only licence subcommands:
 
 ```sh
 codegen license check
@@ -45,47 +47,40 @@ License valid.
   Expiry:  2026-12-31T23:59:59Z       # only if the licence carries an expiry
 ```
 
-`check` reads the local token, verifies the signature and machine fingerprint, and confirms the cache TTL has not elapsed. On TTL expiry it returns `Unreachable` (the `codegen` binary then continues with Community-tier defaults rather than failing the run).
+`check` reads the local token, verifies the Ed25519 signature and machine fingerprint, and confirms the cache TTL has not elapsed. On TTL expiry it returns `Unreachable` and the `codegen` binary continues with Community-tier defaults rather than failing the run.
 
-## Offline / air-gapped activation
+```sh
+codegen license fingerprint
+```
 
-`codegen` does not currently ship a fingerprint-exchange CLI. The bundled subcommands are:
-
-| Subcommand | Description |
-|---|---|
-| `codegen license activate <key>` | Online activation; writes the signed token. |
-| `codegen license check` | Offline verification of the cached token. |
-| `codegen license fingerprint` | Print this machine's stable 64-char hex SHA-256 fingerprint. |
-| `codegen license deactivate` | Best-effort `DELETE /machines/{id}` against Keygen, then clear the local token. |
-
-For an air-gapped activation the supported path today is to run `activate` on a temporarily-connected machine, then keep that machine offline thereafter — the cached token verifies without further network access for as long as the cache TTL holds. A first-class fingerprint-exchange flow is on the roadmap.
+Prints this machine's stable 64-char hex SHA-256 fingerprint — useful when reporting an activation problem.
 
 ## Token format
 
-License tokens are Ed25519-signed JSON. The engine verifies the signature against the public key baked in at build time (CMake define `KEYGEN_ED25519_PUBLIC_KEY`). Verification has no server round-trip after the initial activation.
+License tokens are Ed25519-signed JSON, verified against the public key baked in at build time (CMake define `KEYGEN_ED25519_PUBLIC_KEY`); a signed key verifies locally with no server round-trip. The token carries the licensed tier, the Keygen product, an optional ISO-8601 expiry, the user email, and the machine fingerprint.
 
-The token contains the licensed tier, an optional ISO-8601 expiry, the user email, and the machine fingerprint. Today every issued token is machine-bound — `check()` rejects tokens whose `machine_fingerprint` does not match `codegen license fingerprint` on the running host (`MachineMismatch`). Floating / cross-machine licences are not currently supported.
+Every issued token is machine-bound — verification rejects a token whose fingerprint does not match the running host (`MachineMismatch`). Floating / cross-machine licences are not currently supported.
 
-## Revoking on this machine
+## Deactivating
 
-```sh
-codegen license deactivate
-```
+To release a machine, select the activated component in the manager and press **Shift + D** (the `[D] deactivate-license` action in the footer). This clears the local token and releases the Keygen-side seat best-effort. Transferring a licence to another machine is deactivate-here, then activate-there.
 
-Prints `License deactivated. Seat released.` and clears the local token. The Keygen-side seat is released best-effort (errors are ignored).
+## Offline / air-gapped activation
+
+There is no fingerprint-exchange CLI yet. The supported air-gapped path: activate in the manager on a temporarily-connected machine, then keep it offline — the cached signed token verifies without further network access for as long as the cache TTL holds. A first-class fingerprint-exchange flow is on the roadmap.
 
 ## Diagnostics
 
 | Code | Meaning |
 |---|---|
-| `E101` | Activation key invalid or the licence is not activated. Run `codegen license activate <key>`. |
-| `E103` | Cached token failed signature, machine-fingerprint, or TTL checks (or is corrupt / suspended / expired). Re-run `codegen license activate <key>`. |
+| `E101` | Licence invalid or not activated. Activate the component in `codexx_dtdk_manager`. |
+| `E103` | Cached token failed signature, machine-fingerprint, or TTL checks (or is corrupt / suspended / expired). Re-activate the component in `codexx_dtdk_manager`. |
 
 When the licence service is unreachable on a `check()` (no network and no cache, or TTL elapsed), the engine treats it as `Unreachable` and continues with Community-tier defaults — no fatal error.
 
 <Alert type="info" title="Key Takeaways">
-- Activation is online once; subsequent verification is offline against the cached signed token.
-- Tokens are Ed25519-signed against the build-time public key; no server round-trip at runtime.
-- Tokens are machine-bound to a stable hardware/OS fingerprint; transfer requires deactivate-then-activate.
-- Subcommands today: `activate`, `check`, `fingerprint`, `deactivate`. A fingerprint-exchange CLI for air-gapped activation is planned.
+- Activation lives in the `codexx_dtdk_manager` TUI — select a component, press Enter, paste the key.
+- Verification is offline against a per-product Ed25519-signed token; no server round-trip at runtime.
+- Tokens are machine-bound; transfer is deactivate (Shift + D in the manager) then re-activate.
+- `codegen` keeps read-only `license check` and `license fingerprint`; `activate` / `deactivate` were removed.
 </Alert>

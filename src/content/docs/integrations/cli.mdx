@@ -73,21 +73,13 @@ The Professional-tier `vscode_dap_debugger` capability is not currently enforced
 ## License subcommands
 
 ```
-codegen license activate <key>     Activate the licence on this machine
 codegen license check              Show current licence status
 codegen license fingerprint        Print this machine's fingerprint
-codegen license deactivate         Release the seat and clear the cached token
 ```
 
-The `license` subcommand short-circuits the regular pipeline (no rules are loaded). Output formats:
+The `license` subcommand short-circuits the regular pipeline (no rules are loaded). Activation and deactivation moved to the **CodeXX DTDK manager** (`codexx_dtdk_manager`); `codegen license activate` / `deactivate` now print a pointer to the manager and exit non-zero. Output formats:
 
 ```
-$ codegen license activate <key>
-License activated.
-  Tier:    Professional
-  Email:   user@example.com
-  Key:     XXXX-...
-
 $ codegen license check
 License valid.
   Tier:    Professional
@@ -97,9 +89,6 @@ License valid.
 
 $ codegen license fingerprint
 <64-char hex SHA-256>
-
-$ codegen license deactivate
-License deactivated. Seat released.
 ```
 
 ## Exit codes

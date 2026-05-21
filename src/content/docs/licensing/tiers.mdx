@@ -125,7 +125,7 @@ Yes — Professional includes a 14-day free trial and Team includes a 30-day fre
 Yes. Team is €24 / seat / month at 1–4 seats, €20.40 / seat / month at 5–19 seats (15% off), and €18 / seat / month at 20+ seats (25% off). Annual billing stacks ~20% on top of each bracket.
 
 **Does a Team seat cover the same person across multiple machines?**
-A seat covers one person, but each machine activates separately and binds the cached licence token to that machine's fingerprint. Today, transferring a licence to a different machine requires `codegen license deactivate` on the old machine and `codegen license activate <key>` on the new one.
+A seat covers one person, but each machine activates separately and binds the cached licence token to that machine's fingerprint. Today, transferring a licence to a different machine means deactivating it on the old machine and re-activating on the new one — both done in the `codexx_dtdk_manager` TUI (`[D] deactivate-license`, then `Enter` to activate).
 
 **What happens if I stop paying?**
 The engine reverts to Community-tier behaviour. Your rules, configs, and generated files are unaffected.

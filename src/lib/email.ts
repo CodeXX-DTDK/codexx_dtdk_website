@@ -18,7 +18,6 @@ export async function sendActivationEmail(params: {
   const tierLabel = tier === 'team' ? 'Team' : tier === 'professional' ? 'Professional' : 'Community'
   const machinesNote = tier === 'community' ? 'unlimited machines' : 'up to 5 machines'
   const activateUrl = `${SITE}/activate?key=${encodeURIComponent(key)}`
-  const cmd = `codegen license activate ${key}`
 
   // Trial-aware copy. trialEnd is an ISO-8601 string from Polar; render it as
   // a plain calendar date in the user's locale-agnostic format (YYYY-MM-DD).
@@ -104,12 +103,13 @@ export async function sendActivationEmail(params: {
             </td></tr>
           </table>
 
-          <p style="margin:0 0 8px;font-size:12px;color:#888;text-transform:uppercase;letter-spacing:0.06em">Or run on each machine</p>
-          <div class="cmd-block" style="background:#0d0d0d;border:1px solid #2a2a2a;border-radius:8px;padding:14px 18px;margin-bottom:24px;font-family:ui-monospace,'SF Mono',Menlo,Consolas,monospace;font-size:13px;color:#89b4fa;word-break:break-all;-webkit-user-select:all;user-select:all">${cmd}</div>
+          <p style="margin:0 0 8px;font-size:12px;color:#888;text-transform:uppercase;letter-spacing:0.06em">How to activate</p>
+          <p style="margin:0 0 16px;font-size:13px;line-height:1.6;color:#888">
+            Open the <strong style="color:#cfd6cf">CodeXX DTDK manager</strong>, select the <strong style="color:#cfd6cf">codegen</strong> component and press Enter, then paste your license key into the activation pane. You can activate on ${machinesNote}.
+          </p>
 
           <p style="margin:0;font-size:13px;line-height:1.6;color:#888">
-            You can activate on ${machinesNote}.
-            Check status anytime with <code style="color:#89b4fa;background:#0d0d0d;padding:2px 6px;border-radius:4px;font-size:12px">codegen license check</code>.
+            Already activated? Run <code style="color:#89b4fa;background:#0d0d0d;padding:2px 6px;border-radius:4px;font-size:12px">codegen license check</code> to confirm status from the CLI.
           </p>
         </td></tr>
 
