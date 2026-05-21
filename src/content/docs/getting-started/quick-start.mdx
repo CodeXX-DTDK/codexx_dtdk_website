@@ -102,6 +102,6 @@ crawling required. A condensed index is also available at [`/llms-small.txt`](/l
 - `codegen` selects rules by name with `-a`; the input is a path with `-i`.
 - Default outputs land **next to the input header** unless the rule config sets `outputDirectory`.
 - Anchor comments (`// [[codegen::generated::Rule::QualifiedName]]`) trigger anchor-based rules and mark the inline-injection site.
-- Attribute annotations (`[[codegen::Rule]]`) are the alternative trigger for struct/class-level rules.
+- Attribute annotations (`[[codegen::Rule]]`) are the alternative trigger for declaration-level rules — any node kind listed in the rule's `node_kinds`.
 - The first run rewrites bare anchors into idempotent `:begin]] / :end]]` blocks.
 </Alert>

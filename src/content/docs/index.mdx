@@ -24,7 +24,7 @@ import Card from '@pelagornis/page/components/Card.astro';
 
 <div style="text-align: center; margin: 2rem 0 3rem;">
 
-**codegen** is a production-grade C++ code generation engine. You annotate structs and enums directly in source. You write a LuaU script that receives a structured AST node as JSON and emits whatever you want — C++, TypeScript, Markdown, SQL. The engine handles the rest: parsing, scheduling, deduplication, inline injection, and file routing.
+**codegen** is a production-grade C++ code generation engine. You annotate C++ declarations directly in source — structs, classes, enums, free functions, aliases — and each rule declares in its YAML which AST node kinds it consumes. You write a LuaU script that receives a structured AST node as JSON and emits whatever you want — C++, TypeScript, Markdown, SQL. The engine handles the rest: parsing, scheduling, deduplication, inline injection, and file routing.
 
 It ships as a single binary. It calls nothing home. It runs the same on every machine.
 
