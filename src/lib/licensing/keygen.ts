@@ -31,6 +31,20 @@ export interface KeygenLicense {
   key: string
 }
 
+// Carries the HTTP status so callers can distinguish a genuine 404 ("resource
+// does not exist yet") from a real failure. A bare Error loses the status, and
+// the 404 detail string is not reliably machine-parseable.
+class KeygenApiError extends Error {
+  readonly status: number
+  readonly code: string | undefined
+  constructor(status: number, code: string | undefined, detail: string) {
+    super(detail)
+    this.name = 'KeygenApiError'
+    this.status = status
+    this.code = code
+  }
+}
+
 async function apiFetch<T>(path: string, init: RequestInit = {}): Promise<T> {
   const res = await fetch(`${BASE()}${path}`, {
     ...init,
@@ -39,19 +53,26 @@ async function apiFetch<T>(path: string, init: RequestInit = {}): Promise<T> {
   const body = await res.json() as any
   if (!res.ok) {
     const detail = body.errors?.[0]?.detail ?? `Keygen HTTP ${res.status}`
-    throw new Error(detail)
+    throw new KeygenApiError(res.status, body.errors?.[0]?.code, detail)
   }
   return body as T
 }
 
 export async function upsertUser(email: string): Promise<KeygenUser> {
-  const fetchByEmail = () =>
-    apiFetch<any>(`/users?filter[email]=${encodeURIComponent(email)}&limit=1`)
+  // Keygen's /users LIST endpoint has NO email filter. An unknown query param
+  // is silently ignored, so `?filter[email]=…&limit=1` degraded to "the first
+  // user in the account" — collapsing every buyer onto a single owner. The
+  // RETRIEVE endpoint accepts an email in place of the UUID: 200 → the user
+  // exists, 404 → it does not exist yet.
+  const retrieveByEmail = () =>
+    apiFetch<any>(`/users/${encodeURIComponent(email)}`)
 
-  const existing = await fetchByEmail()
-  if (existing.data?.length > 0) {
-    const u = existing.data[0]
-    return { id: u.id as string, email: u.attributes.email as string }
+  try {
+    const u = await retrieveByEmail()
+    return { id: u.data.id as string, email: u.data.attributes.email as string }
+  } catch (err) {
+    // Only a genuine 404 means "go create it"; anything else is a real failure.
+    if (!(err instanceof KeygenApiError) || err.status !== 404) throw err
   }
 
   try {
@@ -66,16 +87,12 @@ export async function upsertUser(email: string): Promise<KeygenUser> {
       email: created.data.attributes.email as string,
     }
   } catch (err) {
-    // Race between concurrent webhook invocations, or pre-existing user from a prior
-    // partially-failed run: Keygen returns 422 EMAIL_TAKEN. Re-fetch and return.
+    // Race between concurrent webhook invocations: the user was created between
+    // our retrieve and our create. Keygen returns 422 EMAIL_TAKEN — re-retrieve.
     const msg = err instanceof Error ? err.message : String(err)
     if (!/already been taken|EMAIL_TAKEN/i.test(msg)) throw err
-    const retry = await fetchByEmail()
-    if (retry.data?.length > 0) {
-      const u = retry.data[0]
-      return { id: u.id as string, email: u.attributes.email as string }
-    }
-    throw err
+    const u = await retrieveByEmail()
+    return { id: u.data.id as string, email: u.data.attributes.email as string }
   }
 }
 

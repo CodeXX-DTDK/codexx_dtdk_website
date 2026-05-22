@@ -1,15 +1,23 @@
 {
   "mappings": [
     {
-      "name": "list-users-empty",
+      "name": "retrieve-user-by-email-404",
       "request": {
         "method": "GET",
-        "urlPattern": "/v1/accounts/[^/]+/users.*"
+        "urlPattern": "/v1/accounts/[^/]+/users/[^/]+"
       },
       "response": {
-        "status": 200,
+        "status": 404,
         "headers": { "Content-Type": "application/vnd.api+json" },
-        "jsonBody": { "data": [], "meta": { "count": 0 } }
+        "jsonBody": {
+          "errors": [
+            {
+              "title": "Not found",
+              "code": "NOT_FOUND",
+              "detail": "The requested user was not found"
+            }
+          ]
+        }
       }
     },
     {
