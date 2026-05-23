@@ -45,7 +45,38 @@ One command downloads the latest stable manager, verifies its checksum, extracts
 
 The installer fetches the manager through a download proxy that holds a read-only token server-side — the releases live in a private repository, but you never need credentials. To pin a specific version or install a pre-release channel, download `install.sh` / `install.ps1` and pass `--tag` or `--channel`; those paths read the private repo directly and require a GitHub token.
 
-## Manual download
+## Inspect the installer before running it
+
+Don't want to pipe a remote script straight into a shell? Download it, read it, then run it.
+
+<Tabs tabs={[
+  { id: "dl1", label: "Linux" },
+  { id: "dl2", label: "Windows" }
+]} defaultTab="dl1">
+  <div>
+    ```sh
+    curl -fSL https://www.codexx-dtdk.com/install.sh -o install.sh
+    less install.sh                # read it
+    chmod +x install.sh
+    ./install.sh --help            # list every flag
+    ./install.sh                   # default install (stable, ~/.codexx, PATH)
+    ./install.sh --verify          # additionally cosign-verify the archive
+    ```
+  </div>
+  <div>
+    ```powershell
+    Invoke-WebRequest https://www.codexx-dtdk.com/install.ps1 -OutFile install.ps1
+    Get-Content .\install.ps1             # read it
+    Get-Help .\install.ps1 -Detailed      # list every flag
+    .\install.ps1                         # default install
+    .\install.ps1 -Verify                 # additionally cosign-verify the archive
+    ```
+  </div>
+</Tabs>
+
+This is the same artifact the proxy serves to `curl | bash` / `iex` — saving it to disk just lets you audit it first.
+
+## Manual archive download
 
 Prefer to inspect the archive before running anything? Download it directly and set things up yourself.
 
@@ -104,6 +135,80 @@ codegen --help
 ```
 
 Should print the codegen option list. If the command isn't found, confirm `~/.codexx/bin` (or `%USERPROFILE%\.codexx\bin`) is on your `PATH` and that you opened a new shell.
+
+## Uninstall
+
+One command removes the install tree, the `PATH` entry, and — unless you ask otherwise — the per-user config (license tokens) and cache (shared active map).
+
+<Tabs tabs={[
+  { id: "u1", label: "Linux" },
+  { id: "u2", label: "Windows" }
+]} defaultTab="u1">
+  <div>
+    ```sh
+    curl -fsSL https://www.codexx-dtdk.com/uninstall.sh | bash -s -- --yes
+    ```
+
+    The script prints what it will remove, asks for confirmation, then deletes `~/.codexx`, strips the marker block from `~/.bashrc` / `~/.zshrc` / `~/.profile`, and removes `~/.config/codexx` and `~/.cache/codexx`. Add `--keep-config` to retain license tokens (so a reinstall picks them up) or `--keep-cache` to retain the shared active map. `--dry-run` previews without touching anything; `--root <dir>` targets a non-default install location.
+  </div>
+  <div>
+    ```powershell
+    iex "& { $(iwr https://www.codexx-dtdk.com/uninstall.ps1) } -Yes"
+    ```
+
+    The script prints what it will remove, asks for confirmation, then deletes `%USERPROFILE%\.codexx`, removes `%USERPROFILE%\.codexx\bin` from your user `PATH`, and removes `%APPDATA%\CodeXX` and `%LOCALAPPDATA%\CodeXX\Cache`. Add `-KeepConfig` to retain license tokens or `-KeepCache` to retain the shared active map. `-DryRun` previews without touching anything; `-Root <dir>` targets a non-default install location.
+  </div>
+</Tabs>
+
+### Manual uninstall
+
+If you'd rather remove things by hand:
+
+<Tabs tabs={[
+  { id: "mu1", label: "Linux" },
+  { id: "mu2", label: "Windows" }
+]} defaultTab="mu1">
+  <div>
+    ```sh
+    # 1. Install tree (binaries, side-by-side component versions, shim).
+    rm -rf ~/.codexx
+
+    # 2. License tokens (skip to keep your activation for a future reinstall).
+    rm -rf ~/.config/codexx
+
+    # 3. Shared active map + per-tool cache.
+    rm -rf ~/.cache/codexx
+
+    # 4. PATH entry. install.sh appended a marker block to your shell rc files —
+    #    open each rc that exists and delete the block bounded by:
+    #      # >>> codexx-dtdk install begin >>>
+    #      …
+    #      # <<< codexx-dtdk install end <<<
+    sed -i '/# >>> codexx-dtdk install begin >>>/,/# <<< codexx-dtdk install end <<</d' \
+        ~/.bashrc ~/.zshrc ~/.profile 2>/dev/null || true
+    ```
+  </div>
+  <div>
+    ```powershell
+    # 1. Install tree.
+    Remove-Item -Recurse -Force "$env:USERPROFILE\.codexx"
+
+    # 2. License tokens (skip to keep activation for a future reinstall).
+    Remove-Item -Recurse -Force "$env:APPDATA\CodeXX"
+
+    # 3. Shared active map + per-tool cache.
+    Remove-Item -Recurse -Force "$env:LOCALAPPDATA\CodeXX\Cache"
+
+    # 4. PATH entry — strip <root>\bin from the User-scope Path.
+    $bin = "$env:USERPROFILE\.codexx\bin"
+    $parts = ([Environment]::GetEnvironmentVariable('Path','User') -split ';') |
+             Where-Object { $_ -and $_ -ne $bin }
+    [Environment]::SetEnvironmentVariable('Path', ($parts -join ';'), 'User')
+    ```
+  </div>
+</Tabs>
+
+Open a new shell afterwards so the `PATH` change takes effect.
 
 <Alert type="info" title="Key Takeaways">
 - codegen is installed through the DTDK Manager, not downloaded directly.
