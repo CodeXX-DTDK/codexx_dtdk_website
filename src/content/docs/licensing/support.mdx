@@ -1,0 +1,104 @@
+---
+title: Support Policy
+description: How to get technical support for CodeXX DTDK, what response times to expect at each licence tier, what is in and out of scope, and how your privacy is preserved when you send a report.
+---
+
+import Alert from '@pelagornis/page/components/Alert.astro';
+import Card from '@pelagornis/page/components/Card.astro';
+
+## How to get help
+
+There is a single support channel for all tiers:
+
+- **Email:** [support@codexx-dtdk.com](mailto:support@codexx-dtdk.com)
+
+Use the same address whether you are on Community, Professional, or Team. Your licence determines **priority and response time**, not which channel you use or the quality of the answer.
+
+<Alert type="info">
+Before emailing, check the [documentation](/) and the [Diagnostic Codes](/reference/diagnostics/) reference — most `E1xx` errors are explained there with a fix. A self-served answer is the fastest answer.
+</Alert>
+
+## What to include in a report
+
+CodeXX DTDK runs entirely on your machine. We cannot see your code, your environment, or what went wrong unless you tell us. A report that includes the following gets resolved in one round-trip instead of five:
+
+- **Version** — output of `codegen --version` (or the affected tool's `--version`).
+- **Operating system** and architecture.
+- **What you ran** — the exact command line.
+- **What happened** — the full error output, including any `E1xx` code.
+- **What you expected** instead.
+- **A minimal repro** if you can — the smallest input that triggers it.
+
+<Alert type="info">
+Only send what you are comfortable sharing. Redact anything proprietary — a repro that reproduces the bug is worth more than a real-but-secret one. See [Privacy](#privacy) below.
+</Alert>
+
+## Response targets
+
+Targets are measured in **business days, Central European Time**. They are response/triage targets — an acknowledgement and a path forward — not resolution guarantees. A fix may take longer depending on complexity.
+
+<Card title="Community: free">
+
+**Best effort.** Community reports are answered when time allows and are deprioritised behind paid tiers. The full documentation and the [Diagnostic Codes](/reference/diagnostics/) reference are your first port of call.
+
+No guaranteed response time.
+
+</Card>
+
+<br />
+
+<Card title="Professional: €12 / month">
+
+**Best-effort priority.** Email is triaged ahead of Community. Target first response: **within 2 business days.**
+
+</Card>
+
+<br />
+
+<Card title="Team: from €24 / seat / month">
+
+**Priority support.** Bug reports from Team customers are triaged **within 1 business day**, ahead of all other mail. Include your licence key or organisation name so your mail is routed to the priority queue automatically.
+
+</Card>
+
+<Alert type="info">
+Need a contractual SLA, a named contact, or air-gapped / on-prem support assurances? Bespoke arrangements are available on top of Team — email [support@codexx-dtdk.com](mailto:support@codexx-dtdk.com) with your requirements.
+</Alert>
+
+## Comparison
+
+| | Community | Professional | Team |
+|---|:---:|:---:|:---:|
+| Channel | Email | Email | Email |
+| First-response target | Best effort | 2 business days | 1 business day |
+| Priority queue | — | ✓ | ✓ (highest) |
+| Custom SLA available | — | — | on request |
+
+## Scope
+
+**In scope** — we will help with:
+
+- Installation, activation, and licensing issues.
+- Bugs, crashes, and incorrect output in CodeXX DTDK tools.
+- Diagnostic (`E1xx`) codes and how to resolve them.
+- Documented features behaving differently than documented.
+- Reasonable "how do I do X" guidance for documented functionality.
+
+**Out of scope** — we cannot take on:
+
+- Writing your rules, transforms, or build configuration for you (though we will point you at the right docs and examples).
+- Debugging your application's own C++ code.
+- Third-party tools, compilers, or build systems, except where they integrate directly with CodeXX DTDK.
+- Features on tiers you do not hold — see [Tiers & Pricing](/licensing/tiers/).
+
+## Privacy
+
+CodeXX DTDK makes [no outbound network requests during execution](/trust/no-call-home/). Support does not change that:
+
+- We never have access to your code, AST, or environment unless **you** attach it to an email.
+- We only use what you send to reproduce and fix the specific issue you reported.
+- We never ask for your source tree wholesale — a minimal repro is always sufficient and always preferred.
+
+## Reporting a security issue
+
+Do **not** open a public report for security vulnerabilities. Email [support@codexx-dtdk.com](mailto:support@codexx-dtdk.com) with `SECURITY` in the subject line and we will coordinate a private fix and disclosure. This applies to every tier, including Community.
