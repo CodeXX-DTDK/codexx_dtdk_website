@@ -114,6 +114,7 @@ export default defineConfig({
           items: [
             { label: "Tiers & Pricing", slug: "licensing/tiers" },
             { label: "License Activation", slug: "licensing/activation" },
+            { label: "Support Policy", slug: "licensing/support" },
           ],
         },
         // Reference
