@@ -146,17 +146,17 @@ One command removes the install tree, the `PATH` entry, and — unless you ask o
 ]} defaultTab="u1">
   <div>
     ```sh
-    curl -fsSL https://www.codexx-dtdk.com/uninstall.sh | bash -s -- --yes
+    curl -fsSL https://www.codexx-dtdk.com/uninstall.sh | bash
     ```
 
-    The script prints what it will remove, asks for confirmation, then deletes `~/.codexx`, strips the marker block from `~/.bashrc` / `~/.zshrc` / `~/.profile`, and removes `~/.config/codexx` and `~/.cache/codexx`. Add `--keep-config` to retain license tokens (so a reinstall picks them up) or `--keep-cache` to retain the shared active map. `--dry-run` previews without touching anything; `--root <dir>` targets a non-default install location.
+    The script prints what it will remove and asks for confirmation (reading your answer from the terminal even when piped), then deletes `~/.codexx`, strips the marker block from `~/.bashrc` / `~/.zshrc` / `~/.profile`, and removes `~/.config/codexx` and `~/.cache/codexx`. For unattended use append `| bash -s -- --yes` to skip the prompt. Add `--keep-config` to retain license tokens (so a reinstall picks them up) or `--keep-cache` to retain the shared active map. `--dry-run` previews without touching anything; `--root <dir>` targets a non-default install location.
   </div>
   <div>
     ```powershell
-    iex "& { $(iwr https://www.codexx-dtdk.com/uninstall.ps1) } -Yes"
+    irm https://www.codexx-dtdk.com/uninstall.ps1 | iex
     ```
 
-    The script prints what it will remove, asks for confirmation, then deletes `%USERPROFILE%\.codexx`, removes `%USERPROFILE%\.codexx\bin` from your user `PATH`, and removes `%APPDATA%\CodeXX` and `%LOCALAPPDATA%\CodeXX\Cache`. Add `-KeepConfig` to retain license tokens or `-KeepCache` to retain the shared active map. `-DryRun` previews without touching anything; `-Root <dir>` targets a non-default install location.
+    The script prints what it will remove, asks for confirmation, then deletes `%USERPROFILE%\.codexx`, removes `%USERPROFILE%\.codexx\bin` from your user `PATH`, and removes `%APPDATA%\CodeXX` and `%LOCALAPPDATA%\CodeXX\Cache`. For unattended use, download it and run with `-Yes` (`irm …/uninstall.ps1 -OutFile uninstall.ps1; .\uninstall.ps1 -Yes`). Add `-KeepConfig` to retain license tokens or `-KeepCache` to retain the shared active map. `-DryRun` previews without touching anything; `-Root <dir>` targets a non-default install location.
   </div>
 </Tabs>
 
