@@ -1,0 +1,134 @@
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:var(--font-sans);color:var(--color-text-primary)}
+.badge{display:inline-block;font-size:11px;padding:3px 10px;border-radius:var(--border-radius-md);font-weight:500}
+.badge-shipped{background:var(--color-background-success);color:var(--color-text-success)}
+.badge-dev{background:var(--color-background-warning);color:var(--color-text-warning)}
+.badge-research{background:var(--color-background-info);color:var(--color-text-info)}
+.badge-free{background:var(--color-background-secondary);color:var(--color-text-secondary)}
+.nav{display:flex;align-items:center;justify-content:space-between;padding:1rem 1.5rem;border-bottom:0.5px solid var(--color-border-tertiary)}
+.nav-logo{font-size:15px;font-weight:500}
+.nav-links{display:flex;gap:1.5rem;font-size:13px;color:var(--color-text-secondary)}
+.hero{padding:3.5rem 1.5rem 2.5rem;max-width:640px}
+.hero h1{font-size:26px;font-weight:500;line-height:1.3;margin-bottom:1rem}
+.hero p{font-size:15px;color:var(--color-text-secondary);line-height:1.7;margin-bottom:1.5rem}
+.hero-cta{display:flex;gap:12px;align-items:center}
+.btn-primary{background:var(--color-text-primary);color:var(--color-background-primary);border:none;padding:8px 20px;border-radius:var(--border-radius-md);font-size:13px;font-weight:500;cursor:pointer}
+.btn-secondary{background:transparent;border:0.5px solid var(--color-border-secondary);padding:8px 20px;border-radius:var(--border-radius-md);font-size:13px;cursor:pointer;color:var(--color-text-primary)}
+.section{padding:2rem 1.5rem;border-top:0.5px solid var(--color-border-tertiary)}
+.section-label{font-size:11px;text-transform:uppercase;letter-spacing:0.08em;color:var(--color-text-tertiary);margin-bottom:1.25rem;font-weight:500}
+.engine-block{background:var(--color-background-secondary);border-radius:var(--border-radius-lg);padding:1.25rem 1.5rem;font-size:13px;color:var(--color-text-secondary);line-height:1.7;border:0.5px solid var(--color-border-tertiary)}
+.engine-block strong{color:var(--color-text-primary);font-weight:500}
+.products{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-top:0}
+.product-card{background:var(--color-background-primary);border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-lg);padding:1rem 1.25rem}
+.product-card.featured{border:1.5px solid var(--color-border-info)}
+.product-name{font-size:14px;font-weight:500;margin:0.5rem 0 0.4rem}
+.product-desc{font-size:12px;color:var(--color-text-secondary);line-height:1.6}
+.proof-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:12px}
+.proof-card{background:var(--color-background-secondary);border-radius:var(--border-radius-md);padding:1rem;text-align:center}
+.proof-number{font-size:22px;font-weight:500;margin-bottom:4px}
+.proof-label{font-size:11px;color:var(--color-text-secondary)}
+.cta-section{padding:2.5rem 1.5rem;border-top:0.5px solid var(--color-border-tertiary);display:flex;flex-direction:column;gap:1rem}
+.cta-section h2{font-size:18px;font-weight:500}
+.cta-section p{font-size:14px;color:var(--color-text-secondary);max-width:480px;line-height:1.7}
+.input-row{display:flex;gap:8px;max-width:400px}
+.input-row input{flex:1;padding:8px 12px;border:0.5px solid var(--color-border-secondary);border-radius:var(--border-radius-md);font-size:13px;background:var(--color-background-primary);color:var(--color-text-primary)}
+.icon-wrap{width:32px;height:32px;border-radius:var(--border-radius-md);display:flex;align-items:center;justify-content:center;margin-bottom:0.5rem;background:var(--color-background-secondary)}
+</style>
+
+<h2 class="sr-only">CodeXX DTDK landing page wireframe — showing nav, hero, engine overview, four product cards, proof metrics, and early access CTA</h2>
+
+<div class="nav">
+  <span class="nav-logo">CodeXX DTDK</span>
+  <div class="nav-links">
+    <span>Docs</span>
+    <span>codegen ↗</span>
+    <span>Early access</span>
+  </div>
+</div>
+
+<div class="hero">
+  <h1>A legacy-free C++ developer tooling platform</h1>
+  <p>One custom engine — AST, CFG, sandboxed code generation — powering four integrated products for modern C++ development and safety research.</p>
+  <div class="hero-cta">
+    <button class="btn-primary">Request early access</button>
+    <button class="btn-secondary">Read the docs ↗</button>
+  </div>
+</div>
+
+<div class="section">
+  <div class="section-label">The engine</div>
+  <div class="engine-block">
+    <strong>Custom AST front-end.</strong> Forked tree-sitter, brought to C++23, with a Prosser-based preprocessor for macro robustness and a full CST→AST transformation. No Clang dependency — no legacy baggage. The custom CFG enables inter-procedural and thread-aware analysis unavailable in existing tools.
+  </div>
+</div>
+
+<div class="section">
+  <div class="section-label">Products</div>
+  <div class="products">
+    <div class="product-card">
+      <div class="icon-wrap"><i class="ti ti-file-text" style="font-size:16px" aria-hidden="true"></i></div>
+      <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
+        <span class="badge badge-free">Free</span>
+      </div>
+      <div class="product-name">Docs generator</div>
+      <div class="product-desc">Modern, Astro-grade C++ documentation from source. Cross-file linking, code navigation.</div>
+    </div>
+    <div class="product-card featured">
+      <div class="icon-wrap"><i class="ti ti-code" style="font-size:16px" aria-hidden="true"></i></div>
+      <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
+        <span class="badge badge-shipped">V1 shipped</span>
+      </div>
+      <div class="product-name">codegen</div>
+      <div class="product-desc">Full AST as JSON → LuaU transformation logic → deterministic output. Sandboxed. No call-home.</div>
+    </div>
+    <div class="product-card">
+      <div class="icon-wrap"><i class="ti ti-shield-check" style="font-size:16px" aria-hidden="true"></i></div>
+      <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
+        <span class="badge badge-free">Free hook</span>
+        <span class="badge badge-dev">In development</span>
+      </div>
+      <div class="product-name">Linter + memory safety</div>
+      <div class="product-desc">Inter-procedural, thread-aware analysis. Borrow-checking-grade safety for existing C++.</div>
+    </div>
+    <div class="product-card">
+      <div class="icon-wrap"><i class="ti ti-robot" style="font-size:16px" aria-hidden="true"></i></div>
+      <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
+        <span class="badge badge-dev">In development</span>
+      </div>
+      <div class="product-name">MCP server</div>
+      <div class="product-desc">LLM-native C++ workflow. GraphSeek control-flow reasoning, token-saving entity summaries.</div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <div class="section-label">By the numbers</div>
+  <div class="proof-grid">
+    <div class="proof-card">
+      <div class="proof-number">150k+</div>
+      <div class="proof-label">Lines of C++</div>
+    </div>
+    <div class="proof-card">
+      <div class="proof-number">60+</div>
+      <div class="proof-label">Architecture decision records</div>
+    </div>
+    <div class="proof-card">
+      <div class="proof-number">V1</div>
+      <div class="proof-label">codegen shipped</div>
+    </div>
+    <div class="proof-card">
+      <div class="proof-number">4</div>
+      <div class="proof-label">Integrated products</div>
+    </div>
+  </div>
+</div>
+
+<div class="cta-section">
+  <h2>Join the design partner program</h2>
+  <p>Early access for C++ teams. Paid beta, tight feedback loop, direct line to the author. ADRs and preview build available under NDA.</p>
+  <div class="input-row">
+    <input type="email" placeholder="your@email.com" />
+    <button class="btn-primary">Apply</button>
+  </div>
+</div>

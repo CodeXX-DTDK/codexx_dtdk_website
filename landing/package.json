@@ -1,0 +1,23 @@
+{
+  "name": "landing",
+  "type": "module",
+  "version": "0.0.1",
+  "private": true,
+  "scripts": {
+    "dev": "astro dev",
+    "start": "astro dev",
+    "build": "astro build",
+    "preview": "astro preview",
+    "astro": "astro"
+  },
+  "dependencies": {
+    "@astrojs/vercel": "^10.0.5",
+    "@fontsource/inter": "^5.1.0",
+    "@vercel/analytics": "^2.0.1",
+    "aos": "^2.3.4",
+    "astro": "^6.1.9"
+  },
+  "devDependencies": {
+    "@types/aos": "^3.0.7"
+  }
+}

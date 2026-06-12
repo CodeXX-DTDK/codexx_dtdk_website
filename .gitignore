@@ -19,8 +19,9 @@ pnpm-debug.log*
 .env.production
 .env.preview
 
-# local test keypair (never commit private keys)
-dev/test-private.pem
+# local test keypair (never commit private keys) — un-anchored so it matches
+# under any workspace package (e.g. codegen/dev/test-private.pem)
+**/test-private.pem
 
 # macOS-specific files
 .DS_Store
