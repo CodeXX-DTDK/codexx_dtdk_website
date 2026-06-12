@@ -7,6 +7,7 @@ import "@fontsource/inter/600.css";
 import "@fontsource/inter/700.css";
 import "@fontsource/inter/800.css";
 import "../styles/landing.css";
+import Analytics from "@vercel/analytics/astro";
 
 // Outbound destinations — codegen docs live on their own subdomain (microfrontend).
 const CODEGEN_URL = "https://codegen.codexx-dtdk.com";
@@ -208,5 +209,7 @@ const proof = [
           window.matchMedia("(prefers-reduced-motion: reduce)").matches,
       });
     </script>
+
+    <Analytics />
   </body>
 </html>

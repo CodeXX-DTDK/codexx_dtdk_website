@@ -10,11 +10,10 @@ import starlightLlmsTxt from "starlight-llms-txt";
 export default defineConfig({
   site: "https://codegen.codexx-dtdk.com",
   output: "static",
-  adapter: vercel({
-    webAnalytics: {
-      enabled: true,
-    },
-  }),
+  // Web Analytics is wired via the official @vercel/analytics/astro <Analytics />
+  // component in src/components/PageFrame.astro (parity with landing; the
+  // adapter's webAnalytics inject is the deprecated path).
+  adapter: vercel(),
   integrations: [
     mermaid({
       theme: "forest",
