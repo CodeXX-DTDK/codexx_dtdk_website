@@ -4,6 +4,9 @@
 // pane), but the bottom strip renders codegen's own copyright + nav. The
 // upstream theme credit is kept as a small italic line.
 import ChatPane from '@pelagornis/page/components/ChatPane.astro'
+// Web Analytics via the official component (parity with landing); replaces the
+// deprecated adapter webAnalytics inject. Rendered once per page below.
+import Analytics from '@vercel/analytics/astro'
 
 const currentYear = new Date().getFullYear()
 
@@ -81,6 +84,8 @@ const locale =
     </div>
   )
 }
+
+<Analytics />
 
 <style>
   .page { height: 100vh; width: 100%; display: flex; flex-direction: column; overflow: hidden; }

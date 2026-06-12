@@ -1,5 +1,7 @@
 ---
 import '@pelagornis/page/styles.css'
+// Web Analytics (parity with Starlight pages via PageFrame + landing site).
+import Analytics from '@vercel/analytics/astro'
 
 interface Props {
   title: string
@@ -171,5 +173,7 @@ const currentYear = new Date().getFullYear()
         · Built with <a href="https://starlight.astro.build" rel="noopener">Starlight</a>
       </p>
     </footer>
+
+    <Analytics />
   </body>
 </html>
