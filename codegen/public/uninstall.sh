@@ -142,12 +142,18 @@ if [[ "$dry_run" -eq 1 ]]; then
 fi
 
 if [[ "$assume_yes" -ne 1 ]]; then
-    if [[ ! -t 0 ]]; then
+    # Read the confirmation from the controlling terminal so the prompt works
+    # even under `curl ... | bash`, where stdin is the script itself. Fall back
+    # to stdin if it is a tty; refuse only when there is no terminal (e.g. CI).
+    if [[ -r /dev/tty ]]; then
+        read -r -p "Proceed? [y/N] " reply </dev/tty
+    elif [[ -t 0 ]]; then
+        read -r -p "Proceed? [y/N] " reply
+    else
         echo "Refusing to uninstall non-interactively without -y/--yes." >&2
         echo "Re-run with --yes to confirm, or --dry-run to preview." >&2
         exit 2
     fi
-    read -r -p "Proceed? [y/N] " reply
     case "$reply" in
         y|Y|yes|YES) ;;
         *) echo "Aborted."; exit 1 ;;
