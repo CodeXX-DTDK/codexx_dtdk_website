@@ -1,38 +1,14 @@
 {
-  "name": "website",
+  "name": "codexx-website",
+  "private": true,
   "type": "module",
-  "version": "0.0.1",
+  "description": "CodeXX DTDK website monorepo — pure-Astro landing (landing/) + codegen Starlight docs (codegen/).",
   "scripts": {
-    "dev": "astro dev",
-    "dev:sandbox": "astro dev --mode sandbox",
-    "start": "astro dev",
-    "build": "astro build",
-    "preview": "astro preview",
-    "astro": "astro",
-    "test": "node dev/test-suite.mjs",
-    "test:webhook": "node dev/test-suite.mjs --group W",
-    "test:cli": "node dev/test-suite.mjs --group L",
-    "test:live": "node dev/test-suite-live.mjs"
-  },
-  "dependencies": {
-    "@astrojs/starlight": "^0.38.4",
-    "@astrojs/vercel": "^10.0.5",
-    "@pelagornis/page": "^1.2.5",
-    "@refineui/web-icons": "^0.3.32",
-    "@upstash/redis": "^1.35.0",
-    "@vercel/analytics": "^2.0.1",
-    "astro": "^6.1.9",
-    "astro-mermaid": "^2.0.1",
-    "mermaid": "^11.14.0",
-    "resend": "^6.12.2",
-    "sharp": "^0.34.5",
-    "starlight-llms-txt": "^0.8.1",
-    "starlight-versions": "^0.8.2"
-  },
-  "devDependencies": {
-    "@typescript-eslint/parser": "^8.59.0",
-    "eslint": "^10.2.1",
-    "eslint-plugin-astro": "^1.7.0",
-    "eslint-plugin-jsx-a11y": "^6.10.2"
+    "dev": "pnpm --filter landing dev",
+    "dev:landing": "pnpm --filter landing dev",
+    "dev:codegen": "pnpm --filter codegen dev",
+    "build": "pnpm -r build",
+    "build:landing": "pnpm --filter landing build",
+    "build:codegen": "pnpm --filter codegen build"
   }
 }

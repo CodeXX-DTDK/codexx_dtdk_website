@@ -8,7 +8,7 @@ import starlightLlmsTxt from "starlight-llms-txt";
 
 // https://astro.build/config
 export default defineConfig({
-  site: "https://www.codexx-dtdk.com",
+  site: "https://codegen.codexx-dtdk.com",
   output: "static",
   adapter: vercel({
     webAnalytics: {
