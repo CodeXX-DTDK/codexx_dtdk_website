@@ -1,7 +1,3 @@
-import { defineCollection } from 'astro:content'
-import { docsLoader } from '@astrojs/starlight/loaders'
-import { docsSchema } from '@astrojs/starlight/schema'
-
-export const collections = {
-  docs: defineCollection({ loader: docsLoader(), schema: docsSchema() }),
-}
+// Astro requires the content config at this path; the actual schema is shared
+// across the Starlight microfrontends.
+export { collections } from '@codexx/web/content-config'

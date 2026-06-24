@@ -1,6 +1,6 @@
 import type { APIRoute } from 'astro'
 import { createHmac, timingSafeEqual } from 'node:crypto'
-import { buildLicenseMetadata, type Tier } from '../../../lib/licensing/schema'
+import { buildLicenseMetadata, type Tier } from '@codexx/web/licensing/schema'
 import {
   upsertUser,
   findLicenseByOrderId,
@@ -8,7 +8,7 @@ import {
   createLicense,
   suspendLicense,
   reinstateLicense,
-} from '../../../lib/licensing/keygen'
+} from '@codexx/web/licensing/keygen'
 import { sendActivationEmail } from '../../../lib/email'
 
 export const prerender = false

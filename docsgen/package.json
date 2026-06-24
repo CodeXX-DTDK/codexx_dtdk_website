@@ -12,6 +12,7 @@
   "dependencies": {
     "@astrojs/starlight": "^0.38.4",
     "@astrojs/vercel": "^10.0.5",
+    "@codexx/web": "workspace:*",
     "@pelagornis/page": "^1.2.5",
     "@refineui/web-icons": "^0.3.32",
     "@vercel/analytics": "^2.0.1",
