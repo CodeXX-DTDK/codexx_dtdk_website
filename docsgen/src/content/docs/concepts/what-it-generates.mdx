@@ -1,0 +1,79 @@
+---
+title: What It Generates
+description: The shape of docsgen output — one MDX file per public symbol, with frontmatter, signatures, tables, and cross-links.
+---
+
+import Alert from '@pelagornis/page/components/Alert.astro';
+
+docsgen emits **one MDX file per public symbol**, plus a handful of catalog pages. This page describes the shape of those files so you know what to expect — and what your Astro/Starlight site will render.
+
+## One file per symbol
+
+Each of these symbol kinds becomes its own page:
+
+- **Class**, **Struct**, **Union** — with constructors, destructor, public methods, operators, and members.
+- **Enum** — with enumerators.
+- **Function** — free functions and methods.
+- **Variable** — public/global variables and constants.
+- **TypeAlias** — `using` / `typedef`.
+- **Concept** — C++20 concepts.
+- **Operator** — overloaded operators.
+- **Macro** — object-like and function-like macros.
+
+Nested symbols can be hidden from the sidebar with `--hide-nested` (or `hide_nested: true`) — they still generate, but are marked `hidden` when their parent is a type rather than a namespace.
+
+## Anatomy of a page
+
+Every page starts with Starlight frontmatter, then renders the comment and the structured sections:
+
+```mdx
+---
+title: "Socket"
+description: "Async, non-blocking socket with an RAII lifetime."
+---
+
+`Socket` wraps a single OS socket file descriptor and exposes a
+callback-based async I/O model.
+
+*Defined in `input.hpp:154`*
+
+## Public Methods
+
+### connect
+
+​```cpp
+[[nodiscard]] AsyncHandle connect(const Endpoint& endpoint, IoCallback onConnect);
+​```
+
+**Parameters:**
+
+| Name | Type | Default | Description |
+|------|------|---------|-------------|
+| `endpoint` | const [Endpoint](/net_endpoint)& | - | Remote host and port. |
+
+**Returns:** [AsyncHandle](/net_asynchandle) - Handle for cancellation.
+```
+
+Key elements:
+
+- **`title`** is the unqualified name; **`description`** is the symbol's brief (the `@brief` tag or the comment's first sentence).
+- **Signatures** are rendered in fenced `cpp` blocks.
+- **Parameter tables** carry one row per `@param`, with the parameter *type* linked to its page when known.
+- **Returns / Notes / See Also** sections come from `@return`, `@note`, and `@see`.
+- **`*Defined in file:line*`** records the source location.
+
+## Filenames and URLs
+
+A symbol's file name is derived from its qualified name (lowercased, `::` flattened) — e.g. `net::SocketOptions::keepAlive` ⇒ `net_socketoptions_keepalive.mdx`. Cross-links point at the matching URL, prefixed by `--base-url` when set. See [Cross-Linking](/comments/cross-linking/).
+
+## MDX safety
+
+Generated text is escaped so it's valid MDX: JSX-sensitive characters (`{`, `}`, `<`, `>`) in signatures and prose are encoded (`std::span<std::byte>` renders as `std::span&lt;std::byte&gt;`). Fenced code blocks in comments are passed through untouched.
+
+<Alert type="info">
+Output is UTF-8 and overwrites the output directory in place — docsgen does not back up existing files. Point `--output` at a directory you control (typically `src/content/docs/...` in an Astro project).
+</Alert>
+
+## Catalog pages
+
+Beyond per-symbol pages, docsgen emits index pages — `catalog_types`, `catalog_functions`, `catalog_namespaces`, `catalog_files` — that tabulate the whole surface with links. See [Catalog Pages](/concepts/catalogs/).

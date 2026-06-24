@@ -1,0 +1,55 @@
+---
+title: Public API Surface
+description: How docsgen decides which symbols become documentation — and which are filtered out.
+---
+
+docsgen documents what your users can call. A symbol reaches the output only if it passes every filter below.
+
+## What is documented
+
+A symbol is treated as public API when **all** of these hold:
+
+1. **It is not a forward declaration.** Declarations without a definition are skipped.
+2. **Its access is not private or protected.** Only public (and namespace-scope) symbols are rendered.
+3. **It is not in an excluded namespace** (see below).
+4. **Its kind is documentable** — class, struct, union, enum, function, variable, type alias, concept, operator, or macro. Other node kinds (e.g. raw namespaces as symbols) are not emitted as standalone pages.
+
+Everything else is silently dropped. There is no flag today to include private members in the rendered site.
+
+## Excluding namespaces
+
+Implementation lives in namespaces like `detail`, `internal`, or `impl`. Exclude them so they never reach the docs:
+
+```yaml
+# config.docsgen.yaml
+exclude_namespaces:
+  - detail
+  - internal
+```
+
+A symbol is excluded when its qualified name **equals** an entry or **starts with** `entry::`. So `detail` removes `net::detail` only if you list the fully qualified prefix you want — match against the qualified name as docsgen sees it. The same exclusion list is applied to both the MDX output and `llms.txt`.
+
+## Nested symbols and the sidebar
+
+Members of a type (a method, a nested struct) are documented, but you may not want every one cluttering the sidebar. With `--hide-nested` (or `hide_nested: true`):
+
+- A nested symbol still generates its page.
+- It is marked `hidden` when its parent is a **type** (class/struct/union), not a namespace.
+
+Namespace-scoped symbols are never hidden by this rule — they are top-level API.
+
+## The `@llms-only` escape hatch
+
+Sometimes you want a symbol available to AI agents but not rendered on the site (internal-but-documented helpers, agent hints). Tag its comment:
+
+```cpp
+/// @llms-only
+/// Internal fast-path used by the codegen bindings.
+void __fast_encode(...);
+```
+
+`@llms-only` symbols are **skipped during MDX generation** but still included in [llms.txt](/ai/llms-txt/). See [Doc Comments & Tags](/comments/doc-comments/) for the full tag list.
+
+## Why public-only by default
+
+A reference that mixes private plumbing with the public contract is hard to read and easy to break against. By rendering only the surface your users can depend on, docsgen keeps the docs aligned with the API you actually support — and keeps generated diffs focused on changes that matter.

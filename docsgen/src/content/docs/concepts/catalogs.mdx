@@ -1,0 +1,54 @@
+---
+title: Catalog Pages
+description: The index pages docsgen emits alongside per-symbol pages — namespaces, types, functions, and files.
+---
+
+Per-symbol pages are the leaves. **Catalog pages** are the index — generated automatically so readers and search have a way into the surface. docsgen emits four.
+
+## Types
+
+`catalog_types` — every public type (class, struct, union, enum, alias, concept), with its kind and brief, each linked to its page:
+
+```mdx
+---
+title: "Types"
+description: "All public types"
+---
+
+| Name | Kind | Description |
+|------|------|-------------|
+| [net::Endpoint](/net_endpoint) | Struct | IPv4 or IPv6 endpoint (address + port). |
+| [net::Socket](/net_socket) | Class | Async, non-blocking socket with an RAII lifetime. |
+| [net::SocketState](/net_socketstate) | Enum | Coarse-grained socket lifecycle state. |
+```
+
+## Functions
+
+`catalog_functions` — every public free function and method, with signature summary and brief, linked to the owning page.
+
+## Namespaces
+
+`catalog_namespaces` — the surface grouped by namespace. Each namespace gets a heading and a table of its members:
+
+```mdx
+## net
+
+| Name | Kind | Description |
+|------|------|-------------|
+| [Endpoint](/net_endpoint) | Struct | IPv4 or IPv6 endpoint (address + port). |
+| [Socket](/net_socket) | Class | Async, non-blocking socket with an RAII lifetime. |
+```
+
+## Files
+
+`catalog_files` — a reverse index from each indexed header to the symbols it declares:
+
+```mdx
+| File | Symbols |
+|------|--------|
+| `input.hpp` | [Endpoint](/net_endpoint), [Socket](/net_socket), [SocketOptions](/net_socketoptions), ... |
+```
+
+## Using them in a sidebar
+
+Catalogs are ordinary MDX pages, so you can link them anywhere or fold them into your Starlight sidebar — a top-level "API Index" group pointing at the four catalogs works well. Because excluded namespaces and non-public symbols are filtered before catalogs are built, the indexes only ever list what's actually documented. See [Astro / Starlight](/integrations/astro/) for wiring them in.

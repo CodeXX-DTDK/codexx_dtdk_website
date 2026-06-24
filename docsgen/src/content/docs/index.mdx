@@ -1,0 +1,83 @@
+---
+title: docsgen
+description: A C++ API documentation generator. Turns annotated headers into MDX + llms.txt. Deterministic, local-first, free.
+template: splash
+hero:
+  tagline: Your headers are already the docs. docsgen just publishes them.
+  actions:
+    - text: Quick Start
+      link: /getting-started/quick-start/
+      icon: right-arrow
+      variant: primary
+---
+
+import { CardGrid } from '@astrojs/starlight/components';
+import Card from '@pelagornis/page/components/Card.astro';
+
+<div style="text-align: center; margin: 2rem 0 3rem;">
+
+**docsgen** turns a directory of annotated C++ headers into a browsable MDX API reference and an `llms.txt` bundle for AI agents. It parses your real source with the [codex](https://www.codexx-dtdk.com) C++ frontend — namespaces, templates, member access, enumerators, `///` doc comments — and emits one MDX page per public symbol, cross-linked and catalogued.
+
+It ships as a single binary. The core generator calls nothing home. It runs the same on every machine. It is **free to use**.
+
+</div>
+
+## How docsgen is built
+
+docsgen is a terminal stage on top of the codex parsing pipeline:
+
+1. **Parsing** — handled by codex. Your headers are collected, preprocessed, parsed, and analysed into a symbol database with full qualified names, access, comments, and relationships.
+2. **Generation** — handled by docsgen. It walks the public API surface, parses each symbol's doc comment, resolves cross-links, and renders deterministic MDX (plus optional catalog pages and `llms.txt`).
+
+You don't write templates or scripts. You write good `///` comments in your headers, and docsgen publishes them.
+
+---
+
+## Core capabilities
+
+<CardGrid>
+  <Card title="Deterministic output">
+    Same headers ⇒ same MDX. Always. Symbols are sorted by qualified name and
+    rendered by a pure pass over the codex symbol database, so diffs are
+    meaningful and docs are reproducible across machines and CI.
+  </Card>
+  <Card title="Public-API only">
+    docsgen documents what your users can actually call. Private and protected
+    members, forward declarations, and excluded namespaces (`detail`, `impl`)
+    never reach the output.
+  </Card>
+  <Card title="Doxygen-style comments">
+    Reads the tags you already know — `@brief`, `@param`, `@tparam`,
+    `@return`, `@note`, `@see` — and the first sentence of a plain comment
+    becomes the summary. No new comment dialect to learn.
+  </Card>
+  <Card title="Automatic cross-linking">
+    Type references in signatures, parameters, and `@see` entries resolve to
+    links between generated pages. Your reference reads like a connected graph,
+    not a flat dump.
+  </Card>
+  <Card title="Catalog pages">
+    Alongside per-symbol pages, docsgen emits catalogs — namespaces, types,
+    functions, files — so readers (and search) have an index into the surface.
+  </Card>
+  <Card title="Optional AI summaries">
+    Point `llm:` at Anthropic, OpenAI, or a local Ollama model and docsgen adds
+    an `:::note[AI Summary]` block per symbol. Cached and deterministic on
+    warm runs (temperature 0). Off by default — the core generator stays local.
+  </Card>
+  <Card title="llms.txt out of the box">
+    Emit a single plain-text bundle of your whole API for AI agents. Mark
+    symbols `@llms-only` to ship them to agents without cluttering the rendered
+    site.
+  </Card>
+  <Card title="Astro / Starlight native">
+    Output is MDX with frontmatter, cross-link URLs, and `:::note` directives —
+    drop it straight into an Astro docs site (this one is built that way).
+  </Card>
+</CardGrid>
+
+---
+
+## Free to use
+
+docsgen has no tiers, no licence keys, and no paywalled features. Install it, point it at your headers, and publish. See [Installation](/getting-started/installation/) to get started.

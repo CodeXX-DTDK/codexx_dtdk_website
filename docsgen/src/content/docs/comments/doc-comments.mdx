@@ -1,0 +1,70 @@
+---
+title: Doc Comments & Tags
+description: Every comment style and tag docsgen understands, and how each one renders.
+---
+
+import Alert from '@pelagornis/page/components/Alert.astro';
+
+docsgen reads the doc comment attached to each symbol and turns it into structured page sections. It speaks a familiar Doxygen-style dialect — no new syntax to learn.
+
+## Comment styles
+
+docsgen strips the usual comment markers before parsing, so any of these attach to the symbol below them:
+
+```cpp
+/// Triple-slash line comments (recommended).
+
+/** Block comment
+ *  spanning lines. */
+
+// Plain double-slash also works.
+```
+
+Leading markers (`///`, `//`, `/**`, `/*`, `*`) and a single following space are stripped; trailing `*/` is removed. Inside fenced code blocks (```` ``` ````), nothing is parsed — `@` characters and markup pass through verbatim.
+
+## The summary rule
+
+- If a comment has an `@brief`, that text is the summary.
+- Otherwise, the **first sentence** of the description (up to the first `.`, `!`, `?`, or newline) becomes the summary.
+
+The summary populates the page's `description` frontmatter and the brief shown in catalogs.
+
+## Tags
+
+| Tag | Applies to | Renders as |
+|-----|-----------|-----------|
+| `@brief` | any | The summary line. Ends at the first blank line. |
+| `@param <name> <text>` | functions | A row in the **Parameters** table (type auto-linked). |
+| `@tparam <name> <text>` | templates | A row in the **Template Parameters** table. |
+| `@return` / `@returns` | functions | The **Returns** line (return type auto-linked). |
+| `@note` | any | An entry in the **Notes** list (repeatable). |
+| `@see` | any | An entry in **See Also** (symbol name, or URL, auto-linked). |
+| `@llms-only` | any | Flag: ship to [llms.txt](/ai/llms-txt/) but skip the rendered page. |
+
+Tags are multi-line: continuation lines are appended to the current tag until the next tag or a blank line (for `@brief`). Anything not under a tag is the symbol's description body, rendered as Markdown.
+
+## A worked example
+
+```cpp
+/// @brief Connect to a remote host and start the handshake.
+///
+/// The socket transitions to `Connecting` immediately and reaches
+/// `Connected` once the OS confirms the handshake, or `Error` on failure.
+///
+/// @param endpoint  Remote host and port.
+/// @param onConnect Fired once when the connection succeeds or fails.
+/// @return Handle that can be passed to `cancel()` to abort the attempt.
+/// @note No-op when the socket is not in the `Idle` state.
+/// @see Endpoint
+[[nodiscard]] AsyncHandle connect(const Endpoint& endpoint, IoCallback onConnect);
+```
+
+renders to a method page with: a brief, a description paragraph, a Parameters table (with `Endpoint` linked), a Returns line (with `AsyncHandle` linked), a Notes list, and a See Also pointing at the `Endpoint` page.
+
+<Alert type="info">
+`@see` accepts a symbol name (resolved to a link when known), a bare URL (`https://...`), or plain text (rendered as-is when no symbol matches). See [Cross-Linking](/comments/cross-linking/).
+</Alert>
+
+## Markdown in comments
+
+Comment bodies are Markdown. Headings, lists, inline code, and fenced code blocks all work and pass through to the MDX. Keep in mind docsgen escapes JSX-sensitive characters outside code fences so the output stays valid MDX — write `std::vector<T>` freely; it will render correctly.

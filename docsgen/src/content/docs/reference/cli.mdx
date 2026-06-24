@@ -1,0 +1,74 @@
+---
+title: CLI Reference
+description: Every docsgen command-line flag, the config interplay, and exit codes.
+---
+
+import Alert from '@pelagornis/page/components/Alert.astro';
+
+docsgen is a single-shot CLI: it parses headers and writes MDX, then exits.
+
+## Synopsis
+
+```sh
+docsgen [-i <dir>] [-o <dir>] [-c <file>] [--hide-nested]
+        [--base-url <url>] [--llms-txt] [--llms-txt-output <dir>]
+docsgen --version
+docsgen --help
+```
+
+## Flags
+
+| Flag | Argument | Description |
+|------|----------|-------------|
+| `-i`, `--input` | path | Input directory of C++ headers. Required unless `input:` is set in config. |
+| `-o`, `--output` | path | Output directory for MDX. Required unless `output:` is set in config. |
+| `-c`, `--config` | path | Explicit config file (otherwise discovered). |
+| `--hide-nested` | — | Hide non-top-level entities from the sidebar. |
+| `--base-url` | url | Prefix for cross-links (trailing `/` stripped). |
+| `--llms-txt` | — | Also emit `llms.txt`. |
+| `--llms-txt-output` | path | Directory for `llms.txt` (default: same as `--output`). |
+| `--version` | — | Print `<channel>/docsgen@<version>` and exit. |
+| `--help` | — | Print the option list and exit. |
+
+## Flags vs config
+
+- A CLI flag always overrides the corresponding config value.
+- `--input` / `--output` fall back to `input:` / `output:` in config; one of each (flag or config) is required.
+- `--base-url` defaults to `/`; if left at the default, `api_base_url` from config is used.
+- `--llms-txt` is also enabled by `llms_txt.enabled: true`.
+
+See the [Config Schema](/reference/config-schema/) for discovery and path-resolution rules.
+
+## Verbose output
+
+The shared `--verbose` flag (from the common CLI base) prints input/output paths, the resolved config name/version, the indexed symbol count, and each generated file.
+
+## Exit codes
+
+| Code | Meaning |
+|------|---------|
+| `0` | Success. |
+| `1` | Usage error — missing/invalid input or output, or a bad flag. |
+| `2` | Pipeline failure (parse error) or file-write failure. |
+
+The non-zero codes make a bare `docsgen` safe to gate a [CI pipeline](/integrations/ci/) on.
+
+## Examples
+
+```sh
+# Explicit dirs
+docsgen -i ./include -o ./docs
+
+# Config-driven (config.docsgen.yaml discovered)
+docsgen
+
+# Into an Astro site, with link prefix and agent bundle
+docsgen -o ./src/content/docs/api --base-url /api --llms-txt --llms-txt-output ./public
+
+# Check the installed version
+docsgen --version
+```
+
+<Alert type="info">
+docsgen overwrites the output directory in place and never modifies input files. Point `--output` at a directory you own.
+</Alert>

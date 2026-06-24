@@ -1,0 +1,98 @@
+---
+title: Quick Start
+description: Generate an MDX API reference from a directory of C++ headers in two commands.
+---
+
+import Alert from '@pelagornis/page/components/Alert.astro';
+
+This walks you from a folder of headers to a generated MDX reference in about a minute. It assumes docsgen is on your `PATH` — see [Installation](/getting-started/installation/) if not.
+
+## 1. Point docsgen at your headers
+
+The minimal invocation takes an input directory and an output directory:
+
+```sh
+docsgen --input ./include --output ./docs
+```
+
+docsgen collects every `.hpp` / `.h` under `./include` (recursively), parses them with the codex C++ frontend, and writes one MDX file per public symbol into `./docs`, plus catalog pages. The final line reports how many files were written:
+
+```
+wrote 27 MDX files to './docs'
+```
+
+<Alert type="info">
+Short flags work too: `docsgen -i ./include -o ./docs`. Run `docsgen --help` for the full list, or see the [CLI Reference](/reference/cli/).
+</Alert>
+
+## 2. Look at what came out
+
+Each public class, struct, enum, function, alias, concept, operator, and macro becomes its own page. A class page carries the symbol's doc comment, its constructors, methods, operators, and a **See Also** section — with types in signatures already linked to their own pages:
+
+```mdx
+---
+title: "Socket"
+description: "Async, non-blocking socket with an RAII lifetime."
+---
+
+`Socket` wraps a single OS socket file descriptor ...
+
+## Public Methods
+
+### connect
+
+​```cpp
+[[nodiscard]] AsyncHandle connect(const Endpoint& endpoint, IoCallback onConnect);
+​```
+
+**Returns:** [AsyncHandle](/net_asynchandle) - Handle that can be passed to `cancel()`.
+```
+
+docsgen also emits catalog pages — `catalog_types`, `catalog_functions`, `catalog_namespaces`, `catalog_files` — that index the whole surface. See [What It Generates](/concepts/what-it-generates/) and [Catalog Pages](/concepts/catalogs/).
+
+## 3. Add a config file (recommended)
+
+Re-typing flags gets old. Drop a `config.docsgen.yaml` next to your project and docsgen discovers it automatically (from the current directory, then the input directory):
+
+```yaml
+name: net
+description: Async non-blocking socket library
+version: "1.0.0"
+license: MIT
+
+input: "./include"   # relative to this config file
+output: "./docs"
+
+extensions:
+  - .hpp
+  - .h
+
+# Hide implementation namespaces from the output.
+exclude_namespaces:
+  - detail
+  - internal
+```
+
+Now generation is just:
+
+```sh
+docsgen
+```
+
+CLI flags still win over config values when both are present. The full set of keys is in the [Config Schema](/reference/config-schema/).
+
+## 4. (Optional) Emit llms.txt
+
+Add `--llms-txt` (or set `llms_txt.enabled: true`) to also emit a single plain-text bundle of your API for AI agents:
+
+```sh
+docsgen --llms-txt
+```
+
+See [llms.txt](/ai/llms-txt/) for what goes in the bundle and the `@llms-only` escape hatch.
+
+## Next steps
+
+- [Your First Docs](/getting-started/first-docs/) — annotate a header and watch the page change.
+- [How It Works](/concepts/how-it-works/) — the pipeline from headers to MDX.
+- [Doc Comments & Tags](/comments/doc-comments/) — every tag docsgen understands.

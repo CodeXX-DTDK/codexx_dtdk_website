@@ -1,0 +1,65 @@
+---
+title: Astro / Starlight
+description: Wire docsgen output straight into an Astro Starlight docs site.
+---
+
+import Alert from '@pelagornis/page/components/Alert.astro';
+
+docsgen emits MDX with Starlight-compatible frontmatter and `:::note` directives — so its output drops into an [Astro](https://astro.build) / [Starlight](https://starlight.astro.build) site with no transformation. This documentation site is built exactly that way.
+
+## Point output at your content directory
+
+Generate directly into your Starlight content collection:
+
+```sh
+docsgen --input ./include --output ./src/content/docs/api --base-url /api
+```
+
+- `--output ./src/content/docs/api` — Starlight serves this collection at `/api/...`.
+- `--base-url /api` — so generated cross-links resolve to the served URLs. See [Cross-Linking](/comments/cross-linking/).
+
+Or set both in `config.docsgen.yaml` so a bare `docsgen` does the right thing:
+
+```yaml
+input: "./include"
+output: "./src/content/docs/api"
+api_base_url: /api
+```
+
+## Frontmatter compatibility
+
+Each page carries `title` and `description`, which Starlight uses for the page heading, the sidebar label, and `<meta>` tags. The body uses standard Markdown plus `:::note[...]` callouts (for [AI summaries](/ai/llm-summaries/)) — both render natively in Starlight.
+
+## Sidebar wiring
+
+docsgen does not write your sidebar; you point Starlight at the generated directory. The catalog pages make good entry points:
+
+```js
+// astro.config.mjs — sidebar entry
+{
+  label: "API Reference",
+  items: [
+    { label: "Types", slug: "api/catalog_types" },
+    { label: "Functions", slug: "api/catalog_functions" },
+    { label: "Namespaces", slug: "api/catalog_namespaces" },
+    { label: "Files", slug: "api/catalog_files" },
+    { label: "All Symbols", autogenerate: { directory: "api" } },
+  ],
+}
+```
+
+See [Catalog Pages](/concepts/catalogs/) for what each catalog contains.
+
+## llms.txt in public/
+
+For the agent-facing bundle, write it to `public/` so Starlight serves it at `/llms.txt`:
+
+```yaml
+llms_txt:
+  enabled: true
+  output: "./public"
+```
+
+<Alert type="info">
+Because output is deterministic, you can either commit the generated MDX or regenerate it in CI before `astro build`. Committing makes PR diffs reviewable; regenerating keeps it impossible to drift. See [CI Pipelines](/integrations/ci/).
+</Alert>

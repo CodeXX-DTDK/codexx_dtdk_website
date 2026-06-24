@@ -1,0 +1,64 @@
+---
+title: Cross-Linking
+description: How docsgen turns type references into links between generated pages.
+---
+
+import Alert from '@pelagornis/page/components/Alert.astro';
+
+A good API reference reads like a connected graph: click a parameter's type and land on its page. docsgen builds those links automatically.
+
+## What gets linked
+
+Before rendering, docsgen builds an index from every public symbol's name to its generated file. It then resolves references in:
+
+- **Parameter types** in the Parameters table.
+- **Return types** in the Returns line.
+- **Member and field types** on struct/class pages.
+- **`@see` entries** that name a symbol.
+- **Base classes / related types** surfaced in See Also.
+
+A reference like `const Endpoint&` renders as `const [Endpoint](/net_endpoint)&` — the type name becomes a link, the qualifiers stay as text.
+
+## URLs and `--base-url`
+
+A symbol's URL is derived from its qualified name: lowercased, with `::` flattened to `_`. So:
+
+| Symbol | URL |
+|--------|-----|
+| `net::Socket` | `/net_socket` |
+| `net::SocketOptions::keepAlive` | `/net_socketoptions_keepalive` |
+
+By default links are rooted at `/`. If your docs are served under a sub-path, set a prefix:
+
+```sh
+docsgen --base-url /api
+```
+
+```yaml
+# or in config.docsgen.yaml
+api_base_url: /api
+```
+
+Trailing slashes are stripped, so `/api/` and `/api` behave the same. Every generated link is then prefixed (`/api/net_socket`).
+
+## `@see` resolution order
+
+For each `@see` entry, docsgen tries, in order:
+
+1. **URL** — starts with `http://` or `https://` ⇒ rendered as a plain link.
+2. **Symbol** — matches a known symbol name ⇒ linked to its page (the raw, unescaped name is used for the lookup so it matches the index).
+3. **Plain text** — no match ⇒ rendered as-is.
+
+```cpp
+/// @see Endpoint                       // -> link to /net_endpoint
+/// @see https://datatracker.ietf.org/doc/html/rfc793   // -> external link
+/// @see the design notes in DESIGN.md  // -> plain text
+```
+
+<Alert type="info">
+If a `@see` you expected to link renders as plain text, the name didn't match a documented symbol — usually because it's private, in an excluded namespace, or spelled differently than its qualified name. Check [Public API Surface](/concepts/public-api/).
+</Alert>
+
+## Stable links across runs
+
+Because URLs are derived deterministically from qualified names, links don't churn between runs unless you rename a symbol. That keeps your generated docs diff-friendly and safe to commit.

@@ -1,0 +1,102 @@
+---
+title: Config Schema (.yaml)
+description: Every key in config.docsgen.yaml — discovery rules, paths, filters, links, llms.txt, and the llm block.
+---
+
+import Alert from '@pelagornis/page/components/Alert.astro';
+
+docsgen reads a single YAML file named **`config.docsgen.yaml`**. It is optional — everything can be passed on the CLI — but it's the recommended way to pin a project's settings.
+
+## Discovery and precedence
+
+- With `-c/--config <path>`, docsgen loads exactly that file.
+- Otherwise it **discovers** `config.docsgen.yaml`, checking the **current working directory first**, then the input directory.
+- **Paths in the config are relative to the config file's directory**, not your shell's CWD.
+- **CLI flags win** over config values when both are set.
+
+## Full schema
+
+```yaml
+# --- Project metadata (used in llms.txt header) ---
+name: net
+description: Async non-blocking socket library
+version: "1.0.0"
+license: MIT
+authors:
+  - CodeXX Team
+
+# --- Paths (relative to this file) ---
+input: "."          # input directory of C++ headers
+output: "./docs"    # output directory for MDX
+
+# --- File selection ---
+extensions:         # which file extensions to collect
+  - .hpp
+  - .h
+include:            # regex patterns to include
+  - ".*\\.hpp$"
+exclude:            # regex patterns to exclude
+
+# --- Output shaping ---
+exclude_namespaces: # drop these namespaces from output + llms.txt
+  - detail
+  - internal
+hide_nested: false  # hide non-top-level entities from the sidebar
+api_base_url: /     # URL prefix for cross-links
+
+# --- External links (project metadata) ---
+links:
+  homepage: https://example.com
+  github:
+    code: https://github.com/acme/net
+    issues: https://github.com/acme/net/issues
+  gitlab:
+    code: https://gitlab.com/acme/net
+    issues: https://gitlab.com/acme/net/issues
+
+# --- llms.txt ---
+llms_txt:
+  enabled: false
+  output: "./public"   # for Astro projects (served at /llms.txt)
+
+# --- Optional AI summaries ---
+llm:
+  provider: ollama       # anthropic | openai | ollama (default: openai)
+  model: gemma2:27b
+  api_key: "..."         # for hosted providers
+  base_url: "http://localhost:11434"
+  system_prompt_append: "Prefer terse, factual summaries."
+  system_prompt_override: "..."   # replace the built-in prompt entirely
+  max_concurrent: 2
+  max_tokens: 2048
+```
+
+## Key reference
+
+| Key | Type | Meaning |
+|-----|------|---------|
+| `name` | string | Project name; the `# title` in llms.txt. |
+| `description` | string | Tagline; the `> blockquote` in llms.txt. |
+| `version`, `license`, `authors` | string / list | Metadata line in the llms.txt header. |
+| `input` | path | Header directory (relative to config). |
+| `output` | path | MDX output directory (relative to config). |
+| `extensions` | list | File extensions to collect (default `.hpp`, `.h`). |
+| `include` / `exclude` | list of regex | Path filters applied during collection. |
+| `exclude_namespaces` | list | Namespaces dropped from output and llms.txt. |
+| `hide_nested` | bool | Hide type-nested symbols from the sidebar. |
+| `api_base_url` | string | Prefix for generated cross-links (trailing `/` stripped). |
+| `links.*` | strings | Project links (homepage, GitHub/GitLab code + issues). |
+| `llms_txt.enabled` | bool | Emit `llms.txt`. |
+| `llms_txt.output` | path | Directory for `llms.txt` (default: same as `output`). |
+| `llm.provider` | enum | `anthropic`, `ollama`, or OpenAI (default/fallback). |
+| `llm.model` | string | Model ID. |
+| `llm.api_key` | string | Credential for hosted providers. |
+| `llm.base_url` | string | Override provider host/port. |
+| `llm.system_prompt_append` | string | Text appended to the built-in system prompt. |
+| `llm.system_prompt_override` | string | Replaces the built-in system prompt. |
+| `llm.max_concurrent` | int | Parallel provider calls. |
+| `llm.max_tokens` | int | Max tokens per summary. |
+
+<Alert type="info">
+Only the keys you set take effect; everything else falls back to defaults. A malformed config emits a warning and docsgen proceeds as if it were absent. See [LLM Summaries](/ai/llm-summaries/) for the `llm:` block in depth.
+</Alert>
