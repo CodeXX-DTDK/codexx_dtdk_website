@@ -1,0 +1,41 @@
+---
+title: Local-First
+description: What docsgen does and does not send over the network — and how to keep it fully offline.
+---
+
+import Alert from '@pelagornis/page/components/Alert.astro';
+
+docsgen reads your source code. So it matters exactly what it does with it. The short version: the core generator is fully local, and the only path that can reach the network is one you opt into explicitly.
+
+## The core generator calls nothing home
+
+Collecting headers, parsing, building the symbol database, parsing comments, cross-linking, rendering MDX, and writing `llms.txt` all happen on your machine. No telemetry, no analytics, no phone-home. You can run the entire pipeline air-gapped.
+
+docsgen also never writes to your input files — it only reads headers and writes to the output directory you name.
+
+## The one network path: hosted AI summaries
+
+The optional [LLM Summaries](/ai/llm-summaries/) feature is the **only** part of docsgen that can make a network request, and only when you configure a hosted provider:
+
+| Configuration | Network? |
+|---------------|----------|
+| No `llm:` block | None. Fully offline. |
+| `provider: ollama` | None — Ollama runs on your host. |
+| `provider: anthropic` / OpenAI | Sends each symbol's declaration to that provider to generate a summary. |
+
+When you point `llm:` at Anthropic or OpenAI, the declaration text (and your system prompt) is sent to that provider under their terms. If that's not acceptable for your code, use `provider: ollama` for on-device summaries, or omit `llm:` entirely.
+
+<Alert type="info">
+Want summaries **and** zero egress? Run a local model with `provider: ollama`. You get the `:::note[AI Summary]` blocks with nothing leaving the machine.
+</Alert>
+
+## Keeping it reproducible and offline in CI
+
+- Omit `llm:` (or use Ollama) for a hermetic build.
+- If you use a hosted provider, commit the summary cache (`.codexx/cache/tools/docsgen/llm_summaries.json`). With a warm cache, CI makes no provider calls. See [CI Pipelines](/integrations/ci/).
+
+## Summary
+
+- Parsing and generation: **always local.**
+- Input files: **never modified.**
+- Network access: **only** via hosted AI summaries, **only** when you configure them — and avoidable with Ollama.

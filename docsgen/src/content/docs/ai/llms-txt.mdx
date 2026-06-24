@@ -1,0 +1,84 @@
+---
+title: llms.txt
+description: Emit your whole API as one plain-text bundle for AI agents — and the @llms-only escape hatch.
+---
+
+import Alert from '@pelagornis/page/components/Alert.astro';
+
+Alongside the rendered MDX, docsgen can emit an [`llms.txt`](https://llmstxt.org/) file: a single plain-text document containing your entire public API, formatted for an LLM to ingest in one shot. Drop it into an agent and it has your library's surface as context.
+
+## Enabling it
+
+Pass the flag:
+
+```sh
+docsgen --llms-txt
+```
+
+or set it in config:
+
+```yaml
+llms_txt:
+  enabled: true
+  # output: "./public"   # for Astro projects, llms.txt belongs in public/
+```
+
+By default the file is written next to your MDX output. Use `--llms-txt-output <dir>` (or `llms_txt.output`) to redirect it — for an Astro site, `public/` so it's served at `/llms.txt`.
+
+## What's in it
+
+The bundle leads with a header built from your config — title, tagline, and a metadata line:
+
+```text
+# net
+
+> Async non-blocking socket library
+
+**Version:** 1.0.0 | **License:** MIT | **Authors:** CodeXX Team
+
+---
+```
+
+Then one section per public symbol, in qualified-name order, each rendered in plain Markdown (no MDX escaping):
+
+```text
+## net::Socket
+
+*class*
+
+Async, non-blocking socket with an RAII lifetime. ...
+
+**Parameters:**
+- `proto` -- Transport protocol.
+
+**Returns:** Handle for cancellation.
+
+**Notes:**
+- Does not support multi-homed binding in this version.
+
+**See also:** Endpoint, AsyncHandle
+
+---
+```
+
+The same public-API filter and `exclude_namespaces` list that govern the MDX output apply here, so the bundle stays in sync with the rendered site.
+
+## The `@llms-only` tag
+
+Some symbols are worth giving an agent but not worth a page on the site — internal-but-documented helpers, agent hints, fast paths. Tag the comment:
+
+```cpp
+/// @llms-only
+/// Internal fast encoder used by the generated bindings.
+void __fast_encode(...);
+```
+
+`@llms-only` symbols are **skipped during MDX generation** but **still included in llms.txt** (as long as they pass the public-API filter). It's the one-way valve: visible to machines, hidden from the rendered docs.
+
+<Alert type="info">
+This is the docsgen **tool** feature — it generates `llms.txt` for *your* C++ library. Separately, this very documentation site publishes its own [`/llms-full.txt`](/llms-full.txt) via the `starlight-llms-txt` plugin. Same idea, two layers: docs about docsgen, and the API docs docsgen produces.
+</Alert>
+
+## Why ship it
+
+A rendered HTML site is for humans; `llms.txt` is for the agents your users increasingly code alongside. One file, deterministic, regenerated on every build — so the model's view of your API never drifts from the source.

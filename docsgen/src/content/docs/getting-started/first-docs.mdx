@@ -1,0 +1,100 @@
+---
+title: Your First Docs
+description: Annotate a single header with doc comments and see exactly how docsgen renders each tag.
+---
+
+import Alert from '@pelagornis/page/components/Alert.astro';
+
+docsgen turns the comments you already write into structured pages. This page takes one small header from bare to fully documented so you can see each tag's effect.
+
+## The starting point
+
+Create `include/net/endpoint.hpp`:
+
+```cpp
+#pragma once
+#include <string>
+#include <cstdint>
+
+namespace net {
+
+struct Endpoint {
+    std::string host;
+    uint16_t port;
+};
+
+} // namespace net
+```
+
+Generate:
+
+```sh
+docsgen --input ./include --output ./docs
+```
+
+You get a page for `net::Endpoint` — but with no prose, just the declaration and its members. docsgen documents the public surface whether or not it's commented; comments are what make it *useful*.
+
+## Add a summary
+
+The first sentence of a plain comment becomes the page summary (and the `description` frontmatter). Add a `///` comment above the struct:
+
+```cpp
+/// IPv4 or IPv6 endpoint: an address plus a port.
+///
+/// Used by `Socket::connect` and returned by `Socket::remoteEndpoint`.
+struct Endpoint {
+```
+
+Regenerate, and the page now leads with that summary and carries the second paragraph as the body.
+
+## Use explicit tags
+
+For anything richer than a sentence, use the Doxygen-style tags docsgen parses. They work on types, functions, and members alike:
+
+```cpp
+/// @brief Connect to a remote host and start the handshake.
+///
+/// The socket transitions to `Connecting` immediately and reaches
+/// `Connected` once the OS confirms the handshake.
+///
+/// @param endpoint  Remote host and port.
+/// @param onConnect Fired once when the connection succeeds or fails.
+/// @return Handle that can be passed to `cancel()` to abort the attempt.
+/// @note No-op when the socket is not in the `Idle` state.
+/// @see Endpoint
+[[nodiscard]] AsyncHandle connect(const Endpoint& endpoint, IoCallback onConnect);
+```
+
+docsgen renders this as:
+
+- the `@brief` as the method summary,
+- the prose paragraph as the description,
+- a **Parameters** table (one row per `@param`, with the parameter *type* linked),
+- a **Returns** line,
+- a **Notes** list,
+- a **See Also** entry — and because `Endpoint` is a known symbol, `@see Endpoint` becomes a link to its page.
+
+<Alert type="info">
+Every tag docsgen understands — `@brief`, `@param`, `@tparam`, `@return`/`@returns`, `@note`, `@see`, and the `@llms-only` flag — is documented in [Doc Comments & Tags](/comments/doc-comments/).
+</Alert>
+
+## Hide the plumbing
+
+Move helpers into a `detail` namespace and exclude it so they never reach the docs:
+
+```yaml
+# config.docsgen.yaml
+exclude_namespaces:
+  - detail
+```
+
+Private and protected members and forward declarations are dropped automatically — see [Public API Surface](/concepts/public-api/) for the exact rules.
+
+## What you've learned
+
+- docsgen documents the public surface with or without comments.
+- A plain comment's first sentence becomes the summary; tags add structure.
+- Type references in tags and signatures auto-link to their pages.
+- `exclude_namespaces` and access rules keep implementation details out.
+
+Next: [How It Works](/concepts/how-it-works/) for the full pipeline, or the [Config Schema](/reference/config-schema/) to tune output.

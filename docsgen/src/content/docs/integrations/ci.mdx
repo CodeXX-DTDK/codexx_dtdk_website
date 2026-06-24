@@ -1,0 +1,53 @@
+---
+title: CI Pipelines
+description: Run docsgen in CI to keep generated docs in sync with your headers.
+---
+
+import Alert from '@pelagornis/page/components/Alert.astro';
+
+Because docsgen output is deterministic, it fits two clean CI patterns: **regenerate on build**, or **commit and verify**. Pick based on whether you want generated MDX in your repo.
+
+## Pattern A — regenerate before building the site
+
+Keep generated docs out of git; produce them fresh in CI right before the static build:
+
+```yaml
+# .github/workflows/docs.yml
+steps:
+  - uses: actions/checkout@v4
+  - name: Install DTDK Manager
+    run: curl -fsSL https://www.codexx-dtdk.com/install.sh | bash
+  - name: Install docsgen
+    run: ~/.codexx/bin/codexx_dtdk_manager --install docsgen   # or via the TUI
+  - name: Generate API docs
+    run: docsgen   # reads config.docsgen.yaml
+  - name: Build site
+    run: pnpm build
+```
+
+No drift is possible — the docs are always rebuilt from current headers.
+
+## Pattern B — commit generated docs, verify they're current
+
+Commit the MDX so PR diffs show doc changes, and fail CI if someone forgot to regenerate:
+
+```sh
+docsgen
+git diff --exit-code ./src/content/docs/api
+```
+
+A non-zero exit means the committed docs are stale versus the headers. This is only reliable because docsgen is deterministic — the same headers always produce byte-identical MDX.
+
+## AI summaries in CI
+
+If you enable [LLM Summaries](/ai/llm-summaries/), commit the cache so CI doesn't make live provider calls:
+
+```
+.codexx/cache/tools/docsgen/llm_summaries.json
+```
+
+With a warm cache, generation is offline and reproducible. Without it, a hosted provider would be called on every run (slow, costly, and possibly non-reproducible). For a fully hermetic build, prefer `provider: ollama` or rely on the committed cache.
+
+<Alert type="info">
+docsgen exits non-zero on pipeline failure (parse error) or write failure, so a bare `docsgen` is safe to gate a pipeline on. See the [CLI Reference](/reference/cli/) for exit codes.
+</Alert>

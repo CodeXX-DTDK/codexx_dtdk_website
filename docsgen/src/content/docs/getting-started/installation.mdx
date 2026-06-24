@@ -1,0 +1,130 @@
+---
+title: Installation
+description: Install docsgen through the CodeXX DTDK Manager — the single entry point that installs, updates, and verifies every DTDK component.
+---
+
+import Alert from '@pelagornis/page/components/Alert.astro';
+import Tabs from "@pelagornis/page/components/Tabs.astro";
+
+## How CodeXX DTDK is installed
+
+docsgen ships as one component of the **CodeXX Dev-Tool Development Kit (DTDK)**. You don't download `docsgen` directly. You install the **DTDK Manager** once — a small terminal app — and use it to install, update, and verify docsgen and every other component.
+
+The manager keeps each component in a versioned, side-by-side layout under `~/.codexx` and exposes one binary per tool on your `PATH`. No `sudo`, no system package manager, no admin rights.
+
+<Alert type="info">
+docsgen is **free to use** — there is no licence key and no activation step. Install it and run it.
+</Alert>
+
+## Install
+
+One command downloads the latest stable manager, verifies its checksum, extracts it under `~/.codexx`, and adds `~/.codexx/bin` to your shell profile. No GitHub account or token required.
+
+<Tabs tabs={[
+  { id: "tab1", label: "Linux" },
+  { id: "tab2", label: "Windows" },
+  { id: "tab3", label: "macOS" }
+]} defaultTab="tab1">
+  <div>
+    ```sh
+    curl -fsSL https://www.codexx-dtdk.com/install.sh | bash
+    ```
+
+    Open a new shell afterwards so the `PATH` change takes effect. To also verify the release signature, append `-s -- --verify` (requires `cosign` on `PATH`).
+  </div>
+  <div>
+    ```powershell
+    iex ((New-Object System.Net.WebClient).DownloadString('https://www.codexx-dtdk.com/install.ps1'))
+    ```
+
+    Installs under `%USERPROFILE%\.codexx` and prepends `%USERPROFILE%\.codexx\bin` to your user `PATH`. Open a new shell afterwards.
+  </div>
+  <div>
+    <Alert type="info">
+    macOS builds are temporarily paused while the release pipeline is validated on Apple hardware. Until macOS archives ship, build from source on macOS — see the project `README` — or run the Linux build in an x86-64 environment.
+    </Alert>
+  </div>
+</Tabs>
+
+The installer fetches the manager through a download proxy that holds a read-only token server-side — the releases live in a private repository, but you never need credentials. To pin a specific version or install a pre-release channel, download `install.sh` / `install.ps1` and pass `--tag` or `--channel`.
+
+## Inspect the installer before running it
+
+Don't want to pipe a remote script straight into a shell? Download it, read it, then run it.
+
+<Tabs tabs={[
+  { id: "dl1", label: "Linux" },
+  { id: "dl2", label: "Windows" }
+]} defaultTab="dl1">
+  <div>
+    ```sh
+    curl -fSL https://www.codexx-dtdk.com/install.sh -o install.sh
+    less install.sh                # read it
+    chmod +x install.sh
+    ./install.sh --help            # list every flag
+    ./install.sh                   # default install (stable, ~/.codexx, PATH)
+    ./install.sh --verify          # additionally cosign-verify the archive
+    ```
+  </div>
+  <div>
+    ```powershell
+    Invoke-WebRequest https://www.codexx-dtdk.com/install.ps1 -OutFile install.ps1
+    Get-Content .\install.ps1             # read it
+    Get-Help .\install.ps1 -Detailed      # list every flag
+    .\install.ps1                         # default install
+    .\install.ps1 -Verify                 # additionally cosign-verify the archive
+    ```
+  </div>
+</Tabs>
+
+This is the same artifact the proxy serves to `curl | bash` / `iex` — saving it to disk just lets you audit it first.
+
+## Run the manager
+
+Open a new shell so the `PATH` change takes effect, then launch:
+
+```sh
+codexx_dtdk_manager
+```
+
+The manager is a terminal UI. Move with the arrow keys; press `Enter` on the **docsgen** row to install it. `q` quits. The manager handles the download, checksum verification, and side-by-side version management for you. Because docsgen is free, there is no activation prompt — installing the component is all it takes.
+
+## Verify the installation
+
+```sh
+docsgen --version
+docsgen --help
+```
+
+`--version` prints the channel and version (e.g. `stable/docsgen@0.1.0`); `--help` lists every option. If the command isn't found, confirm `~/.codexx/bin` (or `%USERPROFILE%\.codexx\bin`) is on your `PATH` and that you opened a new shell.
+
+## Uninstall
+
+One command removes the install tree and the `PATH` entry.
+
+<Tabs tabs={[
+  { id: "u1", label: "Linux" },
+  { id: "u2", label: "Windows" }
+]} defaultTab="u1">
+  <div>
+    ```sh
+    curl -fsSL https://www.codexx-dtdk.com/uninstall.sh | bash
+    ```
+
+    The script prints what it will remove and asks for confirmation, then deletes `~/.codexx` and strips the marker block from your shell rc files. For unattended use append `| bash -s -- --yes`. `--dry-run` previews without touching anything.
+  </div>
+  <div>
+    ```powershell
+    irm https://www.codexx-dtdk.com/uninstall.ps1 | iex
+    ```
+
+    The script prints what it will remove, asks for confirmation, then deletes `%USERPROFILE%\.codexx` and removes `%USERPROFILE%\.codexx\bin` from your user `PATH`. `-DryRun` previews without touching anything.
+  </div>
+</Tabs>
+
+<Alert type="info" title="Key Takeaways">
+- docsgen is installed through the DTDK Manager, not downloaded directly.
+- One PAT-free command installs the manager — download, checksum, extract, and `PATH` are all automatic.
+- docsgen is free: no licence key, no activation step.
+- Verify with `docsgen --version` once `~/.codexx/bin` is on your `PATH`.
+</Alert>

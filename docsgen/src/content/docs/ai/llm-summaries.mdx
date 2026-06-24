@@ -1,0 +1,75 @@
+---
+title: LLM Summaries
+description: Optionally enrich each page with an AI-written summary and key takeaways — cached, deterministic, and provider-agnostic.
+---
+
+import Alert from '@pelagornis/page/components/Alert.astro';
+
+docsgen can add a short, AI-written summary to each symbol page — an `:::note[AI Summary]` callout with a paragraph and a "Key takeaways" list. It is **off by default**; the core generator stays fully local unless you opt in.
+
+## Enabling it
+
+Add an `llm:` block to your `config.docsgen.yaml`:
+
+```yaml
+llm:
+  provider: ollama          # anthropic | openai | ollama
+  model: gemma2:27b
+  # base_url: "http://localhost:11434"   # default for ollama
+  max_concurrent: 2
+  max_tokens: 2048          # raise for large symbols or thinking models
+```
+
+When `llm:` is present, summaries are generated; when it's absent, every LLM code path is a no-op.
+
+## Providers
+
+| Provider | `provider:` | Notes |
+|----------|-------------|-------|
+| Ollama (local) | `ollama` | Runs on your machine — nothing leaves the host. Best for a local-first setup. |
+| Anthropic | `anthropic` | Claude models. Needs `api_key` (or the provider's env var). |
+| OpenAI | *(default)* | Used when `provider:` is omitted or unrecognised. Needs `api_key`. |
+
+Other keys: `api_key`, `base_url` (override host/port), `system_prompt_append` / `system_prompt_override` (steer the summary style), `max_concurrent` (parallel calls), `max_tokens`.
+
+## What it produces
+
+For each public symbol, docsgen builds a prompt from the declaration and renders the response as:
+
+```mdx
+:::note[AI Summary]
+net::Socket is an RAII-managed, asynchronous, non-blocking socket wrapper ...
+
+**Key takeaways:**
+- Employs a callback-based asynchronous I/O model via IoCallback.
+- Thread-safety is limited to send(), receive(), and cancel() once connected.
+- State-changing operations must run on the event-loop thread.
+:::
+```
+
+## Caching and determinism
+
+Summaries are cached on disk at:
+
+```
+<workspace>/.codexx/cache/tools/docsgen/llm_summaries.json
+```
+
+where `<workspace>` is the directory containing your `config.docsgen.yaml`. The cache key covers the **model ID + declaration text + system prompt**. On a warm run, docsgen reads the cache and calls nothing:
+
+- **Warm cache, temperature 0 ⇒ deterministic.** Re-running produces identical summaries.
+- **Cold cache, or a changed model / prompt ⇒** docsgen calls the provider for the misses, then writes them back.
+
+A pre-pass fires all provider calls (semaphore-limited by `max_concurrent`) and populates the cache *before* the parallel MDX render begins, so the I/O-bound calls don't serialise the CPU-bound generation.
+
+<Alert type="info">
+The AI feature is the **only** part of docsgen that may reach the network, and only when you configure a hosted provider. Use `provider: ollama` to keep everything on-device. See [Local-First](/trust/local-first/).
+</Alert>
+
+<Alert type="warning">
+Commit the cache file if you want reproducible docs in CI without re-calling the provider. Without a warm cache, a CI run with a hosted provider will make live calls (and may differ run-to-run if the model changes upstream).
+</Alert>
+
+## When to use it
+
+AI summaries are a complement, not a replacement, for good `///` comments. They shine for orienting readers on large or subtle types — but the deterministic, hand-written brief is still the contract. Treat the summary as a helpful gloss layered on top.
