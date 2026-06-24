@@ -2,7 +2,10 @@ import { Resend } from 'resend'
 import type { Tier } from './licensing/schema'
 
 const FROM = 'Codegen <noreply@codexx-dtdk.com>'
+// Brand/footer link → landing site. APP_ORIGIN → codegen app (where /activate lives,
+// now on its own subdomain).
 const SITE = 'https://www.codexx-dtdk.com'
+const APP_ORIGIN = 'https://codegen.codexx-dtdk.com'
 
 function resend() {
   return new Resend(process.env.RESEND_API_KEY || import.meta.env.RESEND_API_KEY)
@@ -17,7 +20,7 @@ export async function sendActivationEmail(params: {
   const { to, key, tier, trialEnd } = params
   const tierLabel = tier === 'team' ? 'Team' : tier === 'professional' ? 'Professional' : 'Community'
   const machinesNote = tier === 'community' ? 'unlimited machines' : 'up to 5 machines'
-  const activateUrl = `${SITE}/activate?key=${encodeURIComponent(key)}`
+  const activateUrl = `${APP_ORIGIN}/activate?key=${encodeURIComponent(key)}`
 
   // Trial-aware copy. trialEnd is an ISO-8601 string from Polar; render it as
   // a plain calendar date in the user's locale-agnostic format (YYYY-MM-DD).

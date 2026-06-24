@@ -4,7 +4,7 @@
 
 .DESCRIPTION
     A byte-identical copy of this script is served at
-    https://www.codexx-dtdk.com/install.ps1 — keep website/public/install.ps1
+    https://www.codexx-dtdk.com/install.ps1 — keep landing/public/install.ps1
     in sync when editing this file.
 
     Installs the DTDK Manager + master shim into <root>\ (default

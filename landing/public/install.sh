@@ -2,7 +2,7 @@
 # CodeXX DTDK bootstrap installer (POSIX). Per ADR-038 §5 + ADR-039 §3.
 #
 # A byte-identical copy of this script is served at
-# https://www.codexx-dtdk.com/install.sh — keep website/public/install.sh in
+# https://www.codexx-dtdk.com/install.sh — keep landing/public/install.sh in
 # sync when editing this file.
 #
 # Installs the DTDK Manager + master shim into <root>/ (default $HOME/.codexx)

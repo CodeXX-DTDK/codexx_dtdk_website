@@ -4,7 +4,7 @@
 
 .DESCRIPTION
     A byte-identical copy of this script is served at
-    https://www.codexx-dtdk.com/uninstall.ps1 — keep website/public/uninstall.ps1
+    https://www.codexx-dtdk.com/uninstall.ps1 — keep landing/public/uninstall.ps1
     in sync when editing this file.
 
     Removes the DTDK install tree (default %USERPROFILE%\.codexx), the
