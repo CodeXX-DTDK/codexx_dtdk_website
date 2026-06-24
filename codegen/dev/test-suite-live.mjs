@@ -6,7 +6,7 @@
 // (uses a per-run synthetic order ID so it never collides with real orders).
 //
 // Required env:
-//   WEBHOOK_URL                          full URL, e.g. https://www.codexx-dtdk.com/api/webhooks/polar
+//   WEBHOOK_URL                          full URL, e.g. https://codegen.codexx-dtdk.com/api/webhooks/polar
 //   POLAR_WEBHOOK_SECRET                 polar_whs_…  (matches the signing secret on that deployment)
 //   KEYGEN_ACCOUNT_ID                    Keygen account UUID
 //   KEYGEN_TOKEN                         env-…  admin/env token for cleanup + status reads

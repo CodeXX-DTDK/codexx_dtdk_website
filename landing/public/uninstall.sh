@@ -2,7 +2,7 @@
 # CodeXX DTDK uninstaller (POSIX). Per ADR-038 §5.
 #
 # A byte-identical copy of this script is served at
-# https://www.codexx-dtdk.com/uninstall.sh — keep website/public/uninstall.sh in
+# https://www.codexx-dtdk.com/uninstall.sh — keep landing/public/uninstall.sh in
 # sync when editing this file.
 #
 # Removes the DTDK install tree (default $HOME/.codexx), the shell-profile PATH
