@@ -1,0 +1,25 @@
+{
+  "name": "@codexx/web",
+  "type": "module",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Shared code across the CodeXX website microfrontends (landing, codegen, docsgen) — licensing (Keygen/Polar) helpers, transactional email, rate limiting, Starlight content config, and the shared PageFrame layout.",
+  "exports": {
+    "./rate-limit": "./src/rate-limit.ts",
+    "./email": "./src/email.ts",
+    "./content-config": "./src/content-config.ts",
+    "./licensing/keygen": "./src/licensing/keygen.ts",
+    "./licensing/schema": "./src/licensing/schema.ts",
+    "./PageFrameBase.astro": "./src/components/PageFrameBase.astro"
+  },
+  "dependencies": {
+    "@upstash/redis": "^1.35.0",
+    "resend": "^6.12.2"
+  },
+  "peerDependencies": {
+    "@astrojs/starlight": "^0.38.4",
+    "@pelagornis/page": "^1.2.5",
+    "@vercel/analytics": "^2.0.1",
+    "astro": "^6.1.9"
+  }
+}

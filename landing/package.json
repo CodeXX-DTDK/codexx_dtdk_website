@@ -12,8 +12,8 @@
   },
   "dependencies": {
     "@astrojs/vercel": "^10.0.5",
+    "@codexx/web": "workspace:*",
     "@fontsource/inter": "^5.1.0",
-    "@upstash/redis": "^1.35.0",
     "@vercel/analytics": "^2.0.1",
     "aos": "^2.3.4",
     "astro": "^6.1.9"

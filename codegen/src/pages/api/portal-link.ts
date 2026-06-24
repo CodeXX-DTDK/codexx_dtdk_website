@@ -1,5 +1,5 @@
 import type { APIRoute } from 'astro'
-import { rateLimit, clientIp } from '../../lib/rate-limit'
+import { rateLimit, clientIp } from '@codexx/web/rate-limit'
 import { sendPortalLinkEmail } from '../../lib/email'
 
 export const prerender = false

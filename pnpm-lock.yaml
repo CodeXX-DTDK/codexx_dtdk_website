@@ -16,15 +16,15 @@ importers:
       '@astrojs/vercel':
         specifier: ^10.0.5
         version: 10.0.5(astro@6.1.9(@types/node@24.12.2)(@upstash/redis@1.37.0)(@vercel/functions@3.4.4)(@vercel/kv@3.0.0)(rollup@4.60.2)(typescript@5.9.3)(yaml@2.8.4))(rollup@4.60.2)
+      '@codexx/web':
+        specifier: workspace:*
+        version: link:../shared
       '@pelagornis/page':
         specifier: ^1.2.5
         version: 1.2.5(@astrojs/starlight@0.38.4(astro@6.1.9(@types/node@24.12.2)(@upstash/redis@1.37.0)(@vercel/functions@3.4.4)(@vercel/kv@3.0.0)(rollup@4.60.2)(typescript@5.9.3)(yaml@2.8.4)))
       '@refineui/web-icons':
         specifier: ^0.3.32
         version: 0.3.32
-      '@upstash/redis':
-        specifier: ^1.35.0
-        version: 1.37.0
       '@vercel/analytics':
         specifier: ^2.0.1
         version: 2.0.1
@@ -37,9 +37,6 @@ importers:
       mermaid:
         specifier: ^11.14.0
         version: 11.14.0
-      resend:
-        specifier: ^6.12.2
-        version: 6.12.2
       sharp:
         specifier: ^0.34.5
         version: 0.34.5
@@ -63,11 +60,63 @@ importers:
         specifier: ^6.10.2
         version: 6.10.2(eslint@10.2.1)
 
+  docsgen:
+    dependencies:
+      '@astrojs/starlight':
+        specifier: ^0.38.4
+        version: 0.38.4(astro@6.1.9(@types/node@24.12.2)(@upstash/redis@1.37.0)(@vercel/functions@3.4.4)(@vercel/kv@3.0.0)(rollup@4.60.2)(typescript@5.9.3)(yaml@2.8.4))
+      '@astrojs/vercel':
+        specifier: ^10.0.5
+        version: 10.0.5(astro@6.1.9(@types/node@24.12.2)(@upstash/redis@1.37.0)(@vercel/functions@3.4.4)(@vercel/kv@3.0.0)(rollup@4.60.2)(typescript@5.9.3)(yaml@2.8.4))(rollup@4.60.2)
+      '@codexx/web':
+        specifier: workspace:*
+        version: link:../shared
+      '@pelagornis/page':
+        specifier: ^1.2.5
+        version: 1.2.5(@astrojs/starlight@0.38.4(astro@6.1.9(@types/node@24.12.2)(@upstash/redis@1.37.0)(@vercel/functions@3.4.4)(@vercel/kv@3.0.0)(rollup@4.60.2)(typescript@5.9.3)(yaml@2.8.4)))
+      '@refineui/web-icons':
+        specifier: ^0.3.32
+        version: 0.3.32
+      '@vercel/analytics':
+        specifier: ^2.0.1
+        version: 2.0.1
+      astro:
+        specifier: ^6.1.9
+        version: 6.1.9(@types/node@24.12.2)(@upstash/redis@1.37.0)(@vercel/functions@3.4.4)(@vercel/kv@3.0.0)(rollup@4.60.2)(typescript@5.9.3)(yaml@2.8.4)
+      astro-mermaid:
+        specifier: ^2.0.1
+        version: 2.0.1(astro@6.1.9(@types/node@24.12.2)(@upstash/redis@1.37.0)(@vercel/functions@3.4.4)(@vercel/kv@3.0.0)(rollup@4.60.2)(typescript@5.9.3)(yaml@2.8.4))(mermaid@11.14.0)
+      mermaid:
+        specifier: ^11.14.0
+        version: 11.14.0
+      sharp:
+        specifier: ^0.34.5
+        version: 0.34.5
+      starlight-llms-txt:
+        specifier: ^0.8.1
+        version: 0.8.1(@astrojs/starlight@0.38.4(astro@6.1.9(@types/node@24.12.2)(@upstash/redis@1.37.0)(@vercel/functions@3.4.4)(@vercel/kv@3.0.0)(rollup@4.60.2)(typescript@5.9.3)(yaml@2.8.4)))(astro@6.1.9(@types/node@24.12.2)(@upstash/redis@1.37.0)(@vercel/functions@3.4.4)(@vercel/kv@3.0.0)(rollup@4.60.2)(typescript@5.9.3)(yaml@2.8.4))
+    devDependencies:
+      '@typescript-eslint/parser':
+        specifier: ^8.59.0
+        version: 8.59.0(eslint@10.2.1)(typescript@5.9.3)
+      eslint:
+        specifier: ^10.2.1
+        version: 10.2.1
+      eslint-plugin-astro:
+        specifier: ^1.7.0
+        version: 1.7.0(eslint@10.2.1)
+      eslint-plugin-jsx-a11y:
+        specifier: ^6.10.2
+        version: 6.10.2(eslint@10.2.1)
+
   landing:
     dependencies:
       '@astrojs/vercel':
         specifier: ^10.0.5
         version: 10.0.5(astro@6.1.9(@types/node@24.12.2)(@upstash/redis@1.37.0)(@vercel/functions@3.4.4)(@vercel/kv@3.0.0)(rollup@4.60.2)(typescript@5.9.3)(yaml@2.8.4))(rollup@4.60.2)
+      '@codexx/web':
+        specifier: workspace:*
+        version: link:../shared
       '@fontsource/inter':
         specifier: ^5.1.0
         version: 5.2.8
@@ -84,6 +133,27 @@ importers:
       '@types/aos':
         specifier: ^3.0.7
         version: 3.0.8
+
+  shared:
+    dependencies:
+      '@astrojs/starlight':
+        specifier: ^0.38.4
+        version: 0.38.4(astro@6.1.9(@types/node@24.12.2)(@upstash/redis@1.37.0)(@vercel/functions@3.4.4)(@vercel/kv@3.0.0)(rollup@4.60.2)(typescript@5.9.3)(yaml@2.8.4))
+      '@pelagornis/page':
+        specifier: ^1.2.5
+        version: 1.2.5(@astrojs/starlight@0.38.4(astro@6.1.9(@types/node@24.12.2)(@upstash/redis@1.37.0)(@vercel/functions@3.4.4)(@vercel/kv@3.0.0)(rollup@4.60.2)(typescript@5.9.3)(yaml@2.8.4)))
+      '@upstash/redis':
+        specifier: ^1.35.0
+        version: 1.37.0
+      '@vercel/analytics':
+        specifier: ^2.0.1
+        version: 2.0.1
+      astro:
+        specifier: ^6.1.9
+        version: 6.1.9(@types/node@24.12.2)(@upstash/redis@1.37.0)(@vercel/functions@3.4.4)(@vercel/kv@3.0.0)(rollup@4.60.2)(typescript@5.9.3)(yaml@2.8.4)
+      resend:
+        specifier: ^6.12.2
+        version: 6.12.2
 
 packages:
 
