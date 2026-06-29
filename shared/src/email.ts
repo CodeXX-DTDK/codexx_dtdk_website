@@ -140,7 +140,10 @@ export function createEmailer(brand: EmailBrand): Emailer {
           <p style="margin:0;font-size:12px;line-height:1.6;color:#666">
             Questions? Reply to this email or visit
             <a href="${SITE}" style="color:#999;text-decoration:none">codexx-dtdk.com</a>.<br>
-            This key is tied to your account — do not share it publicly.
+            This key is tied to your account — do not share it publicly.<br>
+            <a href="https://legal.codexx-dtdk.com/privacy" style="color:#999;text-decoration:none">Privacy</a> ·
+            <a href="https://legal.codexx-dtdk.com/terms" style="color:#999;text-decoration:none">Terms</a> ·
+            <a href="https://legal.codexx-dtdk.com/eula" style="color:#999;text-decoration:none">EULA</a>
           </p>
         </td></tr>
 
@@ -239,7 +242,10 @@ export function createEmailer(brand: EmailBrand): Emailer {
         <tr><td class="px" style="padding:18px 32px;border-top:1px solid #2a2a2a;background:#111">
           <p style="margin:0;font-size:12px;line-height:1.6;color:#666">
             Questions? Reply to this email or visit
-            <a href="${SITE}" style="color:#999;text-decoration:none">codexx-dtdk.com</a>.
+            <a href="${SITE}" style="color:#999;text-decoration:none">codexx-dtdk.com</a>.<br>
+            <a href="https://legal.codexx-dtdk.com/privacy" style="color:#999;text-decoration:none">Privacy</a> ·
+            <a href="https://legal.codexx-dtdk.com/terms" style="color:#999;text-decoration:none">Terms</a> ·
+            <a href="https://legal.codexx-dtdk.com/eula" style="color:#999;text-decoration:none">EULA</a>
           </p>
         </td></tr>
 

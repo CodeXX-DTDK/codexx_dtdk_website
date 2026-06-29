@@ -162,6 +162,14 @@ import StandaloneLayout from '../layouts/StandaloneLayout.astro'
       margin-top: calc(-1 * var(--page-space-3));
     }
 
+    .purchase-legal {
+      text-align: center;
+      font-size: 0.8125rem;
+      color: var(--page-text-muted);
+      max-width: 36rem;
+      margin: var(--page-space-6) auto 0;
+    }
+
     /* Error toast */
     #checkout-error {
       display: none;
@@ -344,6 +352,13 @@ import StandaloneLayout from '../layouts/StandaloneLayout.astro'
     </article>
 
   </div>
+
+  <p class="purchase-legal">
+    By subscribing you agree to our
+    <a href="https://legal.codexx-dtdk.com/terms">Terms of Service</a> and
+    <a href="https://legal.codexx-dtdk.com/eula">EULA</a>. See our
+    <a href="https://legal.codexx-dtdk.com/privacy">Privacy Policy</a>.
+  </p>
 
   <section class="special-cases">
     <h2>Different situation?</h2>
