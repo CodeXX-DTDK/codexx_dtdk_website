@@ -1,0 +1,51 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "redirects": [
+    {
+      "source": "/privacy-policy",
+      "destination": "/privacy",
+      "permanent": true
+    },
+    { "source": "/tos", "destination": "/terms", "permanent": true }
+  ],
+  "rewrites": [
+    {
+      "source": "/eula",
+      "has": [
+        { "type": "header", "key": "x-vercel-ip-country", "value": "IT" }
+      ],
+      "destination": "/it/CodeXX_DTDK_EULA_v1.8.pdf"
+    },
+    { "source": "/eula", "destination": "/en/CodeXX_DTDK_EULA_EN_v1.0.pdf" },
+
+    {
+      "source": "/nda",
+      "has": [
+        { "type": "header", "key": "x-vercel-ip-country", "value": "IT" }
+      ],
+      "destination": "/it/CodeXX_DTDK_NDA_v1.1.pdf"
+    },
+    { "source": "/nda", "destination": "/en/CodeXX_DTDK_NDA_EN_v1.0.pdf" },
+
+    {
+      "source": "/privacy",
+      "has": [
+        { "type": "header", "key": "x-vercel-ip-country", "value": "IT" }
+      ],
+      "destination": "/it/CodeXX_DTDK_Privacy_Policy_v1.2.pdf"
+    },
+    {
+      "source": "/privacy",
+      "destination": "/en/CodeXX_DTDK_Privacy_Policy_EN_v1.0.pdf"
+    },
+
+    {
+      "source": "/terms",
+      "has": [
+        { "type": "header", "key": "x-vercel-ip-country", "value": "IT" }
+      ],
+      "destination": "/it/CodeXX_DTDK_TOS_v1.2.pdf"
+    },
+    { "source": "/terms", "destination": "/en/CodeXX_DTDK_TOS_EN_v1.0.pdf" }
+  ]
+}
