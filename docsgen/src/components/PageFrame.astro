@@ -3,21 +3,27 @@
 // (@codexx/web/PageFrameBase.astro). docsgen is free and docs-only, so the
 // footer carries no pricing/activation links.
 import PageFrameBase from '@codexx/web/PageFrameBase.astro'
-
-const currentYear = new Date().getFullYear()
 ---
 
 <PageFrameBase>
   <slot name="header" slot="header" />
   <slot slot="content" />
   <Fragment slot="footer-links">
-    © {currentYear} docsgen ·
-    <a href="/">Docs</a> ·
-    <a href="/getting-started/quick-start/">Quick Start</a> ·
-    <a href="/llms-full.txt">llms.txt</a> ·
-    <a href="/trust/local-first/">Trust</a> ·
-    <a href="https://legal.codexx-dtdk.com/privacy">Privacy</a> ·
-    <a href="https://legal.codexx-dtdk.com/terms">Terms</a> ·
-    <a href="https://legal.codexx-dtdk.com/eula">EULA</a>
+    <section class="footer-group">
+      <span class="footer-heading">Product</span>
+      <a href="/">Docs</a>
+      <a href="/getting-started/quick-start/">Quick Start</a>
+    </section>
+    <section class="footer-group">
+      <span class="footer-heading">Resources</span>
+      <a href="/llms-full.txt">llms.txt</a>
+      <a href="/trust/local-first/">Trust</a>
+    </section>
+    <section class="footer-group">
+      <span class="footer-heading">Legal</span>
+      <a href="https://legal.codexx-dtdk.com/privacy">Privacy</a>
+      <a href="https://legal.codexx-dtdk.com/terms">Terms</a>
+      <a href="https://legal.codexx-dtdk.com/eula">EULA</a>
+    </section>
   </Fragment>
 </PageFrameBase>
