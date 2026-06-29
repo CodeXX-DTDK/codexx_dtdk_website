@@ -6,6 +6,7 @@
 // their own thin PageFrame.astro wrapper that forwards Starlight's header +
 // content slots here and fills footer-links.
 import ChatPane from '@pelagornis/page/components/ChatPane.astro'
+import PageFooter from './PageFooter.astro'
 // Web Analytics via the official component; replaces the deprecated adapter
 // webAnalytics inject. Rendered once per page below.
 import Analytics from '@vercel/analytics/astro'
@@ -32,15 +33,9 @@ const locale =
           <main class="main-frame">
             <slot name="content" />
           </main>
-          <footer class="page-footer">
-            <p class="page-footer-line">
-              <slot name="footer-links" />
-            </p>
-            <p class="page-footer-credit">
-              Theme: <a href="https://github.com/pelagornis/page" rel="noopener">Pelagornis Page</a>
-              · Built with <a href="https://starlight.astro.build" rel="noopener">Starlight</a>
-            </p>
-          </footer>
+          <PageFooter>
+            <slot name="footer-links" slot="links" />
+          </PageFooter>
         </div>
       </div>
       <ChatPane
@@ -59,15 +54,9 @@ const locale =
         <main class="main-frame">
           <slot name="content" />
         </main>
-        <footer class="page-footer">
-          <p class="page-footer-line">
-            <slot name="footer-links" />
-          </p>
-          <p class="page-footer-credit">
-            Theme: <a href="https://github.com/pelagornis/page" rel="noopener">Pelagornis Page</a>
-            · Built with <a href="https://starlight.astro.build" rel="noopener">Starlight</a>
-          </p>
-        </footer>
+        <PageFooter>
+          <slot name="footer-links" slot="links" />
+        </PageFooter>
       </div>
     </div>
   )
@@ -117,30 +106,4 @@ const locale =
     }
   }
 
-  .page-footer {
-    margin-top: auto;
-    border-top: 1px solid var(--page-border-light, var(--page-border));
-    text-align: center;
-    padding: var(--page-space-8);
-    font-size: var(--page-font-size-sm);
-    color: var(--page-text-muted);
-  }
-  .page-footer a {
-    color: var(--page-text-muted);
-    text-decoration: none;
-  }
-  .page-footer a:hover {
-    color: var(--page-text);
-  }
-  .page-footer-line { margin: 0; }
-  .page-footer-credit {
-    margin: 0.5rem 0 0;
-    font-size: var(--page-font-size-xs);
-    font-style: italic;
-    opacity: 0.85;
-  }
-
-  @media (max-width: 768px) {
-    .page-footer { padding: var(--page-space-6) var(--page-space-4); }
-  }
 </style>

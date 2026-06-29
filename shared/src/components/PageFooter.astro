@@ -1,0 +1,136 @@
+---
+// Shared site footer for the Starlight microfrontends. Layout: a CodeXX DTDK
+// brand column on the left, then a grid of grouped link columns supplied by
+// each app via the "links" slot. Each app fills that slot with one or more
+//   <section class="footer-group">
+//     <span class="footer-heading">Label</span>
+//     <a href="...">Link</a> ...
+//   </section>
+// blocks. Column headings render in a monospace face to echo the CLI/engine
+// vernacular of the product. Built on the Pelagornis Page --page-* tokens.
+const currentYear = new Date().getFullYear()
+---
+
+<footer class="page-footer">
+  <div class="page-footer-inner">
+    <div class="page-footer-brand">
+      <span class="page-footer-wordmark">CodeXX DTDK</span>
+      <p class="page-footer-tagline">
+        A legacy-free C++ developer tooling platform.
+      </p>
+    </div>
+    <nav class="page-footer-cols" aria-label="Footer">
+      <slot name="links" />
+    </nav>
+  </div>
+
+  <div class="page-footer-bottom">
+    <span>© {currentYear} CodeXX DTDK · William Karol Di Cioccio</span>
+    <span class="page-footer-credit">
+      Theme: <a href="https://github.com/pelagornis/page" rel="noopener">Pelagornis Page</a>
+      · Built with <a href="https://starlight.astro.build" rel="noopener">Starlight</a>
+    </span>
+  </div>
+</footer>
+
+<style>
+  .page-footer {
+    margin-top: auto;
+    border-top: 1px solid var(--page-border-light, var(--page-border));
+    padding: var(--page-space-10, 4rem) var(--page-space-8) var(--page-space-8);
+    font-size: var(--page-font-size-sm);
+    color: var(--page-text-muted);
+  }
+
+  .page-footer-inner {
+    max-width: 1080px;
+    margin: 0 auto;
+    display: grid;
+    grid-template-columns: minmax(0, 1.3fr) minmax(0, 2.7fr);
+    gap: var(--page-space-8) var(--page-space-10, 4rem);
+    align-items: start;
+  }
+
+  /* Brand */
+  .page-footer-brand {
+    display: flex;
+    flex-direction: column;
+    gap: var(--page-space-3);
+    max-width: 22rem;
+  }
+  .page-footer-wordmark {
+    font-size: var(--page-font-size-lg);
+    font-weight: var(--page-font-weight-extrabold, 800);
+    letter-spacing: -0.02em;
+    color: var(--page-text);
+  }
+  .page-footer-tagline {
+    margin: 0;
+    line-height: 1.55;
+    color: var(--page-text-muted);
+  }
+
+  /* Link columns */
+  .page-footer-cols {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(8.5rem, 1fr));
+    gap: var(--page-space-6) var(--page-space-8);
+  }
+
+  /* Slotted groups (rendered in each app's scope → target via :global) */
+  .page-footer :global(.footer-group) {
+    display: flex;
+    flex-direction: column;
+    gap: var(--page-space-2);
+  }
+  .page-footer :global(.footer-heading) {
+    font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    font-size: var(--page-font-size-xs);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    font-weight: var(--page-font-weight-semibold, 600);
+    color: var(--page-text);
+    opacity: 0.55;
+    margin-bottom: var(--page-space-1);
+  }
+  .page-footer :global(a) {
+    color: var(--page-text-muted);
+    text-decoration: none;
+    transition: color 0.15s ease;
+  }
+  .page-footer :global(a:hover) {
+    color: var(--page-text);
+  }
+
+  /* Bottom bar */
+  .page-footer-bottom {
+    max-width: 1080px;
+    margin: var(--page-space-8) auto 0;
+    padding-top: var(--page-space-5, 1.5rem);
+    border-top: 1px solid var(--page-border-light, var(--page-border));
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: var(--page-space-2);
+    font-size: var(--page-font-size-xs);
+  }
+  .page-footer-credit {
+    font-style: italic;
+    opacity: 0.8;
+  }
+
+  @media (max-width: 768px) {
+    .page-footer {
+      padding: var(--page-space-8) var(--page-space-4) var(--page-space-6);
+    }
+    .page-footer-inner {
+      grid-template-columns: 1fr;
+      gap: var(--page-space-8);
+    }
+    .page-footer-bottom {
+      flex-direction: column;
+      align-items: flex-start;
+    }
+  }
+</style>
