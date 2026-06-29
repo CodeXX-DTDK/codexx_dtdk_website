@@ -11,6 +11,7 @@ import Analytics from "@vercel/analytics/astro";
 
 // Outbound destinations — codegen docs live on their own subdomain (microfrontend).
 const CODEGEN_URL = "https://codegen.codexx-dtdk.com";
+const LEGAL_URL = "https://legal.codexx-dtdk.com";
 const EARLY_ACCESS_MAILTO =
   "mailto:support@codexx-dtdk.com?subject=CodeXX%20DTDK%20early%20access";
 
@@ -191,6 +192,11 @@ const proof = [
 
       <footer class="footer">
         <span>© {new Date().getFullYear()} CodeXX DTDK</span>
+        <span class="footer-legal">
+          <a href={`${LEGAL_URL}/privacy`}>Privacy</a>
+          <a href={`${LEGAL_URL}/terms`}>Terms</a>
+          <a href={`${LEGAL_URL}/eula`}>EULA</a>
+        </span>
         <span>William Karol Di Cioccio</span>
       </footer>
     </div>
