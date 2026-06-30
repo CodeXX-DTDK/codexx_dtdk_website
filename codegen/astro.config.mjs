@@ -34,6 +34,14 @@ export default defineConfig({
           href: "/llms-full.txt",
         },
       ],
+      head: [
+        // Tally popup embed — powers the footer "Report a bug / Suggest an
+        // improvement" triggers (#tally-open hash links).
+        {
+          tag: "script",
+          attrs: { src: "https://tally.so/widgets/embed.js", async: true },
+        },
+      ],
       components: {
         SocialIcons: "./src/components/HeaderNav.astro",
         PageFrame: "./src/components/PageFrame.astro",
