@@ -8,6 +8,8 @@ import "@fontsource/inter/700.css";
 import "@fontsource/inter/800.css";
 import "../styles/landing.css";
 import Analytics from "@vercel/analytics/astro";
+// Site-wide "in active development" warning modal (once per visitor, cross-subdomain).
+import DisclaimerModal from "@codexx/web/DisclaimerModal.astro";
 
 // Outbound destinations — codegen/docsgen docs live on their own subdomains (microfrontends).
 const CODEGEN_URL = "https://codegen.codexx-dtdk.com";
@@ -219,5 +221,6 @@ const proof = [
     </script>
 
     <Analytics />
+    <DisclaimerModal />
   </body>
 </html>
