@@ -10,7 +10,8 @@
     "./content-config": "./src/content-config.ts",
     "./licensing/keygen": "./src/licensing/keygen.ts",
     "./licensing/schema": "./src/licensing/schema.ts",
-    "./PageFrameBase.astro": "./src/components/PageFrameBase.astro"
+    "./PageFrameBase.astro": "./src/components/PageFrameBase.astro",
+    "./DisclaimerModal.astro": "./src/components/DisclaimerModal.astro"
   },
   "dependencies": {
     "@upstash/redis": "^1.35.0",
