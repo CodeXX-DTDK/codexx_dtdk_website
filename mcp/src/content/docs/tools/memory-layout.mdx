@@ -20,7 +20,7 @@ Each region says what occupies it: a **field** (with its name and type), a **bas
 
 ## Requires debug info
 
-This view is built from the **debug information** in a compiled artifact (a `-g` / debug build). It follows that:
+This view is built from the **debug information** in a compiled artifact — **DWARF** from a `-g` build on Linux/macOS, or a **PDB** on Windows. It follows that:
 
 - a type with no debug info available returns a clear "no layout" response rather than a guess;
 - layouts reflect a **specific build**. After you rebuild, the agent should re-query rather than rely on an earlier answer. Treat layout as point-in-time. See [Workspace & Indexing](/concepts/workspace-and-indexing/).
@@ -31,4 +31,11 @@ For a fast size/alignment/padding readout without the full byte map, the agent c
 
 <Alert type="warning" title="Availability by build">
 If your project is built without debug info, layout queries won't return data. The server can be run in a profile that omits this tool entirely for projects where layout isn't available — see [Configuration](/reference/configuration/).
+</Alert>
+
+<Alert type="warning" title="Windows (PDB): current limitations">
+On Windows the layout is read from the program's **PDB** via the MSVC DIA SDK, with two caveats today:
+
+- **64-bit only.** Only **x64 (LLP64)** builds are supported — **32-bit (x86)** and **ARM64** PDBs aren't read yet, so layout queries against those builds return "no layout." Expect Windows sizes to differ from Linux/macOS for the same source (for example, `long` is 4 bytes on Windows vs. 8 elsewhere).
+- **The PDB must sit next to the binary.** The server locates it by convention as `<binary>.pdb` beside the compiled artifact. If your build redirects it with the linker's `/PDB:<path>` flag, or it's renamed or combined into another file, the server can't find it and layout is unavailable — keep the PDB beside the binary (the MSVC default).
 </Alert>
