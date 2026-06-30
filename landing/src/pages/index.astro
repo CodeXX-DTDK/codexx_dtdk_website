@@ -9,8 +9,9 @@ import "@fontsource/inter/800.css";
 import "../styles/landing.css";
 import Analytics from "@vercel/analytics/astro";
 
-// Outbound destinations — codegen docs live on their own subdomain (microfrontend).
+// Outbound destinations — codegen/docsgen docs live on their own subdomains (microfrontends).
 const CODEGEN_URL = "https://codegen.codexx-dtdk.com";
+const DOCSGEN_URL = "https://docsgen.codexx-dtdk.com";
 const LEGAL_URL = "https://legal.codexx-dtdk.com";
 const EARLY_ACCESS_MAILTO =
   "mailto:support@codexx-dtdk.com?subject=CodeXX%20DTDK%20early%20access";
@@ -36,13 +37,14 @@ const products = [
       { cls: "badge-shipped", label: "Shipping soon" },
     ],
     featured: false,
+    href: DOCSGEN_URL,
   },
   {
     icon: "code",
     name: "Code Generator",
     desc: "A one-stop solution for all tasks requiring large amounts of boilerplate. Built on an innovative no DSL AST transform based model, the tool enables advanced RTTI infrastructure, automatic generation of serialization and deserialization methods, self-documenting components... and much more.",
     badges: [{ cls: "badge-shipped", label: "Shipping soon" }],
-    featured: true,
+    featured: false,
     href: CODEGEN_URL,
   },
   {
@@ -56,7 +58,7 @@ const products = [
     icon: "cube",
     name: "MCP server",
     desc: "For LLM-driven C++ workflows. Enables deep and efficient codebase knowledge thanks to tight integration with our proprietary engine and the use of advanced techniques and modern solutions for LLM instrumentation.",
-    badges: [{ cls: "badge-dev", label: "In development" }],
+    badges: [{ cls: "badge-shipped", label: "Shipping soon" }],
     featured: false,
   },
 ];
