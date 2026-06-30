@@ -1,0 +1,65 @@
+---
+title: Tool Catalog
+description: Every tool the CodeXX MCP Server exposes, at a glance, grouped by what it's for.
+---
+
+import Alert from '@pelagornis/page/components/Alert.astro';
+
+A flat reference of every tool. Tools appear in your client under the `codex_v1_` prefix (for example `codex_v1_find_symbols`); the names below omit it for brevity. The server's own `discover` tool returns this same catalog at runtime, always current for the version you're running.
+
+## Server & discovery
+
+| Tool | What it does |
+| --- | --- |
+| `discover` | Returns the full tool catalog, entry point, and recommended workflow — the one call a cold agent makes first. |
+| `health` | Liveness/capability probe: confirms the server is up and reports the backend and storage status. |
+
+## Discovery & facts
+
+| Tool | What it does |
+| --- | --- |
+| `find_symbols` | Resolve a name (or batch of names) to symbols, or enumerate symbols by kind and/or file. The entry point for symbol queries. |
+| `get_symbol` | Display-grade facts for one symbol: kind, signature, file:line, and any label/description. |
+| `symbol_dossier` | One-call overview: facts + layout digest + reference digest + comment/note flags. |
+| `get_comment` | The verbatim doc/comment text attached to a symbol's declaration. |
+| `references` | Every declaration, definition, and use site of a symbol, each tagged with the function it sits inside. |
+
+## Source
+
+| Tool | What it does |
+| --- | --- |
+| `read_symbol_source` | The exact source span for a symbol, with original on-disk coordinates and paging for large bodies. |
+
+## Navigating code
+
+| Tool | What it does |
+| --- | --- |
+| `navigate_graph` | Start walking a structure — control flow, class hierarchy, include graph, or module imports — and get a compact preview plus a summary. |
+| `retrieve_graph` | Page through the full structure from a `navigate_graph` result. |
+
+## Memory layout
+
+| Tool | What it does |
+| --- | --- |
+| `memory_layout` | A type's byte-by-byte layout — fields, bases, vtable pointer, and padding as named regions (debug-info builds). |
+
+## Annotations
+
+| Tool | What it does |
+| --- | --- |
+| `relabel_symbol` | Set/replace a symbol's short label. |
+| `describe_symbol` | Set/replace a symbol's free-form description. |
+| `get_annotation` | Read back a symbol's label and description. |
+| `clear_label` | Remove the label, keep the description. |
+| `clear_description` | Remove the description, keep the label. |
+| `clear_annotation` | Remove both label and description. |
+
+<Alert type="info" title="What's available depends on the profile">
+The annotation write tools and `memory_layout` are gated by the server's profile — `read_only` hides the annotation writes, `no_layout` hides `memory_layout`. See [Configuration](/reference/configuration/).
+</Alert>
+
+## Stability & versioning
+
+The tools are exposed under a **versioned contract**. That's what the `codex_v1_` prefix means: this is version 1 of the tool surface. The prefix is stable, so an agent that learned the tools via `discover` keeps working as the server is updated within the same contract version.
+
+The CodeXX MCP Server is in **preview**. Tool names and shapes can still change between versions while the surface settles, and a future contract revision would carry a new prefix rather than silently altering `codex_v1_`. For the catalog that exactly matches the version you're running, have your agent call `discover` — it always reports the live surface. See [Access & Auth](/trust/auth-posture/) for the broader preview-stage caveats.

@@ -1,0 +1,47 @@
+---
+title: Discovery & Facts
+description: Learn the server's surface, then find symbols and pull their facts, comments, and references.
+---
+
+import Alert from '@pelagornis/page/components/Alert.astro';
+
+These are the tools an agent reaches for first: learn what the server can do, find a symbol, and get the facts about it. Everything else builds on a symbol the agent located here.
+
+## Learn the surface
+
+**`discover`** — one call that tells a cold agent everything it needs to use the server well: the full tool catalog (with each tool's name, access, and purpose), the recommended entry point, and a suggested workflow. An agent that runs `discover` first can use the rest of the toolset without being pre-taught.
+
+**`health`** — a liveness and capability probe. Confirms the server is up and reports which backend is answering and whether durable storage is available. Useful right after connecting, or to confirm the server is responsive.
+
+## Find symbols
+
+**`find_symbols`** — the entry point for symbol queries. Three ways to use it:
+
+- **By name** — resolve a name (ideally [qualified](/concepts/symbols-and-identity/)) to matching symbols, each with its ID, kind, file, and line.
+- **In batch** — resolve several names in one call, with a per-name match count, to map a set of references at once.
+- **By filter** — with no name, enumerate every symbol of a given **kind** (`Function`, `Class`, `Struct`, `Namespace`, …) and/or in a given **file** (path substring). This is how an agent surveys an unfamiliar codebase.
+
+Any label the agent has attached to a symbol comes back inline here, so prior knowledge resurfaces during discovery.
+
+## Get the facts on one symbol
+
+**`get_symbol`** — display-grade facts for a single symbol (by ID or name): its kind, signature, file:line span, and any label or description attached to it.
+
+**`symbol_dossier`** — a lean, one-call overview that collapses several lookups into one response:
+
+- the symbol's facts,
+- a compact memory-layout digest (size, alignment, padding — not the full byte map),
+- a reference digest (total uses, and the files where it's used most),
+- and flags for whether it has a comment or notes attached.
+
+It's the fastest way for an agent to size up a symbol and decide which detail tool to call next.
+
+## Comments and references
+
+**`get_comment`** — the raw documentation/comment text attached to a symbol's declaration, verbatim (comment markers included), with its file and line range. If the symbol has no comment, the server says so.
+
+**`references`** — every place a symbol appears: its declarations and definitions, and every use site, sorted by file and line. Crucially, each use also reports **which function it sits inside** — that's the "who uses this?" link an agent follows to understand impact and call relationships.
+
+<Alert type="info" title="A natural order">
+`discover` → `find_symbols` → `symbol_dossier` → then `get_comment` / `references` (or a detail tool from another page). Start broad, get oriented, drill in.
+</Alert>

@@ -1,0 +1,34 @@
+---
+title: Annotations
+description: Let the agent attach durable labels and descriptions to symbols — knowledge that survives restarts and resurfaces on later lookups.
+---
+
+import Alert from '@pelagornis/page/components/Alert.astro';
+
+Everything else the server does is read-only. Annotations are the exception: they let the agent **write knowledge back onto the code** — short labels and longer descriptions attached to symbols — so what it figures out in one session is there in the next.
+
+## Two kinds of note
+
+- **Label** — a short, one-line alias or display name for a symbol (for example, `"debounced work submission"`). Labels come back **inline** on later `find_symbols`, `get_symbol`, and `symbol_dossier` results, so they surface right where the agent is already looking.
+- **Description** — free-form prose: the *why* behind a symbol, gotchas, intent. Read it back explicitly when the agent wants the detail.
+
+## The tools
+
+- **`relabel_symbol`** — set (or replace) a symbol's label.
+- **`describe_symbol`** — set (or replace) a symbol's description.
+- **`get_annotation`** — read back both the label and description for a symbol, with the time they were last updated.
+- **`clear_label`** — remove the label, keep the description.
+- **`clear_description`** — remove the description, keep the label.
+- **`clear_annotation`** — remove both in one call.
+
+## Durable by design
+
+Annotations are stored durably and **survive server restarts and re-indexing** — unlike the rebuildable project index or short-lived navigation handles. They're tied to the symbol, so they reattach when the project is reloaded.
+
+<Alert type="info" title="Building a knowledge layer">
+Over repeated sessions, annotations turn into a lightweight knowledge layer over your codebase: the agent labels the confusing parts, records the reasoning behind tricky code, and finds those notes waiting next time. Knowledge compounds instead of evaporating when the session ends.
+</Alert>
+
+<Alert type="warning" title="Write access">
+The annotation tools write state. A server run in a read-only profile exposes the read paths (`get_annotation`, and labels shown inline) but not the write/clear tools — see [Configuration](/reference/configuration/).
+</Alert>

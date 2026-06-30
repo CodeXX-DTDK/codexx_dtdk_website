@@ -1,0 +1,27 @@
+---
+title: Reading Source
+description: Pull the exact source span for a symbol — with precise on-disk coordinates and paging for large bodies.
+---
+
+import Alert from '@pelagornis/page/components/Alert.astro';
+
+When the agent needs to actually read code, it doesn't dump a whole file — it pulls exactly the lines that belong to a symbol.
+
+## Read a symbol's source
+
+**`read_symbol_source`** — returns the exact source text for a symbol (by ID or name), along with its location: file, start and end line, and byte offsets. The coordinates are **original on-disk coordinates** — the source as written, matching what you'd see opening the file — so anything the agent reports lines up with your editor.
+
+## Built for large bodies
+
+A long function or class shouldn't blow the model's context. `read_symbol_source` supports **paging**: the agent can request a slice and get back a clear signal of how much remains, including the total size and whether the result was truncated. Partial reads are never silent — the agent always knows there's more to fetch.
+
+<Alert type="info" title="Read narrowly">
+Because the agent can locate a symbol precisely with [discovery tools](/tools/discovery/) first, reading source becomes surgical: fetch one function's body, not the file it lives in. That keeps the model's context focused and its answers grounded in the right lines.
+</Alert>
+
+## What it returns
+
+- the source text for the symbol's span,
+- the file path,
+- start/end line and byte offsets (original on-disk coordinates),
+- paging signals (how much was returned, how much remains) for large spans.

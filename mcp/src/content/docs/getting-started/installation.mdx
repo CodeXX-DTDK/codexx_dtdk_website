@@ -1,0 +1,55 @@
+---
+title: Installation
+description: Connect the CodeXX MCP Server to your AI agent. It ships as a container image you run as a local MCP server over stdio.
+---
+
+import Alert from '@pelagornis/page/components/Alert.astro';
+
+The CodeXX MCP Server ships as a **container image**. You don't install a binary — you run the image as a local MCP server and register it with your agent. The image carries the CodeXX engine, so there is nothing to compile on your machine.
+
+<Alert type="info">
+The CodeXX MCP Server is in **preview**. The image is distributed through our early-access program — if you don't yet have access, request it from <a href="mailto:support@codexx-dtdk.com?subject=CodeXX%20MCP%20Server%20early%20access">support@codexx-dtdk.com</a>.
+</Alert>
+
+## Prerequisites
+
+- A container runtime (Docker or compatible) on your machine.
+- An MCP-capable agent — Claude Code, Claude Desktop, or any client that can launch a stdio MCP server.
+- A C++ project on disk that you want the agent to understand.
+
+## Pull the image
+
+```sh
+docker pull ghcr.io/codexx-dtdk/codexx-mcp-server:stable-0.1.0
+```
+
+## Connect it to your agent
+
+The server speaks the Model Context Protocol over **stdio**: your client launches it as a subprocess and talks to it on standard in/out. You mount your project into the container and tell the server where it lives with `CODEXX_MCP_ROOT`.
+
+The quickest path, with Claude Code, from the root of the project you want to analyse:
+
+```sh
+claude mcp add codexx -- docker run -i --rm \
+  -v "$PWD:/workspace" \
+  -e CODEXX_MCP_ROOT=/workspace \
+  ghcr.io/codexx-dtdk/codexx-mcp-server:stable-0.1.0
+```
+
+This registers a server named `codexx`; its tools appear in your session under the `codex_v1_` prefix (for example `codex_v1_find_symbols`).
+
+<Alert type="info" title="Using Gemini CLI or OpenAI Codex?">
+Every major CLI agent wires up the same `docker run` command — only the registration format differs. See [Configuration → Per-agent setup](/reference/configuration/#per-agent-setup) for the full matrix (Claude Code, Gemini CLI, OpenAI Codex) with config-file snippets and verification commands.
+</Alert>
+
+<Alert type="warning" title="Mount your project read-write">
+The engine keeps a parse cache inside your project so the **next** session starts warm instead of re-indexing from scratch. Mount the project read-write (as above). A read-only mount works, but you pay the full cold index every time you start the server. See [Workspace & Indexing](/concepts/workspace-and-indexing/).
+</Alert>
+
+## Verify the connection
+
+Once registered, ask your agent to call the server's `health` tool, or have it run `discover`. `health` confirms the server is live and reports the backend; `discover` returns the full catalog of tools and the recommended way to use them. If both respond, you're connected — head to the [Quick Start](/getting-started/quick-start/).
+
+<Alert type="info" title="Point it at the right root">
+For best results, point `CODEXX_MCP_ROOT` at a single library or subtree rather than a huge repository root. The engine indexes the whole tree under that path on startup; scoping it keeps the first index fast and the results focused. See [Workspace & Indexing](/concepts/workspace-and-indexing/).
+</Alert>

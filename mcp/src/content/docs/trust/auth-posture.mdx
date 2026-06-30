@@ -1,0 +1,33 @@
+---
+title: Access & Auth
+description: The server's authentication stance during preview, and how to secure it if you self-host.
+---
+
+import Alert from '@pelagornis/page/components/Alert.astro';
+
+The CodeXX MCP Server is in **preview**, and its access model reflects that. This page is the honest summary of where things stand.
+
+## Designed for local, single-project use
+
+The server is built to run on your machine, connected to one project, talking to your agent over a local stdio connection. In that setup the trust boundary is your own machine — the same as any local developer tool — so **authentication is off by default**.
+
+## If you expose it over the network
+
+The server can run as a self-hosted HTTP endpoint instead of local stdio. If you do that, you are responsible for securing it:
+
+- Set `CODEXX_MCP_AUTH_TOKEN` to require a bearer token on **every** call.
+- Put it behind your own network controls (private network, reverse proxy, TLS) as appropriate.
+
+Don't expose an unauthenticated server beyond your own machine.
+
+<Alert type="warning" title="Preview-stage limitations">
+Multi-user and hosted deployment are still being rolled out. Today the server is best treated as a **single-user, single-project** tool. Run one instance per project, keep it local unless you've secured it, and expect the deployment surface to expand as the product leaves preview.
+</Alert>
+
+## State is built to scale later
+
+Even though the preview is single-user, the durable state ([annotations](/tools/annotations/)) is keyed in a way that doesn't depend on any one session — so the same notes resolve consistently across restarts, and the design leaves room for multi-instance deployments down the line. That's groundwork, not a feature you should rely on yet.
+
+## Questions?
+
+Access to the preview image and early-access onboarding go through <a href="mailto:support@codexx-dtdk.com?subject=CodeXX%20MCP%20Server%20access">support@codexx-dtdk.com</a>.

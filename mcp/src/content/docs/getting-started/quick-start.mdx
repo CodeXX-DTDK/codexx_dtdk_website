@@ -1,0 +1,58 @@
+---
+title: Quick Start
+description: From a connected server to your agent answering real questions about your C++ code in a few minutes.
+---
+
+import Alert from '@pelagornis/page/components/Alert.astro';
+
+This walks through a first session once the server is [connected to your agent](/getting-started/installation/). You don't call these tools by hand — you ask your agent questions, and it picks the right tools. The flow below is what a good session looks like under the hood.
+
+## 1. Let the agent learn the surface
+
+A cold agent starts with one call:
+
+- **`discover`** returns the full tool catalog, the recommended entry point, and a suggested workflow.
+- **`health`** confirms the server is live and reports which backend is answering.
+
+You can simply ask: *"What can the codexx server do?"* — the agent will run `discover` and summarise.
+
+## 2. Find something
+
+Symbol lookups start at **`find_symbols`**. Ask in plain language:
+
+> *"Find the `Workspace` class in this project."*
+
+The agent resolves the name to a real declaration with its kind, file, and line. If a name is ambiguous, the server reports the candidates so the agent can disambiguate — usually by using the fully qualified name (`codex::Workspace`). See [Symbols & Identity](/concepts/symbols-and-identity/).
+
+You can also map an unfamiliar codebase:
+
+> *"List every class defined under `src/analysis`."*
+
+## 3. Get the full picture of a symbol
+
+Once a symbol is in hand, **`symbol_dossier`** gives a one-call overview: its facts, a compact memory-layout digest, a summary of where it's referenced, and flags for whether it has comments or notes attached. It's the fastest way for the agent to decide where to drill in.
+
+> *"Give me an overview of `Scheduler::enqueue`."*
+
+## 4. Drill into details
+
+From there the agent reaches for the right detail tool:
+
+- **`references`** — every place a symbol is used, and which function each use sits inside.
+- **`read_symbol_source`** — the exact source span, so the model reads only the lines that matter.
+- **`navigate_graph`** — walk the control flow of a function, a class hierarchy, or an include graph. See [Navigating Code](/tools/navigating-code/).
+- **`memory_layout`** — the byte-by-byte layout of a type (debug-info builds). See [Memory Layout](/tools/memory-layout/).
+
+> *"Who calls `enqueue`, and show me its body."*
+
+## 5. Leave notes for next time
+
+When the agent works something out, it can record it:
+
+> *"Label `enqueue` as 'debounced work submission' and note why the lock is held."*
+
+Those notes persist and resurface on later lookups — see [Annotations](/tools/annotations/).
+
+<Alert type="info" title="The shape of a good session">
+Start broad (`discover` → `find_symbols`), get oriented (`symbol_dossier`), then drill into just the detail you need (`references`, `read_symbol_source`, `navigate_graph`, `memory_layout`). The [Typical Agent Session](/guides/agent-session/) guide walks an end-to-end example.
+</Alert>

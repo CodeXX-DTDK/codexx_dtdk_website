@@ -1,0 +1,34 @@
+---
+title: Memory Layout
+description: Give the agent a type's byte-by-byte layout — fields, bases, the vtable pointer, and padding as a named region.
+---
+
+import Alert from '@pelagornis/page/components/Alert.astro';
+
+C++ layout questions — *how big is this type? where's the padding? does it have a vtable?* — usually mean squinting at a struct and doing arithmetic. The memory-layout tool answers them directly.
+
+## What it returns
+
+**`memory_layout`** — for a given type (by ID or name), the type's actual in-memory layout:
+
+- its **size** and **alignment** in bytes,
+- total **padding**,
+- whether it has a **vtable pointer**, and
+- an **ordered map of byte regions** that tiles the whole type from start to end — with no gaps and no overlaps.
+
+Each region says what occupies it: a **field** (with its name and type), a **base class** subobject, the **vtable pointer**, or **padding**. Padding is a first-class, named region — not a number you have to infer — so the agent can see wasted space and where it sits, and reason about reordering or packing.
+
+## Requires debug info
+
+This view is built from the **debug information** in a compiled artifact (a `-g` / debug build). It follows that:
+
+- a type with no debug info available returns a clear "no layout" response rather than a guess;
+- layouts reflect a **specific build**. After you rebuild, the agent should re-query rather than rely on an earlier answer. Treat layout as point-in-time. See [Workspace & Indexing](/concepts/workspace-and-indexing/).
+
+<Alert type="info" title="Quick layout vs. full map">
+For a fast size/alignment/padding readout without the full byte map, the agent can use the layout digest inside [`symbol_dossier`](/tools/discovery/). Reach for `memory_layout` when it needs the region-by-region breakdown.
+</Alert>
+
+<Alert type="warning" title="Availability by build">
+If your project is built without debug info, layout queries won't return data. The server can be run in a profile that omits this tool entirely for projects where layout isn't available — see [Configuration](/reference/configuration/).
+</Alert>
