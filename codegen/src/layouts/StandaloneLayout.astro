@@ -2,6 +2,8 @@
 import '@pelagornis/page/styles.css'
 // Web Analytics (parity with Starlight pages via PageFrame + landing site).
 import Analytics from '@vercel/analytics/astro'
+// Site-wide "in active development" warning modal (once per visitor, cross-subdomain).
+import DisclaimerModal from '@codexx/web/DisclaimerModal.astro'
 
 interface Props {
   title: string
@@ -175,5 +177,6 @@ const currentYear = new Date().getFullYear()
     </footer>
 
     <Analytics />
+    <DisclaimerModal />
   </body>
 </html>

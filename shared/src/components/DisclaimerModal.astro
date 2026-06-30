@@ -1,0 +1,165 @@
+---
+// Shared "in active development" warning modal, injected on every page of every
+// CodeXX microfrontend (landing, codegen, docsgen). Blocking overlay shown ONCE
+// per visitor across the whole site: acknowledgement is stored in a cookie
+// scoped to `.codexx-dtdk.com`, so accepting on one subdomain carries to all the
+// others. Fully self-contained (no imports, no app CSS deps) and idempotent, so
+// it is safe to include from multiple layouts and re-runs harmlessly under
+// Astro/Starlight view transitions.
+---
+
+<script is:inline>
+  (function () {
+    var COOKIE = "codexx_disclaimer_ack";
+    var MODAL_ID = "codexx-disclaimer";
+
+    function acknowledged() {
+      return document.cookie.indexOf(COOKIE + "=1") !== -1;
+    }
+
+    function persist() {
+      var v =
+        COOKIE + "=1; path=/; max-age=31536000; SameSite=Lax";
+      var h = location.hostname;
+      if (h === "codexx-dtdk.com" || h.indexOf(".codexx-dtdk.com") !== -1) {
+        // Parent-domain cookie → shared across every subdomain microfrontend.
+        document.cookie = v + "; domain=.codexx-dtdk.com";
+      } else {
+        // Local dev / preview hosts: host-only cookie.
+        document.cookie = v;
+      }
+    }
+
+    function dismiss(overlay) {
+      persist();
+      if (overlay && overlay.parentNode) overlay.parentNode.removeChild(overlay);
+      document.documentElement.style.overflow = "";
+      document.body.style.overflow = "";
+    }
+
+    function show() {
+      if (acknowledged()) return;
+      if (document.getElementById(MODAL_ID)) return;
+
+      var overlay = document.createElement("div");
+      overlay.id = MODAL_ID;
+      overlay.setAttribute("role", "dialog");
+      overlay.setAttribute("aria-modal", "true");
+      overlay.setAttribute("aria-labelledby", MODAL_ID + "-title");
+      overlay.style.cssText = [
+        "position:fixed",
+        "inset:0",
+        "z-index:2147483647",
+        "display:flex",
+        "align-items:center",
+        "justify-content:center",
+        "padding:1.25rem",
+        "background:rgba(8,10,14,0.72)",
+        "backdrop-filter:blur(4px)",
+        "-webkit-backdrop-filter:blur(4px)",
+        "font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif",
+      ].join(";");
+
+      var card = document.createElement("div");
+      card.style.cssText = [
+        "max-width:30rem",
+        "width:100%",
+        "box-sizing:border-box",
+        "background:#14181f",
+        "color:#e8edf4",
+        "border:1px solid rgba(255,255,255,0.10)",
+        "border-radius:16px",
+        "padding:1.75rem",
+        "box-shadow:0 24px 60px rgba(0,0,0,0.55)",
+        "text-align:left",
+        "line-height:1.55",
+      ].join(";");
+
+      var badge = document.createElement("div");
+      badge.textContent = "Preview";
+      badge.style.cssText = [
+        "display:inline-block",
+        "font-size:0.7rem",
+        "font-weight:700",
+        "text-transform:uppercase",
+        "letter-spacing:0.08em",
+        "color:#ffd479",
+        "background:rgba(255,200,90,0.12)",
+        "border:1px solid rgba(255,200,90,0.30)",
+        "border-radius:999px",
+        "padding:0.2rem 0.65rem",
+        "margin-bottom:0.9rem",
+      ].join(";");
+
+      var title = document.createElement("h2");
+      title.id = MODAL_ID + "-title";
+      title.textContent = "CodeXX DTDK is in active development";
+      title.style.cssText = [
+        "margin:0 0 0.6rem",
+        "font-size:1.25rem",
+        "font-weight:700",
+        "color:#ffffff",
+      ].join(";");
+
+      var body = document.createElement("p");
+      body.style.cssText = [
+        "margin:0 0 1.4rem",
+        "font-size:0.95rem",
+        "color:#c4ccd8",
+      ].join(";");
+      body.textContent =
+        "Some products, this website, and our cloud infrastructure are still " +
+        "being built. A few components can't be downloaded or purchased yet, " +
+        "and paid features may need a short wait or hands-on help from us while " +
+        "we finish rolling things out. Nothing here is broken — we're building " +
+        "in the open, and we appreciate your patience.";
+
+      var btn = document.createElement("button");
+      btn.type = "button";
+      btn.textContent = "I understand";
+      btn.style.cssText = [
+        "display:block",
+        "width:100%",
+        "box-sizing:border-box",
+        "padding:0.7rem 1.25rem",
+        "font-size:0.95rem",
+        "font-weight:600",
+        "color:#0b0d11",
+        "background:#7cc4ff",
+        "border:none",
+        "border-radius:10px",
+        "cursor:pointer",
+      ].join(";");
+      btn.addEventListener("click", function () {
+        dismiss(overlay);
+      });
+
+      // Keep focus inside the dialog until acknowledged; Escape must NOT dismiss.
+      overlay.addEventListener("keydown", function (e) {
+        if (e.key === "Tab") {
+          e.preventDefault();
+          btn.focus();
+        }
+      });
+
+      card.appendChild(badge);
+      card.appendChild(title);
+      card.appendChild(body);
+      card.appendChild(btn);
+      overlay.appendChild(card);
+
+      document.documentElement.style.overflow = "hidden";
+      document.body.style.overflow = "hidden";
+      document.body.appendChild(overlay);
+      btn.focus();
+    }
+
+    if (document.body) {
+      show();
+    } else {
+      document.addEventListener("DOMContentLoaded", show);
+    }
+    // Re-check after client-side navigations (Astro/Starlight view transitions).
+    document.addEventListener("astro:page-load", show);
+  })();
+</script>

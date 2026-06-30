@@ -10,6 +10,8 @@ import PageFooter from './PageFooter.astro'
 // Web Analytics via the official component; replaces the deprecated adapter
 // webAnalytics inject. Rendered once per page below.
 import Analytics from '@vercel/analytics/astro'
+// Site-wide "in active development" warning modal (once per visitor, cross-subdomain).
+import DisclaimerModal from './DisclaimerModal.astro'
 
 const chatProvider = (import.meta.env.PUBLIC_DOC_CHAT_PROVIDER ?? 'openai') as
   | 'openai'
@@ -63,6 +65,7 @@ const locale =
 }
 
 <Analytics />
+<DisclaimerModal />
 
 <style>
   .page { height: 100vh; width: 100%; display: flex; flex-direction: column; overflow: hidden; }
