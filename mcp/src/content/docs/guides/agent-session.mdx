@@ -1,0 +1,79 @@
+---
+title: A Typical Agent Session
+description: An end-to-end walkthrough of how an agent uses the server to answer a real question about a C++ codebase.
+---
+
+import Alert from '@pelagornis/page/components/Alert.astro';
+
+This guide follows a single, realistic question end to end, showing which tools the agent reaches for and why. You ask in plain language; the agent orchestrates the tools.
+
+> **You:** *"How does `Scheduler::enqueue` work, who calls it, and is the `Scheduler` type laid out efficiently?"*
+
+## 1. Orient (once per session)
+
+If it hasn't already, the agent calls **`discover`** to learn the toolset and the recommended workflow, and optionally **`health`** to confirm the server is live. After this it knows where to start.
+
+## 2. Locate the symbol
+
+The agent calls **`find_symbols`** with `Scheduler::enqueue`. The [qualified name](/concepts/symbols-and-identity/) resolves cleanly to one declaration, and the agent now holds its symbol ID for the follow-up calls.
+
+## 3. Get oriented on the symbol
+
+A single **`symbol_dossier`** call returns the facts (signature, file:line), a summary of where `enqueue` is referenced, a layout digest when the symbol is a type, and flags showing it has a doc comment. The agent now knows roughly how heavily it's used and that documentation exists — enough to plan its drill-down.
+
+<Alert type="info" title="What “structured” actually means">
+These are ordinary tool calls returning JSON the agent reasons over — not prose it has to parse. Illustrative, trimmed:
+
+```json
+// find_symbols  ⟵  { "name": "codex::Scheduler::enqueue" }
+{
+  "matches": [
+    {
+      "symbol_id": "8419302145567788",
+      "qualified_name": "codex::Scheduler::enqueue",
+      "kind": "Function",
+      "file": "libs/codex_workspace/src/scheduler.cpp",
+      "start_line": 142
+    }
+  ]
+}
+```
+
+```json
+// symbol_dossier  ⟵  { "id": "8419302145567788" }
+{
+  "facts": { "kind": "Function", "signature": "void enqueue(Task)", "file": "…/scheduler.cpp", "start_line": 142 },
+  "references": { "total": 12, "top_files": [{ "file": "…/scheduler.cpp", "count": 7 }] },
+  "has_comment": true,
+  "has_annotation": false
+  // a layout digest also appears here when the symbol is a record type
+}
+```
+
+Symbol IDs are strings; the agent threads the one it got from `find_symbols` straight into the next call.
+</Alert>
+
+## 4. Read the why, then the how
+
+- **`get_comment`** pulls the doc comment so the agent leads with the author's stated intent.
+- **`read_symbol_source`** fetches `enqueue`'s exact body — just those lines, not the whole file.
+
+## 5. Answer "who calls it?"
+
+**`references`** lists every use site, each tagged with the function it sits inside. The agent now names the actual callers instead of guessing, and can spot whether `enqueue` is on a hot path.
+
+## 6. Understand the control flow (optional)
+
+If the body is branchy, the agent walks the function's **control flow** with [`navigate_graph`](/tools/navigating-code/) to reason about which paths take the lock, hit early returns, or loop — without re-reading the source repeatedly.
+
+## 7. Check the layout
+
+**`memory_layout`** on `Scheduler` returns its byte-region map: fields, any vtable pointer, and padding as named regions. The agent can now say whether the type wastes space and whether reordering fields would help — concretely, not hand-wavily. (Requires a debug-info build; see [Memory Layout](/tools/memory-layout/).)
+
+## 8. Leave a note
+
+Having worked it out, the agent records what it learned with **`describe_symbol`** (and maybe a short **`relabel_symbol`**). Next session, that note resurfaces inline the moment anyone looks up `enqueue` again. See [Annotations](/tools/annotations/).
+
+<Alert type="info" title="The pattern">
+**Orient → locate → get oriented → drill into just what's needed → leave a note.** Broad-to-narrow keeps the model's context tight and every claim grounded in a tool result rather than a guess.
+</Alert>

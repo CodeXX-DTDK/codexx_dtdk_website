@@ -1,0 +1,131 @@
+---
+title: Configuration
+description: Environment variables and profiles that control where the server indexes, where it stores state, and which tools it exposes.
+---
+
+import Alert from '@pelagornis/page/components/Alert.astro';
+import Tabs from "@pelagornis/page/components/Tabs.astro";
+
+The server is configured through environment variables passed when you launch the container. The two you'll always set are the project root and (optionally) the deployment profile.
+
+## Environment variables
+
+| Variable | Values | Default | Purpose |
+| --- | --- | --- | --- |
+| `CODEXX_MCP_ROOT` | filesystem path | — | The project root to index. **Required** in normal use. Point it at a library or subtree, not a huge repo root. |
+| `CODEXX_MCP_PROFILE` | `full` · `read_only` · `no_layout` | `full` | Which tools the server exposes (see below). |
+| `CODEXX_MCP_DB` | path | a dedicated dir under the project | Where durable state — your [annotations](/tools/annotations/) — is stored. Kept separate from the rebuildable parse cache. |
+| `CODEXX_MCP_TRANSPORT` | `stdio` · `http` | `stdio` | How clients connect. `stdio` is the default for local/desktop agents; `http` is for self-hosted setups. |
+| `CODEXX_MCP_AUTH_TOKEN` | token | unset | If set, every call must present this bearer token. Off by default. See [Access & Auth](/trust/auth-posture/). |
+
+<Alert type="info" title="Where state lives">
+The engine's parse cache (rebuildable) and your annotations (durable) are stored separately, so clearing the cache to force a fresh index never touches your notes. See [Workspace & Indexing](/concepts/workspace-and-indexing/).
+</Alert>
+
+## Profiles
+
+A **profile** scopes which tools the server exposes, so you can match it to a deployment:
+
+- **`full`** *(default)* — every tool, including the annotation write tools and memory layout.
+- **`read_only`** — discovery, facts, source reading, navigation, and layout, plus reading annotations — but **no annotation writes**. Use when you want a strictly read-only view of the code.
+- **`no_layout`** — everything except [memory layout](/tools/memory-layout/). Use for projects built **without debug info**, where layout queries can't return data anyway.
+
+An unrecognised profile is rejected at startup rather than silently ignored.
+
+## Transport
+
+- **stdio** *(default)* — your client launches the server as a subprocess and talks over standard in/out. This is how the [installation](/getting-started/installation/) examples connect it.
+- **http** — for running the server as a standalone, self-hosted endpoint. If you expose it beyond your own machine, turn on authentication — see [Access & Auth](/trust/auth-posture/).
+
+## Per-agent setup
+
+Every major CLI coding agent launches the server the same way — `docker run` with your project mounted and `CODEXX_MCP_ROOT` pointing at the mount — and differs only in how the server is registered and verified. Pull the image first (see [Installation](/getting-started/installation/)), then follow the tab for your agent.
+
+To set any variable from the table above, add another `-e` flag to the `docker run` command. For example, append `-e CODEXX_MCP_PROFILE=read_only` to expose a read-only profile.
+
+<Tabs tabs={[
+  { id: "cc", label: "Claude Code" },
+  { id: "gemini", label: "Gemini CLI" },
+  { id: "codex", label: "OpenAI Codex" }
+]} defaultTab="cc">
+  <div>
+    Register the server from the root of the project you want to analyse. Everything after `--` is the command Claude Code runs to launch it:
+
+    ```sh
+    claude mcp add codexx -- docker run -i --rm \
+      -v "$PWD:/workspace" \
+      -e CODEXX_MCP_ROOT=/workspace \
+      ghcr.io/codexx-dtdk/codexx-mcp-server:stable-0.1.0
+    ```
+
+    Verify the connection with `claude mcp list` — look for `codexx` with a `✓ Connected` status — or run `/mcp` inside a session. By default the server is registered to this project only; add `--scope user` to make it available in every project.
+
+    To pass a server variable, add another `-e` to the launch command:
+
+    ```sh
+    claude mcp add codexx -- docker run -i --rm \
+      -v "$PWD:/workspace" \
+      -e CODEXX_MCP_ROOT=/workspace \
+      -e CODEXX_MCP_PROFILE=read_only \
+      ghcr.io/codexx-dtdk/codexx-mcp-server:stable-0.1.0
+    ```
+  </div>
+  <div>
+    Add an entry under `mcpServers` in your Gemini settings — `~/.gemini/settings.json` for all projects, or `.gemini/settings.json` for one project. Use an **absolute** mount path:
+
+    ```json
+    {
+      "mcpServers": {
+        "codexx": {
+          "command": "docker",
+          "args": [
+            "run", "-i", "--rm",
+            "-v", "/absolute/path/to/your/project:/workspace",
+            "-e", "CODEXX_MCP_ROOT=/workspace",
+            "ghcr.io/codexx-dtdk/codexx-mcp-server:stable-0.1.0"
+          ],
+          "timeout": 60000
+        }
+      }
+    }
+    ```
+
+    The raised `timeout` (milliseconds) gives the first **cold index** room to finish before Gemini gives up — see [Workspace & Indexing](/concepts/workspace-and-indexing/). Or register it from the CLI:
+
+    ```sh
+    gemini mcp add codexx docker run -i --rm \
+      -v "$PWD:/workspace" -e CODEXX_MCP_ROOT=/workspace \
+      ghcr.io/codexx-dtdk/codexx-mcp-server:stable-0.1.0
+    ```
+
+    List servers with `gemini mcp list`, and check status and tools with `/mcp` inside a session.
+  </div>
+  <div>
+    Add a server block to `~/.codex/config.toml` (a project-scoped `.codex/config.toml` also works in a trusted project). Use an **absolute** mount path:
+
+    ```toml
+    [mcp_servers.codexx]
+    command = "docker"
+    args = [
+      "run", "-i", "--rm",
+      "-v", "/absolute/path/to/your/project:/workspace",
+      "-e", "CODEXX_MCP_ROOT=/workspace",
+      "ghcr.io/codexx-dtdk/codexx-mcp-server:stable-0.1.0",
+    ]
+    ```
+
+    Or register it from the CLI:
+
+    ```sh
+    codex mcp add codexx -- docker run -i --rm \
+      -v "$PWD:/workspace" -e CODEXX_MCP_ROOT=/workspace \
+      ghcr.io/codexx-dtdk/codexx-mcp-server:stable-0.1.0
+    ```
+
+    See active servers with `/mcp` in the Codex TUI, or run `codex mcp --help` for all MCP commands.
+  </div>
+</Tabs>
+
+<Alert type="info" title="Where the container vars go">
+`CODEXX_MCP_ROOT`, `CODEXX_MCP_PROFILE`, and the rest are read by the **server inside the container**, so they're passed with `docker run -e …`, not through the agent's own environment. Each agent only needs to know the command to launch — the `docker run …` line — and which directory to mount.
+</Alert>

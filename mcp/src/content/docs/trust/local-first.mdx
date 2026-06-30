@@ -1,0 +1,27 @@
+---
+title: Local-First
+description: Where your code goes when you use the server — and where it doesn't.
+---
+
+import Alert from '@pelagornis/page/components/Alert.astro';
+
+The CodeXX MCP Server is designed to run **next to your code**, not to ship it anywhere.
+
+## Your source stays local
+
+You run the server as a container on your own machine and mount your project into it. The CodeXX engine reads your source **locally** to build its index and answer queries. The server itself does not upload, transmit, or phone home your source code.
+
+## What the server writes
+
+- **The project index / parse cache** — built from your source, kept inside your project so the next session starts warm. Rebuildable; deleting it just forces a cold index.
+- **Your annotations** — the labels and descriptions the agent records, stored durably so they survive restarts. See [Annotations](/tools/annotations/).
+
+Both live on your machine. The server does not modify your source files — it only reads them.
+
+## What your agent sees
+
+Your AI client, of course, receives the tool results it asks for — symbol facts, source spans you request, layout, and so on — because that's the point of connecting it. What leaves your machine is governed by **your agent and its model provider**, not by this server. If you're working under strict data-handling requirements, choose your MCP client and model accordingly.
+
+<Alert type="info" title="Network posture">
+The server's job is to answer the agent's queries from a local index. It is not a telemetry or sync service. If you self-host it over HTTP for remote access, secure that endpoint — see [Access & Auth](/trust/auth-posture/).
+</Alert>

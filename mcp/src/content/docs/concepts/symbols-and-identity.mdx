@@ -1,0 +1,39 @@
+---
+title: Symbols & Identity
+description: How the server identifies symbols, the id-or-name rule, and why qualified names resolve cleanly.
+---
+
+import Alert from '@pelagornis/page/components/Alert.astro';
+
+Almost every tool operates on a **symbol** — a function, class, struct, namespace, enum, and so on. Knowing how symbols are identified makes the difference between a clean answer and an "ambiguous" one.
+
+## Two ways to name a symbol
+
+Every symbol-bearing tool accepts either:
+
+- a **symbol ID** — a stable identifier the server assigns to each symbol, or
+- a **name** — what you'd write in the source.
+
+You rarely type an ID yourself. The agent gets IDs back from `find_symbols` and threads them into follow-up calls, which is unambiguous and fast. Names are what you use when asking the first question.
+
+<Alert type="info" title="A note on IDs">
+Symbol IDs are passed around as strings, not numbers, so they're never rounded or truncated in transit. If you see a long numeric string standing in for a symbol, that's an ID — the agent will have obtained it from a prior lookup.
+</Alert>
+
+## Resolving a name
+
+When you give a name, the server looks it up:
+
+- **Unique match** → it's used directly.
+- **Ambiguous** → the server returns the candidates instead of guessing, so the agent can pick the right one.
+- **No match** → the server says so, rather than inventing a result.
+
+## Prefer qualified names
+
+An unqualified name like `push_back` can match many symbols. A **fully qualified name** like `std::vector::push_back` — or `codex::Workspace::open` in your own code — resolves cleanly the first time.
+
+When a lookup comes back ambiguous, the usual fix is to qualify the name. The agent can also narrow with `find_symbols` filters (by kind, or by file) before drilling in. See [Discovery & Facts](/tools/discovery/).
+
+## Enumerating instead of naming
+
+You don't always start from a name. `find_symbols` can enumerate by **kind** (every `Class`, `Function`, `Struct`, `Namespace`…) and/or by **file** (a path substring), which is how an agent maps an unfamiliar codebase before it knows what to ask for.

@@ -1,0 +1,44 @@
+---
+title: Navigating Code
+description: Let the agent walk control flow, inheritance, includes, and module imports as compact, paged structures — without reading whole files.
+---
+
+import Alert from '@pelagornis/page/components/Alert.astro';
+
+Some questions are about *structure*, not text: how does control flow through this function? what derives from this base class? which headers pull in which? Navigating code lets the agent walk these relationships directly, as a compact structure it can traverse — instead of reconstructing them by reading file after file.
+
+## What you can navigate
+
+The agent picks one of four structures to walk:
+
+- **Control flow** — the flow of execution through a single function: its branches, loops, and the order blocks run in. The agent reasons about reachability and paths without reading the whole body line by line. (This one needs you to name the function to walk.)
+- **Class hierarchy** — inheritance across the project: who derives from whom. Useful for understanding polymorphism and override chains.
+- **Include graph** — which files include which, so the agent can see compile-time coupling and spot heavy or circular includes.
+- **Module imports** — for C++20 modules, the import relationships between modules.
+
+Each is a simplified, agent-legible view of a relationship the CodeXX engine already computes from your source — presented for what it *enables*, not as raw analysis output.
+
+## How navigation works
+
+Navigation is a two-step pattern, designed so even a huge structure stays manageable for a language model.
+
+**`navigate_graph`** starts a traversal. The agent chooses the structure to walk, a starting point, an optional depth limit, and a direction (follow relationships outward, inward, or both). It gets back:
+
+- a **compact preview** — a small, representative sample of the structure,
+- a **summary** — total counts of nodes and relationships, and the kinds present,
+- and a flag saying whether the preview *is* the whole thing or just the start.
+
+If the structure is small, the preview is all of it. If it's large, the agent gets a handle to fetch the rest.
+
+**`retrieve_graph`** pages through a large result using that handle — a page at a time, in a stable order — so the model pulls in only as much structure as it needs, when it needs it.
+
+<Alert type="info" title="Why two steps">
+Whole-program structures (a deep class hierarchy, a big include tree) can be far larger than a model's context. Returning a bounded summary plus paged detail keeps navigation usable at any size — the agent sees the shape first, then drills into the parts that matter.
+</Alert>
+
+## Things to know
+
+- **Control flow needs a target.** To walk a function's control flow, the agent names the function. The other structures don't need one.
+- **File vs. symbol structures.** The include and module-import graphs are about files and modules, so their nodes are paths and module names — not symbols. Control flow and class hierarchy are about symbols.
+- **Results are point-in-time.** A navigation handle is cached briefly and then expires; it's also invalidated when the project is re-indexed. If a handle goes stale, the agent simply starts the traversal again. Treat navigation results as a snapshot of the index when they were produced. See [Workspace & Indexing](/concepts/workspace-and-indexing/).
+- **Check the "complete" flag.** When the preview is only a sample, the summary says so — the agent should page the rest before concluding it has seen everything.

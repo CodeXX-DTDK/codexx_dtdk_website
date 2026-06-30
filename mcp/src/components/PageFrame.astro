@@ -1,0 +1,31 @@
+---
+// mcp's PageFrame: delegates layout/CSS/chat/analytics to the shared base
+// (@codexx/web/PageFrameBase.astro). The CodeXX MCP Server is a preview product
+// with no pricing/activation flow, so the footer carries product + resource
+// links only.
+import PageFrameBase from '@codexx/web/PageFrameBase.astro'
+---
+
+<PageFrameBase>
+  <slot name="header" slot="header" />
+  <slot slot="content" />
+  <Fragment slot="footer-links">
+    <section class="footer-group">
+      <span class="footer-heading">Product</span>
+      <a href="/">Docs</a>
+      <a href="/getting-started/quick-start/">Quick Start</a>
+      <a href="/reference/tool-catalog/">Tool Catalog</a>
+    </section>
+    <section class="footer-group">
+      <span class="footer-heading">Resources</span>
+      <a href="/llms-full.txt">llms.txt</a>
+      <a href="/trust/local-first/">Trust</a>
+    </section>
+    <section class="footer-group">
+      <span class="footer-heading">Legal</span>
+      <a href="https://legal.codexx-dtdk.com/privacy">Privacy</a>
+      <a href="https://legal.codexx-dtdk.com/terms">Terms</a>
+      <a href="https://legal.codexx-dtdk.com/eula">EULA</a>
+    </section>
+  </Fragment>
+</PageFrameBase>

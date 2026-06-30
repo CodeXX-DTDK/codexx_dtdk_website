@@ -1,0 +1,45 @@
+---
+title: For AI Agents
+description: How an autonomous agent should approach the CodeXX MCP Server — start with discover, and read these docs as llms.txt.
+---
+
+import Alert from '@pelagornis/page/components/Alert.astro';
+
+This page is written for the agent as much as the human. The CodeXX MCP Server exists to make a C++ codebase legible to a model, so its own docs are published in a machine-friendly form too.
+
+## Read these docs as `llms.txt`
+
+The entire documentation set is available as a single plain-text bundle, ready to drop into a model's context:
+
+- **`/llms.txt`** — an indexed summary of the docs.
+- **`/llms-full.txt`** — the complete reference in one file.
+
+Point an agent at [`/llms-full.txt`](/llms-full.txt) to teach it the whole product surface in one fetch — no crawling, no HTML.
+
+## Start every session with `discover`
+
+The server is self-describing. A cold agent's first call should be **`discover`**, which returns:
+
+- the full tool catalog — every tool's name, access level, and purpose,
+- the recommended **entry point** (`find_symbols`), and
+- a suggested **workflow** for using the tools together.
+
+An agent that calls `discover` first can use the server effectively without being pre-taught — the catalog it gets back is always exact for the running version. Pair it with **`health`** to confirm the server is live. See [Discovery & Facts](/tools/discovery/).
+
+## The recommended loop
+
+The toolset rewards a broad-to-narrow approach, which keeps a model's context small and its answers grounded in tool results rather than guesses:
+
+1. **Orient** — `discover` (once), then `find_symbols` to locate a symbol or enumerate a kind/file.
+2. **Get oriented** — `symbol_dossier` for a one-call overview before pulling detail.
+3. **Drill in** — `references`, `read_symbol_source`, `navigate_graph`, or `memory_layout`, as the question demands.
+4. **Record** — `relabel_symbol` / `describe_symbol` to leave durable notes that resurface next session.
+
+The [Typical Agent Session](/guides/agent-session/) guide walks this loop end to end with concrete calls.
+
+<Alert type="info" title="Design notes that matter to agents">
+- **Identifiers are strings.** Symbol IDs are decimal strings — thread them through verbatim; never coerce them to numbers. See [Symbols & Identity](/concepts/symbols-and-identity/).
+- **Prefer qualified names.** An unqualified name may resolve ambiguously; the server returns candidates rather than guessing.
+- **Results are paged and bounded.** Navigation and large source reads come back with a "there's more" signal — check it before concluding you've seen everything. See [Navigating Code](/tools/navigating-code/).
+- **Some results are point-in-time.** Navigation handles expire and are invalidated by re-index; memory layout reflects a specific build. Re-query rather than relying on stale results.
+</Alert>

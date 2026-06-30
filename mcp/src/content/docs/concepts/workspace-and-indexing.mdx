@@ -1,0 +1,42 @@
+---
+title: Workspace & Indexing
+description: How the server indexes your project, what to point it at, and why cold starts are slower than warm ones.
+---
+
+import Alert from '@pelagornis/page/components/Alert.astro';
+
+The server answers questions against an **index** of your project that the CodeXX engine builds from your source. Understanding when that index is built — and what it covers — explains the server's startup behaviour and a few practical tips.
+
+## What gets indexed
+
+When the server starts, the engine crawls the tree under `CODEXX_MCP_ROOT`, parses the C++ translation units it finds, and resolves them into a symbol database — names, kinds, signatures, comments, references, and relationships. Every query the agent makes is answered from this index.
+
+## Cold start vs. warm start
+
+- **Cold start** — the first time you index a project, the engine parses everything from scratch. On a sizeable codebase this takes **tens of seconds**. The agent should expect the first call after startup to be slower.
+- **Warm start** — the engine persists its parse cache inside your project. On the next start it reuses that cache and is ready in a few seconds.
+- **Live updates** — once running, the engine notices files you create, modify, or delete and re-parses just the affected files before answering the next query. You don't restart the server to pick up edits.
+
+<Alert type="warning" title="Mount read-write to stay warm">
+The parse cache only helps if the engine can write it. If your project is mounted read-only, every session pays the full cold index. Mount it read-write (the default in the [installation](/getting-started/installation/) commands).
+</Alert>
+
+## Point it at a library, not the world
+
+Index time and result focus both scale with how much you point the server at. **Scope `CODEXX_MCP_ROOT` to the library or subtree you're working in**, not a giant monorepo root:
+
+- The first index stays fast.
+- Results stay relevant to the code you care about.
+- You avoid stressing the engine on very large trees, which is still being hardened for whole-repository indexing in the preview.
+
+If you need to work across several independent components, run a server instance per component (each with its own `CODEXX_MCP_ROOT`).
+
+## What state lives where
+
+- **The project index / parse cache** is rebuildable. Deleting it just forces a cold start.
+- **Your annotations** (labels and descriptions the agent records) are kept separately and durably, so they survive restarts and re-indexing. See [Annotations](/tools/annotations/).
+- **Navigation results** are cached briefly while the agent pages through them, then expire. See [Navigating Code](/tools/navigating-code/).
+
+<Alert type="info" title="Treat layout and navigation as point-in-time">
+Memory layout reflects a specific build's debug info, and navigation results reflect the index at the moment they were produced. After a rebuild or re-index, the agent should re-query rather than rely on earlier results. See [Memory Layout](/tools/memory-layout/) and [Navigating Code](/tools/navigating-code/).
+</Alert>
