@@ -16,11 +16,11 @@
     direct GitHub Releases download; because the releases repository is
     private, the direct path requires -Token.
 
-    The manager release archive ships both binaries (ADR-038 §5):
-      bin\codexx_dtdk_manager.exe
-      .shim\codexx_shim.exe
+    Two overseer archives are installed side by side (ADR-038 §5, ADR-068 §1):
+      manager archive → bin\codexx_dtdk_manager.exe + .shim\codexx_shim.exe
+      updater archive → bin\codexx_dtdk_updater.exe   (collaborative self-update)
     Subsequent component installs (codegen, docsgen, …) go through the manager
-    TUI; this script bootstraps the entry point only.
+    TUI; this script bootstraps the two overseer entry points only.
 
     Re-running is idempotent: the user PATH is read first and the install root
     is only prepended if not already present.
@@ -104,141 +104,160 @@ function Get-AssetFile($url, $dest, $headers) {
 }
 
 # ---------------------------------------------------------------------------
-# Resolve the release tag and the archive / sha256 / sigstore source URLs.
+# Install-Component <component> <workflow-yml>
+#
+# Resolves the latest <channel>/<component> release (proxy or direct), downloads
+# the archive + sha256, verifies integrity (+ optional cosign against the
+# component's release workflow), and extracts it into <Root>\. The bootstrap
+# installs two engine-less overseer binaries (ADR-038 §5, ADR-068): 'manager'
+# and 'updater', shipped in separate archives (ADR-068 §1). Every other
+# component is installed later through the manager TUI.
 # ---------------------------------------------------------------------------
-$sigstoreSrc = $null
-$dlHeaders = $null
+$script:ResolvedManagerTag = $null
 
-if ($mode -eq 'proxy') {
-    Write-Host "Resolving latest stable manager release via $Proxy…"
-    try {
-        $meta = Invoke-RestMethod -Uri "$Proxy/api/download?asset=meta"
-    }
-    catch {
-        throw "Could not reach the download service at $Proxy."
-    }
-    $Tag = $meta.tag
-    if (-not $Tag) { throw "The download service returned no release." }
+function Install-Component {
+    param([string]$Component, [string]$Workflow)
 
-    $q = "platform=$os&arch=$arch"
-    $archiveSrc = "$Proxy/api/download?$q&asset=archive"
-    $shaSrc = "$Proxy/api/download?$q&asset=sha256"
-    $sigstoreSrc = "$Proxy/api/download?$q&asset=sigstore"
-}
-else {
-    $apiBase = "https://api.github.com/repos/$Repo"
-    $ghHeaders = @{ Accept = 'application/vnd.github+json'; Authorization = "Bearer $Token" }
+    $sigstoreSrc = $null
+    $dlHeaders = $null
+    $ctag = $Tag
 
-    if (-not $Tag) {
-        Write-Host "Resolving latest $Channel/manager release in $Repo…"
-        $releases = Invoke-RestMethod -Uri "$apiBase/releases?per_page=100" -Headers $ghHeaders
-
-        $pattern = '^' + [regex]::Escape($Channel) + '/manager@(\d+)\.(\d+)\.(\d+)(?:-(rc|rev)\.(\d+))?$'
-        $best = $null
-        foreach ($r in $releases) {
-            if ($r.draft) { continue }
-            if ($r.tag_name -match $pattern) {
-                $maj = [int]$Matches[1]
-                $mnr = [int]$Matches[2]
-                $pat = [int]$Matches[3]
-                $extraKind = if ($Matches[4]) { $Matches[4] } else { '' }
-                $extraN = if ($Matches[5]) { [int]$Matches[5] } else { 0 }
-                # Bare > rev.N > rc.N at the same X.Y.Z
-                $rankExtra = switch ($extraKind) {
-                    '' { 2 }
-                    'rev' { 1 }
-                    'rc' { 0 }
-                }
-                $rank = ($maj * 1e12) + ($mnr * 1e9) + ($pat * 1e6) + ($rankExtra * 1e3) + $extraN
-                if (-not $best -or $rank -gt $best.Rank) {
-                    $best = @{ Rank = $rank; Tag = $r.tag_name }
-                }
-            }
-        }
-        if (-not $best) { throw "No $Channel/manager release found in $Repo." }
-        $Tag = $best.Tag
-    }
-
-    $release = Invoke-RestMethod -Uri "$apiBase/releases/tags/$Tag" -Headers $ghHeaders
-
-    # Match the archive asset by pattern rather than reconstructing the exact
-    # name — the release labels arch inconsistently (linux: x86_64, win: x64).
-    $rx = '^codexx_dtdk_manager-.*-' + $os + '-[^.]+\.(zip|tar\.gz)$'
-    $archiveAsset = $release.assets | Where-Object { $_.name -match $rx } | Select-Object -First 1
-    if (-not $archiveAsset) { throw "No manager archive for $os in $Tag." }
-
-    function Get-AssetUrl($name) {
-        foreach ($a in $release.assets) {
-            if ($a.name -eq $name) { return $a.url }
-        }
-        return $null
-    }
-    $archiveSrc = $archiveAsset.url
-    $shaSrc = Get-AssetUrl "$($archiveAsset.name).sha256"
-    $sigstoreSrc = Get-AssetUrl "$($archiveAsset.name).sigstore"
-    if (-not $shaSrc) { throw "$($archiveAsset.name).sha256 sidecar missing." }
-
-    # Private-repo assets need the API URL + octet-stream Accept header.
-    $dlHeaders = $ghHeaders.Clone()
-    $dlHeaders['Accept'] = 'application/octet-stream'
-}
-
-$version = ($Tag -split '@')[-1]
-Write-Host "Resolved tag: $Tag"
-
-# ---------------------------------------------------------------------------
-# Download to staging, verify integrity, optional cosign
-# ---------------------------------------------------------------------------
-$stageDir = Join-Path $Root ".staging\$Tag"
-New-Item -ItemType Directory -Force -Path $stageDir | Out-Null
-$archivePath = Join-Path $stageDir "manager-archive.zip"
-$shaPath = "$archivePath.sha256"
-
-Write-Host "Downloading manager $version…"
-Get-AssetFile $archiveSrc $archivePath $dlHeaders
-Get-AssetFile $shaSrc $shaPath $dlHeaders
-
-$expectedSha = (Get-Content $shaPath -Raw).Trim().Split(' ')[0]
-$actualSha = (Get-FileHash $archivePath -Algorithm SHA256).Hash.ToLower()
-if ($expectedSha.ToLower() -ne $actualSha) {
-    Write-Error "sha256 mismatch for the manager archive: expected $expectedSha, got $actualSha"
-    exit 1
-}
-Write-Host "sha256 OK"
-
-if ($Verify) {
-    if (-not (Get-Command cosign -ErrorAction SilentlyContinue)) {
-        Write-Warning "-Verify requested but cosign not on PATH; skipping"
-    }
-    elseif (-not $sigstoreSrc) {
-        Write-Warning "no .sigstore sidecar available for $Tag; skipping verify"
-    }
-    else {
-        $sigstorePath = "$archivePath.sigstore"
+    if ($mode -eq 'proxy') {
+        Write-Host "Resolving latest stable $Component release via $Proxy…"
         try {
-            Get-AssetFile $sigstoreSrc $sigstorePath $dlHeaders
-            $escapedRepo = $Repo -replace '\.', '\.'
-            $identityRegex = "^https://github\.com/$escapedRepo/\.github/workflows/release-manager\.yml@.*"
-            cosign verify-blob `
-                --bundle $sigstorePath `
-                --certificate-identity-regexp $identityRegex `
-                --certificate-oidc-issuer "https://token.actions.githubusercontent.com" `
-                $archivePath | Out-Null
-            if ($LASTEXITCODE -ne 0) { throw "cosign verify-blob failed" }
-            Write-Host "cosign verify OK"
+            $meta = Invoke-RestMethod -Uri "$Proxy/api/download?component=$Component&asset=meta"
         }
         catch {
-            Write-Warning "signature verification skipped: $_"
+            throw "Could not reach the download service at $Proxy."
+        }
+        $ctag = $meta.tag
+        if (-not $ctag) { throw "The download service returned no $Component release." }
+
+        $q = "platform=$os&arch=$arch&component=$Component"
+        $archiveSrc = "$Proxy/api/download?$q&asset=archive"
+        $shaSrc = "$Proxy/api/download?$q&asset=sha256"
+        $sigstoreSrc = "$Proxy/api/download?$q&asset=sigstore"
+    }
+    else {
+        $apiBase = "https://api.github.com/repos/$Repo"
+        $ghHeaders = @{ Accept = 'application/vnd.github+json'; Authorization = "Bearer $Token" }
+
+        if (-not $ctag) {
+            Write-Host "Resolving latest $Channel/$Component release in $Repo…"
+            $releases = Invoke-RestMethod -Uri "$apiBase/releases?per_page=100" -Headers $ghHeaders
+
+            $pattern = '^' + [regex]::Escape($Channel) + '/' + [regex]::Escape($Component) + '@(\d+)\.(\d+)\.(\d+)(?:-(rc|rev)\.(\d+))?$'
+            $best = $null
+            foreach ($r in $releases) {
+                if ($r.draft) { continue }
+                if ($r.tag_name -match $pattern) {
+                    $maj = [int]$Matches[1]
+                    $mnr = [int]$Matches[2]
+                    $pat = [int]$Matches[3]
+                    $extraKind = if ($Matches[4]) { $Matches[4] } else { '' }
+                    $extraN = if ($Matches[5]) { [int]$Matches[5] } else { 0 }
+                    # Bare > rev.N > rc.N at the same X.Y.Z
+                    $rankExtra = switch ($extraKind) {
+                        '' { 2 }
+                        'rev' { 1 }
+                        'rc' { 0 }
+                    }
+                    $rank = ($maj * 1e12) + ($mnr * 1e9) + ($pat * 1e6) + ($rankExtra * 1e3) + $extraN
+                    if (-not $best -or $rank -gt $best.Rank) {
+                        $best = @{ Rank = $rank; Tag = $r.tag_name }
+                    }
+                }
+            }
+            if (-not $best) { throw "No $Channel/$Component release found in $Repo." }
+            $ctag = $best.Tag
+        }
+
+        $release = Invoke-RestMethod -Uri "$apiBase/releases/tags/$ctag" -Headers $ghHeaders
+
+        # Match the archive asset by pattern rather than reconstructing the exact
+        # name — the release labels arch inconsistently (linux: x86_64, win: x64).
+        $rx = '^codexx_dtdk_' + [regex]::Escape($Component) + '-.*-' + $os + '-[^.]+\.(zip|tar\.gz)$'
+        $archiveAsset = $release.assets | Where-Object { $_.name -match $rx } | Select-Object -First 1
+        if (-not $archiveAsset) { throw "No $Component archive for $os in $ctag." }
+
+        $archiveSrc = $archiveAsset.url
+        $shaSrc = ($release.assets | Where-Object { $_.name -eq "$($archiveAsset.name).sha256" } | Select-Object -First 1).url
+        $sigstoreSrc = ($release.assets | Where-Object { $_.name -eq "$($archiveAsset.name).sigstore" } | Select-Object -First 1).url
+        if (-not $shaSrc) { throw "$($archiveAsset.name).sha256 sidecar missing." }
+
+        # Private-repo assets need the API URL + octet-stream Accept header.
+        $dlHeaders = $ghHeaders.Clone()
+        $dlHeaders['Accept'] = 'application/octet-stream'
+    }
+
+    $version = ($ctag -split '@')[-1]
+    Write-Host "Resolved $Component tag: $ctag"
+
+    $stageDir = Join-Path $Root ".staging\$ctag"
+    New-Item -ItemType Directory -Force -Path $stageDir | Out-Null
+    $archivePath = Join-Path $stageDir "$Component-archive.zip"
+    $shaPath = "$archivePath.sha256"
+
+    Write-Host "Downloading $Component $version…"
+    Get-AssetFile $archiveSrc $archivePath $dlHeaders
+    Get-AssetFile $shaSrc $shaPath $dlHeaders
+
+    $expectedSha = (Get-Content $shaPath -Raw).Trim().Split(' ')[0]
+    $actualSha = (Get-FileHash $archivePath -Algorithm SHA256).Hash.ToLower()
+    if ($expectedSha.ToLower() -ne $actualSha) {
+        Write-Error "sha256 mismatch for the $Component archive: expected $expectedSha, got $actualSha"
+        exit 1
+    }
+    Write-Host "sha256 OK ($Component)"
+
+    if ($Verify) {
+        if (-not (Get-Command cosign -ErrorAction SilentlyContinue)) {
+            Write-Warning "-Verify requested but cosign not on PATH; skipping"
+        }
+        elseif (-not $sigstoreSrc) {
+            Write-Warning "no .sigstore sidecar available for $ctag; skipping verify"
+        }
+        else {
+            $sigstorePath = "$archivePath.sigstore"
+            try {
+                Get-AssetFile $sigstoreSrc $sigstorePath $dlHeaders
+                $escapedRepo = $Repo -replace '\.', '\.'
+                $identityRegex = "^https://github\.com/$escapedRepo/\.github/workflows/$Workflow@.*"
+                cosign verify-blob `
+                    --bundle $sigstorePath `
+                    --certificate-identity-regexp $identityRegex `
+                    --certificate-oidc-issuer "https://token.actions.githubusercontent.com" `
+                    $archivePath | Out-Null
+                if ($LASTEXITCODE -ne 0) { throw "cosign verify-blob failed" }
+                Write-Host "cosign verify OK ($Component)"
+            }
+            catch {
+                Write-Warning "signature verification skipped: $_"
+            }
         }
     }
+
+    New-Item -ItemType Directory -Force -Path $Root | Out-Null
+    Write-Host "Extracting $Component into $Root\…"
+    Expand-Archive -Path $archivePath -DestinationPath $Root -Force
+
+    if ($Component -eq 'manager') { $script:ResolvedManagerTag = $ctag }
 }
 
 # ---------------------------------------------------------------------------
-# Extract into <root>\ — overwrites bin\codexx_dtdk_manager.exe + .shim\codexx_shim.exe
+# Install the overseer binaries. An explicit -Tag names a single component and
+# installs only that one; otherwise both the manager and the updater are fetched
+# (the updater tracks the manager's channel, ADR-068).
 # ---------------------------------------------------------------------------
-New-Item -ItemType Directory -Force -Path $Root | Out-Null
-Write-Host "Extracting into $Root\…"
-Expand-Archive -Path $archivePath -DestinationPath $Root -Force
+if ($Tag) {
+    $tagComponent = ($Tag -split '/')[1].Split('@')[0]
+    Install-Component $tagComponent "release-$tagComponent.yml"
+    Write-Host "Note: -Tag installs only $tagComponent; the other overseer binary was not fetched."
+}
+else {
+    Install-Component 'manager' 'release-manager.yml'
+    Install-Component 'updater' 'release-updater.yml'
+}
 
 # Best-effort cleanup of the staging tree.
 Remove-Item -Path (Join-Path $Root ".staging") -Recurse -Force -ErrorAction SilentlyContinue
@@ -261,8 +280,9 @@ if (-not $NoPath) {
     }
 }
 
+$summaryTag = if ($script:ResolvedManagerTag) { $script:ResolvedManagerTag } else { $Tag }
 Write-Host ""
-Write-Host "✓ CodeXX DTDK manager $Tag installed at $Root."
+Write-Host "✓ CodeXX DTDK $summaryTag installed at $Root."
 Write-Host ""
 Write-Host "Next:"
 Write-Host "  $Root\bin\codexx_dtdk_manager.exe      # browse + install components"
