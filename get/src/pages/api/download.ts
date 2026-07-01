@@ -46,7 +46,7 @@ interface GhRelease {
 const TAG_RE = new RegExp(`^${CHANNEL}/manager@(\\d+)\\.(\\d+)\\.(\\d+)(?:-(rc|rev)\\.(\\d+))?$`)
 
 // Total order over matching tags: X.Y.Z first, then bare > rev.N > rc.N at the
-// same X.Y.Z. Mirrors the ranking in scripts/install.{sh,ps1}.
+// same X.Y.Z. Mirrors the ranking in public/install.{sh,ps1}.
 function rank(m: RegExpMatchArray): number {
   const [, maj, min, pat, kind, n] = m
   const extra = !kind ? 2 : kind === 'rev' ? 1 : 0

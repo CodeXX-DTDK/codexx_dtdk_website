@@ -1,6 +1,7 @@
 packages:
   - "shared"
   - "landing"
+  - "get"
   - "codegen"
   - "docsgen"
   - "mcp"

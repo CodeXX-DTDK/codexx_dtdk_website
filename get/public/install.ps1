@@ -3,16 +3,15 @@
     CodeXX DTDK bootstrap installer (Windows). Per ADR-038 §5 + ADR-039 §3.
 
 .DESCRIPTION
-    A byte-identical copy of this script is served at
-    https://www.codexx-dtdk.com/install.ps1 — keep landing/public/install.ps1
-    in sync when editing this file.
+    This is the canonical source, served verbatim at
+    https://get.codexx-dtdk.com/install.ps1 — there is no other copy.
 
     Installs the DTDK Manager + master shim into <root>\ (default
     %USERPROFILE%\.codexx) and prepends <root>\bin to the user's PATH so
     installed tools resolve in fresh shells.
 
     By default the latest STABLE manager release is fetched through the public
-    download proxy (https://www.codexx-dtdk.com) — no GitHub account or token
+    download proxy (https://get.codexx-dtdk.com) — no GitHub account or token
     is required. -Token, -Tag, -Repo, or a non-stable -Channel switch to a
     direct GitHub Releases download; because the releases repository is
     private, the direct path requires -Token.
@@ -39,7 +38,7 @@
     GitHub repo (owner/name). Default: CodeXX-DTDK/codexx_dtdk.
 
 .PARAMETER Proxy
-    Download-proxy base URL. Default: https://www.codexx-dtdk.com.
+    Download-proxy base URL. Default: https://get.codexx-dtdk.com.
 
 .PARAMETER NoPath
     Skip user PATH update.
@@ -58,7 +57,7 @@ param(
     [string]$Channel = 'stable',
     [string]$Tag = '',
     [string]$Repo = 'CodeXX-DTDK/codexx_dtdk',
-    [string]$Proxy = $(if ($env:CODEXX_DOWNLOAD_PROXY) { $env:CODEXX_DOWNLOAD_PROXY } else { 'https://www.codexx-dtdk.com' }),
+    [string]$Proxy = $(if ($env:CODEXX_DOWNLOAD_PROXY) { $env:CODEXX_DOWNLOAD_PROXY } else { 'https://get.codexx-dtdk.com' }),
     [switch]$NoPath,
     [switch]$Verify,
     [string]$Token = $env:GITHUB_TOKEN

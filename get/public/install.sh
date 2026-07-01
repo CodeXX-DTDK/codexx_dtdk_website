@@ -1,16 +1,15 @@
 #!/usr/bin/env bash
 # CodeXX DTDK bootstrap installer (POSIX). Per ADR-038 §5 + ADR-039 §3.
 #
-# A byte-identical copy of this script is served at
-# https://www.codexx-dtdk.com/install.sh — keep landing/public/install.sh in
-# sync when editing this file.
+# This is the canonical source, served verbatim at
+# https://get.codexx-dtdk.com/install.sh — there is no other copy.
 #
 # Installs the DTDK Manager + master shim into <root>/ (default $HOME/.codexx)
 # and appends <root>/bin to the user's shell profile so installed tools resolve
 # in fresh shells.
 #
 # By default the latest STABLE manager release is fetched through the public
-# download proxy (https://www.codexx-dtdk.com) — no GitHub account or token is
+# download proxy (https://get.codexx-dtdk.com) — no GitHub account or token is
 # required. Passing --token, --tag, --repo, or a non-stable --channel switches
 # to a direct GitHub Releases API download; because the releases repository is
 # private, the direct path requires --token.
@@ -38,7 +37,7 @@ set -euo pipefail
 readonly DEFAULT_REPO="CodeXX-DTDK/codexx_dtdk"
 readonly DEFAULT_ROOT="${HOME}/.codexx"
 readonly DEFAULT_CHANNEL="stable"
-readonly DEFAULT_PROXY="https://www.codexx-dtdk.com"
+readonly DEFAULT_PROXY="https://get.codexx-dtdk.com"
 readonly MARKER_BEGIN="# >>> codexx-dtdk install begin >>>"
 readonly MARKER_END="# <<< codexx-dtdk install end <<<"
 
