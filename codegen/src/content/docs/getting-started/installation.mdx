@@ -24,14 +24,14 @@ One command downloads the latest stable manager, verifies its checksum, extracts
 ]} defaultTab="tab1">
   <div>
     ```sh
-    curl -fsSL https://www.codexx-dtdk.com/install.sh | bash
+    curl -fsSL https://get.codexx-dtdk.com/install.sh | bash
     ```
 
     Open a new shell afterwards so the `PATH` change takes effect. To also verify the release signature, append `-s -- --verify` (requires `cosign` on `PATH`).
   </div>
   <div>
     ```powershell
-    iex ((New-Object System.Net.WebClient).DownloadString('https://www.codexx-dtdk.com/install.ps1'))
+    iex ((New-Object System.Net.WebClient).DownloadString('https://get.codexx-dtdk.com/install.ps1'))
     ```
 
     Installs under `%USERPROFILE%\.codexx` and prepends `%USERPROFILE%\.codexx\bin` to your user `PATH`. Open a new shell afterwards.
@@ -55,7 +55,7 @@ Don't want to pipe a remote script straight into a shell? Download it, read it, 
 ]} defaultTab="dl1">
   <div>
     ```sh
-    curl -fSL https://www.codexx-dtdk.com/install.sh -o install.sh
+    curl -fSL https://get.codexx-dtdk.com/install.sh -o install.sh
     less install.sh                # read it
     chmod +x install.sh
     ./install.sh --help            # list every flag
@@ -65,7 +65,7 @@ Don't want to pipe a remote script straight into a shell? Download it, read it, 
   </div>
   <div>
     ```powershell
-    Invoke-WebRequest https://www.codexx-dtdk.com/install.ps1 -OutFile install.ps1
+    Invoke-WebRequest https://get.codexx-dtdk.com/install.ps1 -OutFile install.ps1
     Get-Content .\install.ps1             # read it
     Get-Help .\install.ps1 -Detailed      # list every flag
     .\install.ps1                         # default install
@@ -85,7 +85,7 @@ Prefer to inspect the archive before running anything? Download it directly and 
   { id: "m2", label: "Windows (x64)" }
 ]} defaultTab="m1">
   <div>
-    <LinkButton href="https://www.codexx-dtdk.com/api/download?platform=linux&arch=x64" variant="primary">Download DTDK Manager — Linux x64</LinkButton>
+    <LinkButton href="https://get.codexx-dtdk.com/api/download?platform=linux&arch=x64" variant="primary">Download DTDK Manager — Linux x64</LinkButton>
 
     Extract it into your install root and add its `bin/` to your `PATH`:
 
@@ -97,7 +97,7 @@ Prefer to inspect the archive before running anything? Download it directly and 
     ```
   </div>
   <div>
-    <LinkButton href="https://www.codexx-dtdk.com/api/download?platform=windows&arch=x64" variant="primary">Download DTDK Manager — Windows x64</LinkButton>
+    <LinkButton href="https://get.codexx-dtdk.com/api/download?platform=windows&arch=x64" variant="primary">Download DTDK Manager — Windows x64</LinkButton>
 
     Extract the archive into `%USERPROFILE%\.codexx` and add `%USERPROFILE%\.codexx\bin` to your user `PATH`:
 
@@ -146,14 +146,14 @@ One command removes the install tree, the `PATH` entry, and — unless you ask o
 ]} defaultTab="u1">
   <div>
     ```sh
-    curl -fsSL https://www.codexx-dtdk.com/uninstall.sh | bash
+    curl -fsSL https://get.codexx-dtdk.com/uninstall.sh | bash
     ```
 
     The script prints what it will remove and asks for confirmation (reading your answer from the terminal even when piped), then deletes `~/.codexx`, strips the marker block from `~/.bashrc` / `~/.zshrc` / `~/.profile`, and removes `~/.config/codexx` and `~/.cache/codexx`. For unattended use append `| bash -s -- --yes` to skip the prompt. Add `--keep-config` to retain license tokens (so a reinstall picks them up) or `--keep-cache` to retain the shared active map. `--dry-run` previews without touching anything; `--root <dir>` targets a non-default install location.
   </div>
   <div>
     ```powershell
-    irm https://www.codexx-dtdk.com/uninstall.ps1 | iex
+    irm https://get.codexx-dtdk.com/uninstall.ps1 | iex
     ```
 
     The script prints what it will remove, asks for confirmation, then deletes `%USERPROFILE%\.codexx`, removes `%USERPROFILE%\.codexx\bin` from your user `PATH`, and removes `%APPDATA%\CodeXX` and `%LOCALAPPDATA%\CodeXX\Cache`. For unattended use, download it and run with `-Yes` (`irm …/uninstall.ps1 -OutFile uninstall.ps1; .\uninstall.ps1 -Yes`). Add `-KeepConfig` to retain license tokens or `-KeepCache` to retain the shared active map. `-DryRun` previews without touching anything; `-Root <dir>` targets a non-default install location.

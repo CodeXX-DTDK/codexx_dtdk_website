@@ -16,7 +16,7 @@ Keep generated docs out of git; produce them fresh in CI right before the static
 steps:
   - uses: actions/checkout@v4
   - name: Install DTDK Manager
-    run: curl -fsSL https://www.codexx-dtdk.com/install.sh | bash
+    run: curl -fsSL https://get.codexx-dtdk.com/install.sh | bash
   - name: Install docsgen
     run: ~/.codexx/bin/codexx_dtdk_manager --install docsgen   # or via the TUI
   - name: Generate API docs
