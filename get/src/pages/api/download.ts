@@ -8,14 +8,21 @@ export const prerender = false
 const env = (k: string): string | undefined =>
   (import.meta.env as Record<string, string | undefined>)[k] ?? process.env[k]
 
-// The DTDK Manager releases repo is PRIVATE. This endpoint resolves the latest
-// `stable/manager@*` GitHub Release server-side. For asset requests it
-// 302-redirects the caller to GitHub's short-lived signed URL; for `meta` it
-// returns the resolved tag/version as JSON (consumed by the bootstrap scripts
-// so they can install without a user-supplied PAT). The PAT is used only here
-// — it is never sent to the client.
+// The DTDK releases repo is PRIVATE. This endpoint resolves the latest
+// `stable/<component>@*` GitHub Release server-side. The bootstrap installs two
+// engine-less overseer binaries (ADR-038 §5, ADR-068): the `manager` (default)
+// and the `updater`; pass `?component=updater` to resolve the latter. For asset
+// requests it 302-redirects the caller to GitHub's short-lived signed URL; for
+// `meta` it returns the resolved tag/version as JSON (consumed by the bootstrap
+// scripts so they can install without a user-supplied PAT). The PAT is used only
+// here — it is never sent to the client.
 const DEFAULT_REPO = 'CodeXX-DTDK/codexx_dtdk'
-const CHANNEL = 'stable' // the proxy only ever serves stable manager builds
+const CHANNEL = 'stable' // the proxy only ever serves stable builds
+
+// Components the proxy will serve. Both are engine-less overseers installed by
+// the bootstrap; every other component is installed through the manager TUI.
+const COMPONENTS = ['manager', 'updater'] as const
+type Component = (typeof COMPONENTS)[number]
 
 const PLATFORMS = ['linux', 'windows', 'macos'] as const
 const ASSET_KINDS = ['archive', 'sha256', 'sigstore', 'meta'] as const
@@ -42,11 +49,13 @@ interface GhRelease {
   assets: GhAsset[]
 }
 
-// stable/manager@X.Y.Z with an optional -rc.N / -rev.N pre-release suffix.
-const TAG_RE = new RegExp(`^${CHANNEL}/manager@(\\d+)\\.(\\d+)\\.(\\d+)(?:-(rc|rev)\\.(\\d+))?$`)
+// stable/<component>@X.Y.Z with an optional -rc.N / -rev.N pre-release suffix.
+// Built per-request from the resolved component.
+const tagRegex = (component: Component): RegExp =>
+  new RegExp(`^${CHANNEL}/${component}@(\\d+)\\.(\\d+)\\.(\\d+)(?:-(rc|rev)\\.(\\d+))?$`)
 
 // Total order over matching tags: X.Y.Z first, then bare > rev.N > rc.N at the
-// same X.Y.Z. Mirrors the ranking in scripts/install.{sh,ps1}.
+// same X.Y.Z. Mirrors the ranking in public/install.{sh,ps1}.
 function rank(m: RegExpMatchArray): number {
   const [, maj, min, pat, kind, n] = m
   const extra = !kind ? 2 : kind === 'rev' ? 1 : 0
@@ -57,6 +66,13 @@ export const GET: APIRoute = async ({ request, url }) => {
   const kind = (url.searchParams.get('asset') ?? 'archive').toLowerCase()
   if (!ASSET_KINDS.includes(kind as AssetKind)) {
     return json({ error: `unknown asset: ${kind} — expected archive | sha256 | sigstore | meta` }, 400)
+  }
+
+  // Which overseer binary to resolve. Defaults to `manager` for backwards
+  // compatibility with existing bootstrap invocations.
+  const component = (url.searchParams.get('component') ?? 'manager').toLowerCase()
+  if (!COMPONENTS.includes(component as Component)) {
+    return json({ error: `unknown component: ${component} — expected manager | updater` }, 400)
   }
 
   // `meta` is release-wide (tag/version); a platform is only needed to locate a
@@ -107,15 +123,16 @@ export const GET: APIRoute = async ({ request, url }) => {
     return json({ error: 'Could not reach GitHub.' }, 502)
   }
 
+  const tagRe = tagRegex(component as Component)
   let best: { rel: GhRelease; r: number } | null = null
   for (const rel of releases) {
     if (rel.draft) continue
-    const m = rel.tag_name.match(TAG_RE)
+    const m = rel.tag_name.match(tagRe)
     if (!m) continue
     const r = rank(m)
     if (!best || r > best.r) best = { rel, r }
   }
-  if (!best) return json({ error: `No ${CHANNEL}/manager release has been published yet.` }, 404)
+  if (!best) return json({ error: `No ${CHANNEL}/${component} release has been published yet.` }, 404)
 
   // meta: the resolved release identity, for the bootstrap scripts.
   if (kind === 'meta') {
@@ -127,14 +144,14 @@ export const GET: APIRoute = async ({ request, url }) => {
   }
 
   // Locate the per-platform archive. Asset schema (ADR-037 §2) is
-  // codexx_dtdk_manager-<version>-<platform>-<arch>.<ext>; match platform +
+  // codexx_dtdk_<component>-<version>-<platform>-<arch>.<ext>; match platform +
   // extension, and the arch token only when an arch was requested.
   const archPart = arch ? `(?:${ARCH_ALIASES[arch].join('|')})` : '[^.]+'
-  const archiveRe = new RegExp(`^codexx_dtdk_manager-.*-${platform}-${archPart}\\.(?:tar\\.gz|zip)$`)
+  const archiveRe = new RegExp(`^codexx_dtdk_${component}-.*-${platform}-${archPart}\\.(?:tar\\.gz|zip)$`)
   const archive = best.rel.assets.find((a) => archiveRe.test(a.name))
   if (!archive) {
     return json(
-      { error: `No DTDK Manager build for ${platform}${arch ? `/${arch}` : ''} in ${best.rel.tag_name}.` },
+      { error: `No DTDK ${component} build for ${platform}${arch ? `/${arch}` : ''} in ${best.rel.tag_name}.` },
       404,
     )
   }

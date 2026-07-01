@@ -3,9 +3,8 @@
     CodeXX DTDK uninstaller (Windows). Per ADR-038 §5.
 
 .DESCRIPTION
-    A byte-identical copy of this script is served at
-    https://www.codexx-dtdk.com/uninstall.ps1 — keep landing/public/uninstall.ps1
-    in sync when editing this file.
+    This is the canonical source, served verbatim at
+    https://get.codexx-dtdk.com/uninstall.ps1 — there is no other copy.
 
     Removes the DTDK install tree (default %USERPROFILE%\.codexx), the
     %USERPROFILE%\.codexx\bin entry from the user PATH, and — unless asked

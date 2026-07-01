@@ -1,25 +1,24 @@
 #!/usr/bin/env bash
 # CodeXX DTDK bootstrap installer (POSIX). Per ADR-038 §5 + ADR-039 §3.
 #
-# A byte-identical copy of this script is served at
-# https://www.codexx-dtdk.com/install.sh — keep landing/public/install.sh in
-# sync when editing this file.
+# This is the canonical source, served verbatim at
+# https://get.codexx-dtdk.com/install.sh — there is no other copy.
 #
 # Installs the DTDK Manager + master shim into <root>/ (default $HOME/.codexx)
 # and appends <root>/bin to the user's shell profile so installed tools resolve
 # in fresh shells.
 #
 # By default the latest STABLE manager release is fetched through the public
-# download proxy (https://www.codexx-dtdk.com) — no GitHub account or token is
+# download proxy (https://get.codexx-dtdk.com) — no GitHub account or token is
 # required. Passing --token, --tag, --repo, or a non-stable --channel switches
 # to a direct GitHub Releases API download; because the releases repository is
 # private, the direct path requires --token.
 #
-# The manager release archive ships both binaries (ADR-038 §5):
-#   bin/codexx_dtdk_manager
-#   .shim/codexx_shim
+# Two overseer archives are installed side by side (ADR-038 §5, ADR-068 §1):
+#   manager archive → bin/codexx_dtdk_manager + .shim/codexx_shim
+#   updater archive → bin/codexx_dtdk_updater   (collaborative self-update)
 # Subsequent component installs (codegen, docsgen, …) go through the manager
-# TUI; this script bootstraps the entry point only.
+# TUI; this script bootstraps the two overseer entry points only.
 #
 # Usage:
 #   install.sh [--root <dir>] [--channel <stable|insider|canary>]
@@ -38,7 +37,7 @@ set -euo pipefail
 readonly DEFAULT_REPO="CodeXX-DTDK/codexx_dtdk"
 readonly DEFAULT_ROOT="${HOME}/.codexx"
 readonly DEFAULT_CHANNEL="stable"
-readonly DEFAULT_PROXY="https://www.codexx-dtdk.com"
+readonly DEFAULT_PROXY="https://get.codexx-dtdk.com"
 readonly MARKER_BEGIN="# >>> codexx-dtdk install begin >>>"
 readonly MARKER_END="# <<< codexx-dtdk install end <<<"
 
@@ -225,43 +224,57 @@ download() {
 }
 
 # ---------------------------------------------------------------------------
-# Resolve the release tag and the archive / sha256 / sigstore source URLs.
+# install_component <component> <workflow-yml>
+#
+# Resolves the latest <channel>/<component> release (proxy or direct), downloads
+# the archive + sha256, verifies integrity (+ optional cosign against the
+# component's release workflow), and extracts it into <root>/. The bootstrap
+# installs two engine-less overseer binaries (ADR-038 §5, ADR-068): `manager`
+# and `updater`, shipped in separate archives (ADR-068 §1). Every other
+# component is installed later through the manager TUI.
 # ---------------------------------------------------------------------------
-sigstore_src=""
+RESOLVED_MANAGER_TAG=""
 
-if [[ "$mode" == "proxy" ]]; then
-    echo "Resolving latest ${DEFAULT_CHANNEL} manager release via ${proxy}…"
-    meta_json="$(curl -fsSL "${proxy}/api/download?asset=meta")" || {
-        echo "Could not reach the download service at ${proxy}." >&2
-        exit 1
-    }
-    tag="$(printf '%s' "$meta_json" | python3 -c '
+install_component() {
+    local component="$1"
+    local workflow="$2"
+    local ctag="$tag" archive_src sha_src sigstore_src=""
+
+    if [[ "$mode" == "proxy" ]]; then
+        echo "Resolving latest ${DEFAULT_CHANNEL} ${component} release via ${proxy}…"
+        local meta_json
+        meta_json="$(curl -fsSL "${proxy}/api/download?component=${component}&asset=meta")" || {
+            echo "Could not reach the download service at ${proxy}." >&2
+            exit 1
+        }
+        ctag="$(printf '%s' "$meta_json" | python3 -c '
 import json, sys
 try:
     print(json.loads(sys.stdin.read()).get("tag", ""))
 except Exception:
     print("")
 ')"
-    [[ -n "$tag" ]] || { echo "The download service returned no release." >&2; exit 1; }
+        [[ -n "$ctag" ]] || { echo "The download service returned no ${component} release." >&2; exit 1; }
 
-    q="platform=${os}&arch=${arch}"
-    archive_src="${proxy}/api/download?${q}&asset=archive"
-    sha_src="${proxy}/api/download?${q}&asset=sha256"
-    sigstore_src="${proxy}/api/download?${q}&asset=sigstore"
-else
-    api_auth=(-H "Authorization: Bearer $token")
-    api_base="https://api.github.com/repos/${repo}"
+        local q="platform=${os}&arch=${arch}&component=${component}"
+        archive_src="${proxy}/api/download?${q}&asset=archive"
+        sha_src="${proxy}/api/download?${q}&asset=sha256"
+        sigstore_src="${proxy}/api/download?${q}&asset=sigstore"
+    else
+        local api_auth=(-H "Authorization: Bearer $token")
+        local api_base="https://api.github.com/repos/${repo}"
 
-    if [[ -z "$tag" ]]; then
-        echo "Resolving latest ${channel}/manager release in ${repo}…"
-        releases_json="$(curl -fsSL "${api_auth[@]}" \
-            -H "Accept: application/vnd.github+json" \
-            "${api_base}/releases?per_page=100")"
-        tag="$(printf '%s' "$releases_json" | python3 -c '
+        if [[ -z "$ctag" ]]; then
+            echo "Resolving latest ${channel}/${component} release in ${repo}…"
+            local releases_json
+            releases_json="$(curl -fsSL "${api_auth[@]}" \
+                -H "Accept: application/vnd.github+json" \
+                "${api_base}/releases?per_page=100")"
+            ctag="$(printf '%s' "$releases_json" | python3 -c '
 import json, re, sys
-channel = sys.argv[1]
+channel, component = sys.argv[1], sys.argv[2]
 data = json.loads(sys.stdin.read())
-pattern = re.compile(r"^" + re.escape(channel) + r"/manager@(\d+)\.(\d+)\.(\d+)(?:-(rc|rev)\.(\d+))?$")
+pattern = re.compile(r"^" + re.escape(channel) + r"/" + re.escape(component) + r"@(\d+)\.(\d+)\.(\d+)(?:-(rc|rev)\.(\d+))?$")
 best = None
 for r in data:
     if r.get("draft"):
@@ -278,30 +291,32 @@ for r in data:
     if best is None or key > best[0]:
         best = (key, r["tag_name"])
 print(best[1] if best else "")
-' "$channel")"
-        [[ -n "$tag" ]] || { echo "No ${channel}/manager release found in ${repo}." >&2; exit 1; }
-    fi
+' "$channel" "$component")"
+            [[ -n "$ctag" ]] || { echo "No ${channel}/${component} release found in ${repo}." >&2; exit 1; }
+        fi
 
-    release_json="$(curl -fsSL "${api_auth[@]}" \
-        -H "Accept: application/vnd.github+json" \
-        "${api_base}/releases/tags/${tag}")"
+        local release_json
+        release_json="$(curl -fsSL "${api_auth[@]}" \
+            -H "Accept: application/vnd.github+json" \
+            "${api_base}/releases/tags/${ctag}")"
 
-    # Match the archive asset by pattern rather than reconstructing the exact
-    # name — the release labels arch inconsistently (linux: x86_64, win: x64).
-    archive_name="$(printf '%s' "$release_json" | python3 -c '
+        # Match the archive asset by pattern rather than reconstructing the exact
+        # name — the release labels arch inconsistently (linux: x86_64, win: x64).
+        local archive_name
+        archive_name="$(printf '%s' "$release_json" | python3 -c '
 import json, re, sys
-os_ = sys.argv[1]
+os_, component = sys.argv[1], sys.argv[2]
 data = json.loads(sys.stdin.read())
-rx = re.compile(r"^codexx_dtdk_manager-.*-" + re.escape(os_) + r"-[^.]+\.(tar\.gz|zip)$")
+rx = re.compile(r"^codexx_dtdk_" + re.escape(component) + r"-.*-" + re.escape(os_) + r"-[^.]+\.(tar\.gz|zip)$")
 for a in data.get("assets", []):
     if rx.match(a.get("name", "")):
         print(a.get("name", ""))
         break
-' "$os")"
-    [[ -n "$archive_name" ]] || { echo "No manager archive for ${os} in ${tag}." >&2; exit 1; }
+' "$os" "$component")"
+        [[ -n "$archive_name" ]] || { echo "No ${component} archive for ${os} in ${ctag}." >&2; exit 1; }
 
-    asset_url() {
-        printf '%s' "$release_json" | python3 -c '
+        asset_url() {
+            printf '%s' "$release_json" | python3 -c '
 import json, sys
 want = sys.argv[1]
 data = json.loads(sys.stdin.read())
@@ -310,66 +325,83 @@ for a in data.get("assets", []):
         print(a.get("url", ""))
         break
 ' "$1"
-    }
-    archive_src="$(asset_url "${archive_name}")"
-    sha_src="$(asset_url "${archive_name}.sha256")"
-    sigstore_src="$(asset_url "${archive_name}.sigstore")"
+        }
+        archive_src="$(asset_url "${archive_name}")"
+        sha_src="$(asset_url "${archive_name}.sha256")"
+        sigstore_src="$(asset_url "${archive_name}.sigstore")"
 
-    [[ -n "$archive_src" ]] || { echo "Archive asset URL missing in ${tag}." >&2; exit 1; }
-    [[ -n "$sha_src" ]] || { echo "${archive_name}.sha256 sidecar missing." >&2; exit 1; }
-fi
-
-version="${tag##*@}"
-echo "Resolved tag: ${tag}"
-
-# ---------------------------------------------------------------------------
-# Download to staging, verify integrity, optional cosign
-# ---------------------------------------------------------------------------
-stage_dir="${root}/.staging/${tag}"
-mkdir -p "$stage_dir"
-archive_path="${stage_dir}/manager-archive.tar.gz"
-sha_path="${archive_path}.sha256"
-
-echo "Downloading manager ${version}…"
-download "$archive_src" "$archive_path"
-download "$sha_src" "$sha_path"
-
-expected_sha="$(awk '{print $1}' "$sha_path")"
-actual_sha="$($sha_cmd "$archive_path" | awk '{print $1}')"
-if [[ "$expected_sha" != "$actual_sha" ]]; then
-    echo "::error:: sha256 mismatch for the manager archive" >&2
-    echo "  expected: $expected_sha" >&2
-    echo "  actual:   $actual_sha" >&2
-    exit 1
-fi
-echo "sha256 OK"
-
-if [[ "$verify" -eq 1 ]]; then
-    if ! command -v cosign >/dev/null 2>&1; then
-        echo "::warning:: --verify requested but cosign not on PATH; skipping" >&2
-    elif [[ -z "$sigstore_src" ]]; then
-        echo "::warning:: no .sigstore sidecar available for ${tag}; skipping verify" >&2
-    elif ! download "$sigstore_src" "${archive_path}.sigstore"; then
-        echo "::warning:: .sigstore sidecar download failed; skipping verify" >&2
-    else
-        identity_regex="^https://github\\.com/${repo//./\\.}/\\.github/workflows/release-manager\\.yml@.*"
-        cosign verify-blob \
-            --bundle "${archive_path}.sigstore" \
-            --certificate-identity-regexp "$identity_regex" \
-            --certificate-oidc-issuer "https://token.actions.githubusercontent.com" \
-            "$archive_path" \
-            >/dev/null
-        echo "cosign verify OK"
+        [[ -n "$archive_src" ]] || { echo "Archive asset URL missing in ${ctag}." >&2; exit 1; }
+        [[ -n "$sha_src" ]] || { echo "${archive_name}.sha256 sidecar missing." >&2; exit 1; }
     fi
-fi
+
+    local version="${ctag##*@}"
+    echo "Resolved ${component} tag: ${ctag}"
+
+    local stage_dir="${root}/.staging/${ctag}"
+    mkdir -p "$stage_dir"
+    local archive_path="${stage_dir}/${component}-archive.tar.gz"
+    local sha_path="${archive_path}.sha256"
+
+    echo "Downloading ${component} ${version}…"
+    download "$archive_src" "$archive_path"
+    download "$sha_src" "$sha_path"
+
+    local expected_sha actual_sha
+    expected_sha="$(awk '{print $1}' "$sha_path")"
+    actual_sha="$($sha_cmd "$archive_path" | awk '{print $1}')"
+    if [[ "$expected_sha" != "$actual_sha" ]]; then
+        echo "::error:: sha256 mismatch for the ${component} archive" >&2
+        echo "  expected: $expected_sha" >&2
+        echo "  actual:   $actual_sha" >&2
+        exit 1
+    fi
+    echo "sha256 OK (${component})"
+
+    if [[ "$verify" -eq 1 ]]; then
+        if ! command -v cosign >/dev/null 2>&1; then
+            echo "::warning:: --verify requested but cosign not on PATH; skipping" >&2
+        elif [[ -z "$sigstore_src" ]]; then
+            echo "::warning:: no .sigstore sidecar available for ${ctag}; skipping verify" >&2
+        elif ! download "$sigstore_src" "${archive_path}.sigstore"; then
+            echo "::warning:: .sigstore sidecar download failed; skipping verify" >&2
+        else
+            local identity_regex="^https://github\\.com/${repo//./\\.}/\\.github/workflows/${workflow}@.*"
+            cosign verify-blob \
+                --bundle "${archive_path}.sigstore" \
+                --certificate-identity-regexp "$identity_regex" \
+                --certificate-oidc-issuer "https://token.actions.githubusercontent.com" \
+                "$archive_path" \
+                >/dev/null
+            echo "cosign verify OK (${component})"
+        fi
+    fi
+
+    mkdir -p "$root"
+    echo "Extracting ${component} into ${root}/…"
+    tar -xzf "$archive_path" -C "$root"
+
+    [[ "$component" == "manager" ]] && RESOLVED_MANAGER_TAG="$ctag"
+}
 
 # ---------------------------------------------------------------------------
-# Extract into <root>/ — overwrites bin/codexx_dtdk_manager + .shim/codexx_shim
+# Install the overseer binaries. An explicit --tag names a single component and
+# installs only that one; otherwise both the manager and the updater are fetched
+# (the updater tracks the manager's channel, ADR-068).
 # ---------------------------------------------------------------------------
-mkdir -p "$root"
-echo "Extracting into ${root}/…"
-tar -xzf "$archive_path" -C "$root"
-chmod +x "${root}/bin/codexx_dtdk_manager" "${root}/.shim/codexx_shim"
+if [[ -n "$tag" ]]; then
+    tag_component="${tag#*/}"; tag_component="${tag_component%@*}"
+    install_component "$tag_component" "release-${tag_component}.yml"
+    echo "Note: --tag installs only ${tag_component}; the other overseer binary was not fetched."
+else
+    install_component manager release-manager.yml
+    install_component updater release-updater.yml
+fi
+
+# Make the overseer binaries executable (tar preserves mode, but be defensive
+# across tar implementations). Only chmod what actually landed.
+for b in "${root}/bin/codexx_dtdk_manager" "${root}/bin/codexx_dtdk_updater" "${root}/.shim/codexx_shim"; do
+    [[ -f "$b" ]] && chmod +x "$b" 2>/dev/null || true
+done
 
 # Best-effort cleanup of the staging tree.
 rm -rf "${root}/.staging" 2>/dev/null || true
@@ -383,7 +415,7 @@ fi
 
 cat <<EOF
 
-✓ CodeXX DTDK manager ${tag} installed at ${root}.
+✓ CodeXX DTDK ${RESOLVED_MANAGER_TAG:-$tag} installed at ${root}.
 
 Next:
   ${root}/bin/codexx_dtdk_manager      # browse + install components

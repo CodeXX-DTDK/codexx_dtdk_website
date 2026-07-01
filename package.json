@@ -2,15 +2,17 @@
   "name": "codexx-website",
   "private": true,
   "type": "module",
-  "description": "CodeXX DTDK website monorepo — pure-Astro landing (landing/) + codegen Starlight docs (codegen/) + docsgen Starlight docs (docsgen/) + mcp Starlight docs (mcp/).",
+  "description": "CodeXX DTDK website monorepo — pure-Astro landing (landing/) + distribution surface (get/, installers + download proxy) + codegen Starlight docs (codegen/) + docsgen Starlight docs (docsgen/) + mcp Starlight docs (mcp/).",
   "scripts": {
     "dev": "pnpm --filter landing dev",
     "dev:landing": "pnpm --filter landing dev",
+    "dev:get": "pnpm --filter get dev",
     "dev:codegen": "pnpm --filter codegen dev",
     "dev:docsgen": "pnpm --filter docsgen dev",
     "dev:mcp": "pnpm --filter mcp dev",
     "build": "pnpm -r build",
     "build:landing": "pnpm --filter landing build",
+    "build:get": "pnpm --filter get build",
     "build:codegen": "pnpm --filter codegen build",
     "build:docsgen": "pnpm --filter docsgen build",
     "build:mcp": "pnpm --filter mcp build"
