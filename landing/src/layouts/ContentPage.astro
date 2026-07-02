@@ -1,0 +1,125 @@
+---
+// Shared frame for the landing site's dedicated content pages (Origin, About,
+// On AI). Mirrors index.astro's head/theme/nav/footer 1:1 so these pages are
+// visually indistinguishable from the home page, but wraps a prose column
+// instead of the marketing sections. Each page fills the default slot with its
+// body and passes the page hero copy via props.
+import "@fontsource/inter/400.css";
+import "@fontsource/inter/500.css";
+import "@fontsource/inter/600.css";
+import "@fontsource/inter/700.css";
+import "@fontsource/inter/800.css";
+import "../styles/landing.css";
+import Analytics from "@vercel/analytics/astro";
+import DisclaimerModal from "@codexx/web/DisclaimerModal.astro";
+
+interface Props {
+  /** <title> + og — full document title. */
+  title: string;
+  /** Meta description. */
+  description: string;
+  /** Small uppercase label above the page heading. */
+  eyebrow: string;
+  /** Page H1. */
+  heading: string;
+  /** Optional standfirst paragraph under the heading. */
+  lead?: string;
+  /** Current path, so the matching nav link renders active. */
+  active?: "origin" | "about" | "ai";
+}
+
+const { title, description, eyebrow, heading, lead, active } = Astro.props;
+
+const LEGAL_URL = "https://legal.codexx-dtdk.com";
+const EARLY_ACCESS_MAILTO =
+  "mailto:support@codexx-dtdk.com?subject=CodeXX%20DTDK%20early%20access";
+
+const navLinks = [
+  { id: "origin", href: "/origin", label: "Origin" },
+  { id: "about", href: "/about", label: "About" },
+  { id: "ai", href: "/ai", label: "On AI" },
+];
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <title>{title}</title>
+    <meta name="description" content={description} />
+  </head>
+  <body>
+    <script is:inline>
+      const saved = localStorage.getItem("starlight-theme");
+      const dark = saved
+        ? saved === "dark"
+        : window.matchMedia("(prefers-color-scheme: dark)").matches;
+      document.documentElement.dataset.theme = dark ? "dark" : "light";
+    </script>
+
+    <div class="wrap">
+      <nav class="nav">
+        <a class="nav-logo" href="/">CodeXX DTDK</a>
+        <div class="nav-links">
+          {
+            navLinks.map((l) => (
+              <a href={l.href} class={active === l.id ? "is-active" : undefined}>
+                {l.label}
+              </a>
+            ))
+          }
+          <a href={EARLY_ACCESS_MAILTO}>Early access</a>
+        </div>
+      </nav>
+
+      <header class="content-hero" data-aos="fade-up">
+        <span class="content-eyebrow">{eyebrow}</span>
+        <h1>{heading}</h1>
+        {lead && <p class="content-lead">{lead}</p>}
+      </header>
+
+      <main class="prose" data-aos="fade-up">
+        <slot />
+      </main>
+
+      <section class="cta-section" data-aos="fade-up">
+        <h2>Join the design partner program</h2>
+        <p>
+          Early access for C++ teams. Tight feedback loop, direct line to the author.
+        </p>
+        <div class="hero-cta">
+          <a class="btn-primary" href={EARLY_ACCESS_MAILTO}>Request early access</a>
+          <a class="btn-secondary" href="/">Back home</a>
+        </div>
+      </section>
+
+      <footer class="footer">
+        <span>© {new Date().getFullYear()} CodeXX DTDK</span>
+        <span class="footer-legal">
+          <a href={`${LEGAL_URL}/privacy`}>Privacy</a>
+          <a href={`${LEGAL_URL}/terms`}>Terms</a>
+          <a href={`${LEGAL_URL}/eula`}>EULA</a>
+        </span>
+        <span>William Karol Di Cioccio</span>
+      </footer>
+    </div>
+
+    <script>
+      import AOS from "aos";
+      import "aos/dist/aos.css";
+      AOS.init({
+        duration: 600,
+        easing: "ease-out-cubic",
+        once: true,
+        offset: 80,
+        disable: () =>
+          window.matchMedia("(prefers-reduced-motion: reduce)").matches,
+      });
+    </script>
+
+    <Analytics />
+    <DisclaimerModal />
+  </body>
+</html>
