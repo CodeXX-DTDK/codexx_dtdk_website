@@ -1,0 +1,83 @@
+---
+import ContentPage from "../layouts/ContentPage.astro";
+---
+
+<ContentPage
+  title="On AI — CodeXX DTDK"
+  description="How CodeXX DTDK uses LLMs: extensively, but under human review, test-driven development, dogfooding, and enforced best practices. We are engineers using modern tools — not vibe-coders."
+  eyebrow="On AI"
+  heading="Yes, we use LLMs. Here's how — and how we don't."
+  lead="We're upfront about leaning on AI. We're just as upfront that every line of it lands inside a serious engineering process."
+  active="ai"
+>
+  <p>
+    The honest reason is scale. The human and economic resources behind CodeXX
+    are small; the surface area of the problem — a legacy-free engine for
+    understanding C++ and a whole ecosystem of tools on top of it — is not. So we
+    use <strong>LLMs extensively</strong> throughout development to close that gap.
+  </p>
+
+  <p>
+    What we want to be equally clear about is that using AI heavily and being
+    careless are not the same thing. Here is what actually surrounds every AI
+    contribution:
+  </p>
+
+  <ul>
+    <li>
+      <strong>Human review, always.</strong> All code is thoroughly reviewed by
+      humans before it lands. Nothing merges because a model was confident about it.
+    </li>
+    <li>
+      <strong>Test-driven development.</strong> Behaviour is pinned down by tests,
+      not by vibes — which is exactly what keeps AI-assisted changes honest.
+    </li>
+    <li>
+      <strong>We dogfood our own tools.</strong> We self-host the engine and run
+      it across the entire corpus of our own codebase and all of its
+      dependencies. If the tools aren't reliable on our own code, we find out
+      before you do.
+    </li>
+    <li>
+      <strong>Best practices are enforced by automation.</strong> Pre-commit
+      hooks, CI actions, formatters, and checks gate the work — the standard
+      doesn't depend on anyone remembering to uphold it.
+    </li>
+    <li>
+      <strong>Strong LLM guidelines.</strong> We hold the models to explicit
+      guidelines for workflows and artifact quality, so AI output meets the same
+      bar as anything else in the repository.
+    </li>
+  </ul>
+
+  <p class="pull">
+    We are not vibe-coders shipping code we don't understand.
+  </p>
+
+  <p>
+    This is serious engineering that <strong>leverages the most modern tools to
+    reach the best possible result</strong>. AI is an accelerator here — pointed
+    at a real architecture, held to real tests, and reviewed by real engineers who
+    know exactly what the code does and why.
+  </p>
+
+  <h2>A reality check</h2>
+
+  <p>
+    We should also be honest in the other direction. AI coding agents are getting
+    better every day; they now produce high-quality code at a speed that, like it
+    or not, a human developer simply can't match. But they will
+    <strong>betray you when you're most vulnerable</strong> — hallucinating
+    something plausible and wrong exactly when you least expect it. That is
+    precisely why we never skip a review before merging, and why we never let an
+    LLM drive design. They are confined to <strong>implementation and
+    counsel</strong>, nothing more.
+  </p>
+
+  <p>
+    It remains fully <strong>our</strong> responsibility to keep the code
+    maintainable, to hold a clear and complete picture of the software — no small
+    thing in a codebase this size — and, ultimately, to build a piece of
+    software's most important feature: <strong>its soul</strong>.
+  </p>
+</ContentPage>

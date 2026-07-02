@@ -1,0 +1,68 @@
+---
+import ContentPage from "../layouts/ContentPage.astro";
+---
+
+<ContentPage
+  title="Project Origin — CodeXX DTDK"
+  description="How CodeXX DTDK began: a documentation problem on a hobby game engine that led, through Clang and regex dead-ends, to a tree-sitter–based engine for understanding C++."
+  eyebrow="Project Origin"
+  heading="It started with documentation."
+  lead="CodeXX DTDK didn't begin as a platform. It began as one stubborn problem on a side project — and the long road to solving it properly."
+  active="origin"
+>
+  <p>
+    In my free time I was building a game engine. Like every engine, it grew a
+    surface area faster than I could document it — and I wanted documentation
+    that actually looked modern: something that would drop cleanly into an
+    <strong>Astro + Starlight</strong> site, with real cross-references and code
+    navigation rather than a wall of extracted comments.
+  </p>
+
+  <p>
+    Nothing off the shelf did what I wanted, so I set out to generate it from
+    source. That turned out to be the hard part.
+  </p>
+
+  <h2>The two dead-ends</h2>
+
+  <p>
+    My first instinct was to reach for <strong>Clang</strong>. If anything
+    understands C++, it's the compiler front-end. But building tooling on top of
+    a compiler is heavy: slow to set up, awkward to embed, and shaped around
+    compilation rather than around <em>understanding</em> a codebase the way a
+    human reader does.
+  </p>
+
+  <p>
+    So I swung the other way — <strong>heuristics and regular expressions</strong>.
+    Fast to start, and just as fast to fall apart. C++ is far too context-sensitive
+    to pattern-match your way through; every rule I added spawned three exceptions.
+  </p>
+
+  <p class="pull">
+    The answer was in the middle ground.</p>
+
+  <h2>The middle ground</h2>
+
+  <p>
+    Between the compiler's weight and the regex's fragility sat
+    <strong>tree-sitter</strong> — fast, incremental, embeddable, and forgiving of
+    incomplete code. On its own it produces a concrete syntax tree, not the
+    semantic picture I needed. So I forked it, updated it for the C++ I cared
+    about, and started building my own <strong>AST and analysis layer on top of
+    its CST</strong>.
+  </p>
+
+  <p>
+    That layer is what became the CodeXX engine. Once you own the whole path from
+    source to a real understanding of the code, documentation stops being the
+    goal and becomes just the first thing you can build. Code generation,
+    memory-safety analysis, IDE intelligence — they all fall out of the same
+    foundation.
+  </p>
+
+  <p>
+    The documentation generator that started it all still ships today. It just
+    turned out to be the smallest piece of a much larger idea.
+  </p>
+</ContentPage>
