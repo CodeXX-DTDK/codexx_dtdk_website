@@ -49,12 +49,16 @@ graph TD
 
 **Inline injection rewrites anchor blocks in place.** Bare anchors written by hand are expanded on first run into one paired `:begin]]/:end]]` block per `inline` item (N items ⇒ N consecutive blocks). Later runs grow or shrink the run in place to match the current item count.
 
+## What the analyzer resolves
+
+Before any rule runs, the engine builds a real semantic model over your source — not just a syntax tree. It indexes a symbol database, resolves a class hierarchy, and builds include and module dependency graphs. Rules can query this directly through the [native API](/reference/luau-globals/): resolve a base class to its declaring symbol, look a struct up by qualified name, or check for a member or method. The same engine computes deeper facts still — per-expression types, points-to sets, and, on debug-info builds, byte-level memory layout — that power the LSP and MCP surfaces. codegen deliberately hands each rule a clean syntactic AST node plus those symbol and hierarchy queries, rather than the full semantic model, so rules stay pure functions over JSON.
+
 ## What the engine does not do
 
-- It does not instantiate templates. It sees the template declaration as the codex parser produced it.
-- It does not evaluate `constexpr`. Values are represented as their source text.
-- It does not perform overload resolution. The analyzer does best-effort symbol indexing but no semantic typing.
-- It does not cache between runs. Every invocation re-parses every input under `--input` (incremental persistence is not implemented today).
+- It does not instantiate templates. A rule sees the template as written; written template arguments are extracted syntactically, but no specialization is synthesised and an uninstantiated generic resolves to a `dependent` type.
+- It does not fold `constexpr`. Constant values are represented as their source text; the engine does not evaluate them.
+- It does not do conversion-ranking overload resolution. Overloads are indexed distinctly, but the engine will not pick the single best-viable candidate for a call site the way a compiler front-end does.
+- The codegen CLI re-parses every input on each run. It does not use the workspace engine's persistent incremental index — that cache backs the long-running LSP and MCP servers, not the one-shot generator.
 
 <Alert type="info" title="Key Takeaways">
 - Pipeline: load → anchor-scan → parse + analyze → collect candidates → **grouping → handler → preamble** → assemble → inline-edits.
