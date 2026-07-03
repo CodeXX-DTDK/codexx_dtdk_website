@@ -41,6 +41,28 @@ These functions are registered by the engine and use stable opaque integer IDs (
 
 All functions return `nil` on bad arguments (wrong type or missing); only the lookup functions return `nil` for "not found."
 
+### Semantic query API
+
+These functions expose the engine's semantic model — type resolution, symbol lookup, references, and relations — to rules. They project the codex L2 `SemanticQuery` surface as JSON. Two ID conventions apply:
+
+- **Node IDs** are the same opaque registry integers used by the introspection API above (the `_registryId` on the payload, or the result of a lookup).
+- **Symbol IDs** are content hashes that cross the boundary as **decimal strings** (a 64-bit hash would lose precision as a LuaU number). Pass them back verbatim as strings.
+
+Functions whose return type is `json` hand back a JSON **string** — call `json.decode` on it. The shape of every returned model is documented in [Semantic Queries](/concepts/semantic-query/).
+
+| Function | Signature | Description |
+|---|---|---|
+| `type_symbol_of(nodeId)` | `int -> string\|nil` | Symbol ID of the **type** of a node: a variable/field ⇒ its declared type; an expression ⇒ its inferred type; a type declaration ⇒ itself. `nil` for builtins, dependent/unresolved types, and non-type-bearing nodes. |
+| `type_node_of(nodeId)` | `int -> int\|nil` | Registry node ID of the **declaration** of a node's type — pivot from a traversed node straight into its type's own AST. `nil` when the type has no user-declared symbol. |
+| `type_of(nodeId)` | `int -> json\|nil` | The node's full [`ResolvedType`](/concepts/semantic-query/#resolvedtype) (state + type signature + resolved type symbol). |
+| `symbol_summary(symbolId)` | `string -> json\|nil` | Flat [`SymbolSummary`](/concepts/semantic-query/#symbol-summaries) for a symbol ID (kind, qualified name, signature, location, access, parent). |
+| `find_symbols(qualifiedName)` | `string -> json` | JSON array of symbol-ID strings matching a qualified name (all overloads). |
+| `references(symbolId)` | `string -> json\|nil` | JSON array of [`Reference`](/concepts/semantic-query/#references) objects — every declaration, definition, and use site of the symbol, sorted by location. |
+| `base_classes(symbolId)` | `string -> json\|nil` | JSON array of the symbol's direct base-class symbol-ID strings. |
+| `members(symbolId)` | `string -> json\|nil` | JSON array of the symbol's direct member symbol-ID strings. |
+
+The deepest facts (`type_of`, `type_symbol_of`, `references`) are richest under [`--use-workspace`](/integrations/cli/#preprocessor--parser), which resolves against a whole-workspace snapshot; symbol lookups (`find_symbols`, `symbol_summary`, `base_classes`, `members`) work in every mode. Like the introspection API, every function returns `nil` on bad arguments or when the query has no answer.
+
 ## Context objects
 
 ### Preamble context
@@ -147,7 +169,8 @@ The following are explicitly **not** provided:
 - Any FFI
 
 <Alert type="info" title="Key Takeaways">
-- `json.encode` / `json.decode` and the native introspection API are always present.
+- `json.encode` / `json.decode`, the native introspection API, and the semantic query API are always present.
 - HTTP and env access are opt-in via `permissions:` in the rule config; nothing else opens the sandbox.
 - The native API gives scripts cross-entity lookup (base classes, definition headers, finding structs by name) without re-implementing the analyzer.
+- The semantic query API adds type resolution — resolve a node's type to a symbol, pivot into that type's declaration, and query references and relations. Symbol IDs are decimal strings; `json`-returning functions hand back a string to `json.decode`. See [Semantic Queries](/concepts/semantic-query/).
 </Alert>

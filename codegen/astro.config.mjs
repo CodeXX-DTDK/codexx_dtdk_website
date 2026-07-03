@@ -62,6 +62,7 @@ export default defineConfig({
           items: [
             { label: "How It Works", slug: "concepts/how-it-works" },
             { label: "The AST Schema", slug: "concepts/ast-schema" },
+            { label: "Semantic Queries", slug: "concepts/semantic-query" },
             { label: "Rule Lifecycle", slug: "concepts/rule-lifecycle" },
             { label: "Grouping & Fan-in", slug: "concepts/grouping" },
             { label: "Preamble System", slug: "concepts/preamble" },

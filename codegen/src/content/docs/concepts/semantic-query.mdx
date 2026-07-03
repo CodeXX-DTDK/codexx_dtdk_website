@@ -1,0 +1,197 @@
+---
+title: Semantic Queries
+description: Resolve a node's type to a symbol, pivot into its declaration, and query symbols, references, and relations from a LuaU rule — with the JSON model each function returns.
+---
+
+import Alert from '@pelagornis/page/components/Alert.astro';
+
+The [AST Schema](/concepts/ast-schema/) describes the syntactic node each handler receives. The **semantic query API** goes further: it resolves what those syntactic names actually *refer to*. From a traversed node you can resolve its **type** to a symbol, pivot into that type's own declaration node, and look up symbol summaries, references, base classes, and members. These functions are the LuaU projection of the engine's L2 semantic model (the same one behind the LSP and MCP servers), returned as JSON.
+
+## Two ID conventions
+
+The API mixes two kinds of handle — keep them straight:
+
+| Handle | Type | Where it comes from |
+|---|---|---|
+| **Node ID** | `int` | The opaque registry integer — the `_registryId` on your payload, or the result of a lookup (`find_struct_by_name`, `type_node_of`, `get_base_classes[].id`). Feed it to `get_node`, `type_of`, etc. |
+| **Symbol ID** | `string` | A content hash. It crosses the boundary as a **decimal string** because a 64-bit hash would lose precision as a LuaU number. Pass it back verbatim; never coerce it to a number. |
+
+Functions whose signature returns `json` hand back a JSON **string** — call `json.decode` on it before use.
+
+<Alert type="info" title="Type facts and --use-workspace">
+Type resolution (`type_of`, `type_symbol_of`, `type_node_of`) and `references` are richest when codegen runs with [`--use-workspace`](/integrations/cli/#preprocessor--parser), which resolves against a whole-workspace semantic snapshot (cross-header types included). Symbol lookups (`find_symbols`, `symbol_summary`, `base_classes`, `members`) work in every mode. Every function returns `nil` when it has no answer.
+</Alert>
+
+## Resolving a node's type
+
+Three functions turn a node into type information. Given a member-variable node's registry ID:
+
+```lua
+local varId = var._registryId          -- or registry id from a lookup
+
+local typeSym  = type_symbol_of(varId) -- "8391045..."  (symbol id string) or nil
+local typeNode = type_node_of(varId)   -- 57  (registry node id of the type's decl) or nil
+local resolved = type_of(varId)        -- json string of a ResolvedType, or nil
+```
+
+- **`type_symbol_of(nodeId) -> string | nil`** — the symbol ID of the node's *type*. A variable or field resolves to its declared type; an expression to its inferred type; a type declaration (struct/class/enum/…) resolves to *itself*. `nil` for builtins (`int`, `bool`), dependent/unresolved types, and nodes that don't bear a type.
+- **`type_node_of(nodeId) -> int | nil`** — the registry node ID of that type's **declaration**, so you can pivot straight from a field into the AST of its type and introspect it with `get_node`, `struct_has_method`, etc. `nil` when the type has no user-declared symbol.
+- **`type_of(nodeId) -> json | nil`** — the full `ResolvedType`.
+
+### `ResolvedType`
+
+```json
+{
+  "state": "Known",
+  "type": {
+    "identifier": { "name": "ConnectionOptions", "templateArguments": [] },
+    "isConst": false,
+    "isPointer": false,
+    "isReference": false
+  },
+  "typeSymbol": "8391045221338712004"
+}
+```
+
+| Field | Type | Description |
+|---|---|---|
+| `state` | string | `"Known"`, `"Unknown"`, or `"Dependent"` (an uninstantiated template parameter resolves to `"Dependent"`). |
+| `type` | object \| null | The resolved [type signature](/concepts/ast-schema/#type-signatures) — same shape as a syntactic `typeSignature`. `null` unless `state` is `"Known"`. |
+| `typeSymbol` | string \| null | Symbol ID of the type this names, when it names a user-declared type known to the database. `null` for builtins, dependent/unknown types, or when no matching symbol exists — the same emptiness as `type_symbol_of` returning `nil`. |
+
+### Pivoting into the type's declaration
+
+```lua
+-- For a member variable, find whether its type is a known struct with a `serialize` method.
+local typeNode = type_node_of(var._registryId)
+if typeNode then
+    if struct_has_method(typeNode, "serialize") then
+        -- the field's type declares serialize(...) — emit a delegating call
+    end
+    -- or inspect the whole thing:
+    local decl = json.decode(get_node(typeNode))
+end
+```
+
+## Symbol summaries
+
+**`symbol_summary(symbolId) -> json | nil`** returns a flat, projection-ready description of a global symbol.
+
+```json
+{
+  "id": "8391045221338712004",
+  "kind": "Struct",
+  "name": "ConnectionOptions",
+  "qualifiedName": "network::internal::ConnectionOptions",
+  "signature": "struct ConnectionOptions",
+  "location": {
+    "file": "include/network/options.hpp",
+    "startLine": 12, "startColumn": 8,
+    "endLine": 20, "endColumn": 1
+  },
+  "access": "none",
+  "moduleName": "",
+  "isModuleExported": false,
+  "isForwardDeclaration": false,
+  "parent": "0"
+}
+```
+
+| Field | Type | Description |
+|---|---|---|
+| `id` | string | This symbol's ID. |
+| `kind` | string | Symbol kind (see below). |
+| `name` | string | Unqualified name. |
+| `qualifiedName` | string | Fully-qualified name. |
+| `signature` | string | Human-readable declaration signature. |
+| `location` | object | Declaration site: `file`, `startLine`, `startColumn`, `endLine`, `endColumn`. |
+| `access` | string | `public` \| `protected` \| `private` \| `none` (member access; `none` for namespace-scope symbols). |
+| `moduleName` | string | Owning C++20 module, or `""`. |
+| `isModuleExported` | bool | `true` if `export`ed from a module. |
+| `isForwardDeclaration` | bool | `true` if this summary is of a forward declaration. |
+| `parent` | string | Symbol ID of the enclosing symbol, or `"0"` (the invalid ID) at namespace scope. |
+
+`kind` is one of: `Namespace`, `Class`, `Struct`, `Union`, `Enum`, `EnumValue`, `Function`, `Constructor`, `Destructor`, `Operator`, `Variable`, `StructuredBinding`, `Concept`, `Typedef`, `TypeAlias`, `Template`, `Module`, `Unknown`.
+
+## Finding symbols
+
+**`find_symbols(qualifiedName) -> json`** returns a JSON array of symbol-ID strings matching a qualified name (all overloads).
+
+```lua
+local ids = json.decode(find_symbols("network::internal::ConnectionOptions"))
+for _, id in ipairs(ids) do
+    local s = json.decode(symbol_summary(id))
+    -- s.qualifiedName, s.kind, s.location, ...
+end
+```
+
+The array is empty (`[]`) when nothing matches. Each element is a string you pass to `symbol_summary`, `references`, `base_classes`, or `members`.
+
+## References
+
+**`references(symbolId) -> json | nil`** returns every occurrence of a symbol — declarations, definitions, and use sites — sorted by location.
+
+```json
+[
+  { "file": "include/network/options.hpp", "line": 12, "column": 8,  "kind": "Definition", "isLocal": false },
+  { "file": "src/client.cpp",              "line": 44, "column": 17, "kind": "Use",        "isLocal": false }
+]
+```
+
+| Field | Type | Description |
+|---|---|---|
+| `file` | string | Path of the occurrence. |
+| `line` | int | 1-based line. |
+| `column` | int | 1-based column. |
+| `kind` | string | `ForwardDeclaration` \| `Declaration` \| `Definition` \| `Use` \| `Comment` (a `Comment` occurrence is the doc comment attached to the declaration). |
+| `isLocal` | bool | `true` for a function-local symbol's occurrence; `false` for a global symbol's. |
+
+## Relations
+
+Two functions walk the symbol graph directly. Both return a JSON array of symbol-ID strings (empty when there are none).
+
+- **`base_classes(symbolId) -> json | nil`** — direct base classes of a class/struct symbol.
+- **`members(symbolId) -> json | nil`** — direct members (fields, methods, nested types) of a symbol.
+
+```lua
+-- Walk a type's direct bases and summarise each.
+local baseIds = json.decode(base_classes(typeSym) or "[]")
+for _, id in ipairs(baseIds) do
+    local base = json.decode(symbol_summary(id))
+    -- base.qualifiedName, base.kind, ...
+end
+```
+
+For the syntactic base list (with access specifiers, as written on the declaration) use [`get_base_classes`](/reference/luau-globals/#native-introspection-api) on the node instead; use `base_classes` when you already hold a symbol ID and want the resolved graph.
+
+## A worked example
+
+```lua
+-- For every member variable of the entity, resolve its type and, when the type is a
+-- user struct that declares serialize(), delegate to it; otherwise write the field raw.
+return function(input)
+    local node = json.decode(input)
+    local lines = {}
+
+    for _, var in ipairs(node.memberVariables or {}) do
+        if var.kind == "Variable" then
+            local typeNode = type_node_of(var._registryId)
+            if typeNode and struct_has_method(typeNode, "serialize") then
+                table.insert(lines, var.identifier.name .. ".serialize(out);")
+            else
+                table.insert(lines, "out << " .. var.identifier.name .. ";")
+            end
+        end
+    end
+
+    return json.encode({ source = table.concat(lines, "\n") })
+end
+```
+
+<Alert type="info" title="Key Takeaways">
+- Node IDs are integers (registry handles); symbol IDs are **decimal strings** — never coerce them to numbers.
+- `type_symbol_of` gives a node's type as a symbol; `type_node_of` pivots into that type's declaration node; `type_of` returns the full `ResolvedType` (`state` + `type` signature + `typeSymbol`).
+- `symbol_summary`, `find_symbols`, `references`, `base_classes`, and `members` cover symbol lookup, occurrences, and the class graph. `json`-returning functions hand back a string — `json.decode` it.
+- Builtins, dependent, and unresolved types return `nil` / `null` — an incompatible node stays empty, never guesses.
+- Type and reference facts are fullest under [`--use-workspace`](/integrations/cli/#preprocessor--parser); symbol lookups work in every mode.
+</Alert>
