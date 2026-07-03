@@ -51,14 +51,16 @@ graph TD
 
 ## What the analyzer resolves
 
-Before any rule runs, the engine builds a real semantic model over your source — not just a syntax tree. It indexes a symbol database, resolves a class hierarchy, and builds include and module dependency graphs. Rules can query this directly through the [native API](/reference/luau-globals/): resolve a base class to its declaring symbol, look a struct up by qualified name, or check for a member or method. The same engine computes deeper facts still — per-expression types, points-to sets, and, on debug-info builds, byte-level memory layout — that power the LSP and MCP surfaces. codegen deliberately hands each rule a clean syntactic AST node plus those symbol and hierarchy queries, rather than the full semantic model, so rules stay pure functions over JSON.
+Before any rule runs, the engine builds a real semantic model over your source — not just a syntax tree. It indexes a symbol database, resolves a class hierarchy, and builds include and module dependency graphs. On top of that it computes deeper facts — per-expression types, resolved type-to-symbol bindings, references, and (on debug-info builds) byte-level memory layout — the same analysis that powers the LSP and MCP surfaces.
+
+Rules reach all of it through two complementary surfaces: the syntactic AST node handed to each handler as JSON (see [The AST Schema](/concepts/ast-schema/)), and the [semantic query API](/concepts/semantic-query/) — a set of native functions that resolve a traversed node's **type** to its declaring symbol, pivot into that type's own declaration node, and look up symbol summaries, references, base classes, and members. Both surfaces speak JSON, so rules stay pure functions over JSON while still having the full semantic model a query away. The deepest facts (types, references) require the whole-workspace snapshot, so a handful of them are only populated under [`--use-workspace`](/integrations/cli/#preprocessor--parser); the syntactic AST and symbol lookups work in every mode.
 
 ## What the engine does not do
 
 - It does not instantiate templates. A rule sees the template as written; written template arguments are extracted syntactically, but no specialization is synthesised and an uninstantiated generic resolves to a `dependent` type.
 - It does not fold `constexpr`. Constant values are represented as their source text; the engine does not evaluate them.
 - It does not do conversion-ranking overload resolution. Overloads are indexed distinctly, but the engine will not pick the single best-viable candidate for a call site the way a compiler front-end does.
-- The codegen CLI re-parses every input on each run. It does not use the workspace engine's persistent incremental index — that cache backs the long-running LSP and MCP servers, not the one-shot generator.
+- By default the codegen CLI re-parses every input on each run (the self-contained one-shot pipeline). Passing [`--use-workspace`](/integrations/cli/#preprocessor--parser) opts into the persistent ADR-033 cache that also backs the LSP and MCP servers: warm runs restore cached ASTs and skip re-parsing, and types resolve against a whole-workspace snapshot rather than a single invocation.
 
 <Alert type="info" title="Key Takeaways">
 - Pipeline: load → anchor-scan → parse + analyze → collect candidates → **grouping → handler → preamble** → assemble → inline-edits.

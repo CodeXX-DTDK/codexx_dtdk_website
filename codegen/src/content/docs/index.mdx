@@ -30,8 +30,8 @@ It ships as a single binary. It calls nothing home. It runs the same on every ma
 
 codegen separates the problem into two clean layers:
 
-1. **Parsing** — handled by the engine. The full C++ AST is resolved and serialised to JSON, including namespaces, template arguments, member variables, enumerators, and annotations.
-2. **Transformation** — handled by you, in LuaU. Your rule receives one AST node as JSON and returns output text. The rule has no compiler coupling, no filesystem access, and no network access.
+1. **Analysis** — handled by the engine. The full C++ AST is resolved and serialised to JSON (namespaces, template arguments, member variables, enumerators, annotations), and on top of it the engine builds a real semantic model: a symbol database, class hierarchy, dependency graphs, and resolved types.
+2. **Transformation** — handled by you, in LuaU. Your rule receives one AST node as JSON and returns output text — and can query the semantic model on demand (resolve a field's type to its declaring symbol, look up references, walk base classes). The rule has no compiler coupling, no filesystem access, and no network access.
 
 This split is what makes everything below possible.
 
@@ -62,6 +62,18 @@ This split is what makes everything below possible.
     without a compiler, inspectable with `jq`, and the full docs are also published as
     a single plain-text bundle at [`/llms-full.txt`](/llms-full.txt) — drop it into any
     LLM agent for codegen-aware code intelligence.
+  </Card>
+  <Card title="Semantic-aware rules">
+    Rules see more than syntax. A [semantic query API](/concepts/semantic-query/) resolves
+    a field's type to its declaring symbol, pivots into that type's own AST, and looks up
+    references, base classes, and members — the same analysis that powers the LSP and MCP
+    servers. Generate against what your types *mean*, not just how they're spelled.
+  </Card>
+  <Card title="Workspace-cache acceleration">
+    With [`--use-workspace`](/integrations/cli/), codegen reads from the shared workspace
+    intelligence cache: warm runs restore parsed ASTs and skip re-parsing, and types resolve
+    against a whole-workspace snapshot for accurate cross-header resolution. Available on
+    Professional and Team tiers.
   </Card>
   <Card title="Rules testable in isolation">
     Feed a JSON blob to a rule, assert on the output. No compiler, no project, no fixtures.
