@@ -1,6 +1,7 @@
 packages:
   - "shared"
   - "landing"
+  - "status"
   - "get"
   - "codegen"
   - "docsgen"

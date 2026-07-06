@@ -1,0 +1,260 @@
+---
+// Status aggregator page. The shell (nav / hero / footer) mirrors the landing
+// site's ContentPage 1:1 so this subdomain is visually indistinguishable. The
+// per-service metadata (name / category / official link) is static and rendered
+// server-side as a skeleton; only the live STATE + detail is filled in by the
+// client script, which polls the same-origin /api/status.json serverless route
+// every 60s. No JS → the page still lists every dependency with a link out.
+import "@fontsource/inter/400.css";
+import "@fontsource/inter/500.css";
+import "@fontsource/inter/600.css";
+import "@fontsource/inter/700.css";
+import "@fontsource/inter/800.css";
+import "../styles/landing.css";
+import Analytics from "@vercel/analytics/astro";
+import DisclaimerModal from "@codexx/web/DisclaimerModal.astro";
+
+const LEGAL_URL = "https://legal.codexx-dtdk.com";
+const HOME_URL = "https://landing.codexx-dtdk.com";
+
+// Static skeleton metadata — MUST stay in sync with SOURCES in
+// src/pages/api/status.json.ts (the endpoint is the source of truth for state).
+const services = [
+  { id: "keygen", name: "Keygen", category: "Licensing & distribution", officialUrl: "https://status.keygen.sh/" },
+  { id: "polar", name: "Polar", category: "Billing & checkout", officialUrl: "https://status.polar.sh/" },
+  { id: "tally", name: "Tally", category: "Feedback & bug forms", officialUrl: "https://status.tally.so/" },
+  { id: "resend", name: "Resend", category: "Transactional email", officialUrl: "https://resend-status.com/" },
+  { id: "github", name: "GitHub", category: "Code & release hosting", officialUrl: "https://www.githubstatus.com/" },
+];
+
+const title = "Status — CodeXX DTDK";
+const description =
+  "Live status of the third-party cloud services CodeXX DTDK depends on — Keygen, Polar, Tally, Resend, and GitHub. Aggregated from each provider's official status page.";
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <title>{title}</title>
+    <meta name="description" content={description} />
+  </head>
+  <body>
+    <script is:inline>
+      const saved = localStorage.getItem("starlight-theme");
+      const dark = saved
+        ? saved === "dark"
+        : window.matchMedia("(prefers-color-scheme: dark)").matches;
+      document.documentElement.dataset.theme = dark ? "dark" : "light";
+    </script>
+
+    <div class="wrap">
+      <nav class="nav">
+        <a class="nav-logo" href={HOME_URL}>CodeXX DTDK</a>
+        <div class="nav-links">
+          <a href={HOME_URL}>Home</a>
+          <a href="/" class="is-active">Status</a>
+        </div>
+      </nav>
+
+      <header class="content-hero" data-aos="fade-up">
+        <span class="content-eyebrow">System status</span>
+        <h1>Service status</h1>
+        <p class="content-lead">
+          CodeXX DTDK builds on a handful of trusted cloud services. This page
+          aggregates their official status pages so you can tell, at a glance,
+          whether everything is running.
+        </p>
+      </header>
+
+      <div
+        id="status-banner"
+        class="status-banner status-state-unknown"
+        data-aos="fade-up"
+        role="status"
+        aria-live="polite"
+      >
+        <span class="status-dot"></span>
+        <span class="status-banner-text">
+          <span class="status-banner-title" id="banner-title">Checking status…</span>
+          <span class="status-banner-sub" id="banner-sub">Contacting status providers.</span>
+        </span>
+        <span class="status-updated">
+          <span id="checked-at">—</span>
+          <button id="refresh-btn" class="status-refresh" type="button">Refresh</button>
+        </span>
+      </div>
+
+      <main class="status-grid" data-aos="fade-up">
+        {
+          services.map((s) => (
+            <article class="status-card status-state-unknown" id={`card-${s.id}`}>
+              <div class="status-card-head">
+                <span class="status-dot"></span>
+                <span class="status-card-name">{s.name}</span>
+                <span class="status-card-category">{s.category}</span>
+              </div>
+              <span class="status-card-state" data-role="state">Checking…</span>
+              <span class="status-card-detail" data-role="detail">
+                Fetching current status.
+              </span>
+              <a
+                class="btn-secondary status-card-link"
+                data-role="link"
+                href={s.officialUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                hidden
+              >
+                View official status page ↗
+              </a>
+            </article>
+          ))
+        }
+      </main>
+
+      <p class="status-note">
+        Status is pulled directly from each provider (Keygen, Polar &amp; Tally
+        via Better Stack, Resend via incident.io, GitHub via Statuspage) and
+        refreshes automatically every 60 seconds. When a service is impaired we
+        surface a link to its official status page for the authoritative,
+        detailed picture. Our own landing and documentation sites are hosted
+        statically on Vercel and are intentionally not tracked here.
+      </p>
+
+      <footer class="footer">
+        <span>© {new Date().getFullYear()} CodeXX DTDK</span>
+        <span class="footer-legal">
+          <a href={`${LEGAL_URL}/privacy`}>Privacy</a>
+          <a href={`${LEGAL_URL}/terms`}>Terms</a>
+          <a href={`${LEGAL_URL}/eula`}>EULA</a>
+        </span>
+        <span>William Karol Di Cioccio</span>
+      </footer>
+    </div>
+
+    <script>
+      import AOS from "aos";
+      import "aos/dist/aos.css";
+      AOS.init({
+        duration: 600,
+        easing: "ease-out-cubic",
+        once: true,
+        offset: 80,
+        disable: () =>
+          window.matchMedia("(prefers-reduced-motion: reduce)").matches,
+      });
+
+      type State = "operational" | "maintenance" | "degraded" | "down" | "unknown";
+      interface Service {
+        id: string;
+        name: string;
+        category: string;
+        state: State;
+        detail: string;
+        officialUrl: string;
+      }
+      interface Payload {
+        checkedAt: string;
+        overall: { state: State; title: string; sub: string };
+        services: Service[];
+      }
+
+      const STATE_CLASSES: Record<State, string> = {
+        operational: "status-state-operational",
+        maintenance: "status-state-maintenance",
+        degraded: "status-state-degraded",
+        down: "status-state-down",
+        unknown: "status-state-unknown",
+      };
+      const STATE_LABEL: Record<State, string> = {
+        operational: "Operational",
+        maintenance: "Maintenance",
+        degraded: "Degraded",
+        down: "Outage",
+        unknown: "Unknown",
+      };
+      const ALL_CLASSES = Object.values(STATE_CLASSES);
+
+      const banner = document.getElementById("status-banner")!;
+      const bannerTitle = document.getElementById("banner-title")!;
+      const bannerSub = document.getElementById("banner-sub")!;
+      const checkedAt = document.getElementById("checked-at")!;
+      const refreshBtn = document.getElementById("refresh-btn") as HTMLButtonElement;
+
+      function setStateClass(el: Element, state: State) {
+        el.classList.remove(...ALL_CLASSES);
+        el.classList.add(STATE_CLASSES[state]);
+      }
+
+      function relTime(iso: string): string {
+        const then = Date.parse(iso);
+        if (Number.isNaN(then)) return "just now";
+        const secs = Math.max(0, Math.round((Date.now() - then) / 1000));
+        if (secs < 10) return "just now";
+        if (secs < 60) return `${secs}s ago`;
+        const mins = Math.round(secs / 60);
+        if (mins < 60) return `${mins} min ago`;
+        return `${Math.round(mins / 60)} h ago`;
+      }
+
+      let lastCheckedIso: string | null = null;
+
+      function render(data: Payload) {
+        lastCheckedIso = data.checkedAt;
+        setStateClass(banner, data.overall.state);
+        bannerTitle.textContent = data.overall.title;
+        bannerSub.textContent = data.overall.sub;
+
+        for (const svc of data.services) {
+          const card = document.getElementById(`card-${svc.id}`);
+          if (!card) continue;
+          setStateClass(card, svc.state);
+          const stateEl = card.querySelector('[data-role="state"]')!;
+          const detailEl = card.querySelector('[data-role="detail"]')!;
+          const linkEl = card.querySelector('[data-role="link"]') as HTMLAnchorElement;
+          stateEl.textContent = STATE_LABEL[svc.state];
+          detailEl.textContent = svc.detail;
+          linkEl.href = svc.officialUrl;
+          // Only surface the official-page link when something needs attention.
+          linkEl.hidden = svc.state === "operational";
+        }
+        updateCheckedLabel();
+      }
+
+      function updateCheckedLabel() {
+        checkedAt.textContent = lastCheckedIso
+          ? `Checked ${relTime(lastCheckedIso)}`
+          : "—";
+      }
+
+      async function poll() {
+        refreshBtn.disabled = true;
+        refreshBtn.classList.add("status-refresh-spin");
+        try {
+          const res = await fetch("/api/status.json", { cache: "no-store" });
+          if (!res.ok) throw new Error(`HTTP ${res.status}`);
+          render((await res.json()) as Payload);
+        } catch {
+          bannerTitle.textContent = "Couldn't load status";
+          bannerSub.textContent = "We couldn't reach our own status aggregator. Retrying shortly.";
+          setStateClass(banner, "unknown");
+        } finally {
+          refreshBtn.disabled = false;
+          refreshBtn.classList.remove("status-refresh-spin");
+        }
+      }
+
+      refreshBtn.addEventListener("click", poll);
+      // Keep the "checked N ago" label honest between polls.
+      setInterval(updateCheckedLabel, 15000);
+      setInterval(poll, 60000);
+      poll();
+    </script>
+
+    <Analytics />
+    <DisclaimerModal />
+  </body>
+</html>

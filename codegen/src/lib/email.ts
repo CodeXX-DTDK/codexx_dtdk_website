@@ -9,6 +9,6 @@ export const { sendActivationEmail, sendPortalLinkEmail } = createEmailer({
   from: 'Codegen <noreply@codexx-dtdk.com>',
   // Brand/footer link → landing site. appOrigin → codegen app (where /activate
   // lives, on its own subdomain).
-  siteUrl: 'https://www.codexx-dtdk.com',
+  siteUrl: 'https://landing.codexx-dtdk.com',
   appOrigin: 'https://codegen.codexx-dtdk.com',
 })
