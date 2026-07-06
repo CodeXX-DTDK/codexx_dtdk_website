@@ -216,6 +216,31 @@ importers:
         specifier: ^6.12.2
         version: 6.12.2
 
+  status:
+    dependencies:
+      '@astrojs/vercel':
+        specifier: ^10.0.5
+        version: 10.0.5(astro@6.1.9(@types/node@24.12.2)(@upstash/redis@1.37.0)(@vercel/functions@3.4.4)(@vercel/kv@3.0.0)(rollup@4.60.2)(typescript@5.9.3)(yaml@2.8.4))(rollup@4.60.2)
+      '@codexx/web':
+        specifier: workspace:*
+        version: link:../shared
+      '@fontsource/inter':
+        specifier: ^5.1.0
+        version: 5.2.8
+      '@vercel/analytics':
+        specifier: ^2.0.1
+        version: 2.0.1
+      aos:
+        specifier: ^2.3.4
+        version: 2.3.4
+      astro:
+        specifier: ^6.1.9
+        version: 6.1.9(@types/node@24.12.2)(@upstash/redis@1.37.0)(@vercel/functions@3.4.4)(@vercel/kv@3.0.0)(rollup@4.60.2)(typescript@5.9.3)(yaml@2.8.4)
+    devDependencies:
+      '@types/aos':
+        specifier: ^3.0.7
+        version: 3.0.8
+
 packages:
 
   '@antfu/install-pkg@1.1.0':
