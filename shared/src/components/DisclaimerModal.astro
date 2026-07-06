@@ -1,25 +1,83 @@
 ---
 // Shared "in active development" warning modal, injected on every page of every
-// CodeXX microfrontend (landing, codegen, docsgen). Blocking overlay shown ONCE
-// per visitor across the whole site: acknowledgement is stored in a cookie
-// scoped to `.codexx-dtdk.com`, so accepting on one subdomain carries to all the
-// others. Fully self-contained (no imports, no app CSS deps) and idempotent, so
-// it is safe to include from multiple layouts and re-runs harmlessly under
+// CodeXX microfrontend (landing, codegen, docsgen, mcp, status). Blocking
+// overlay shown ONCE per visitor across the whole site: acknowledgement is
+// stored in a cookie scoped to `.codexx-dtdk.com`, so accepting on one subdomain
+// carries to all the others. Idempotent and re-runs harmlessly under
 // Astro/Starlight view transitions.
+//
+// Styling: the modal is themed with the shared page design tokens (--page-*),
+// which are defined on :root by both the landing CSS and the Pelagornis docs
+// theme. That means it inherits each site's palette, radii, shadow, Inter font,
+// and light/dark theme automatically instead of hard-coding its own look. Every
+// var() carries a light-theme fallback so it still renders sanely if a token is
+// ever missing. Styles are injected as one scoped <style> (id-guarded) so the
+// button/badge can use real :hover/:active states while staying dependency-free.
 ---
 
 <script is:inline>
   (function () {
     var COOKIE = "codexx_disclaimer_ack";
     var MODAL_ID = "codexx-disclaimer";
+    var STYLE_ID = "codexx-disclaimer-style";
+
+    var CSS = [
+      "#" + MODAL_ID + "{",
+      "  position:fixed;inset:0;z-index:2147483647;display:flex;",
+      "  align-items:center;justify-content:center;padding:1.25rem;",
+      "  background:rgba(0,0,0,0.6);",
+      "  -webkit-backdrop-filter:blur(4px);backdrop-filter:blur(4px);",
+      '  font-family:var(--page-font-family,"Inter",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif);',
+      "}",
+      "#" + MODAL_ID + " .cxx-card{",
+      "  max-width:30rem;width:100%;box-sizing:border-box;",
+      "  background:var(--page-bg-elevated,#ffffff);",
+      "  color:var(--page-text,#212121);",
+      "  border:1px solid var(--page-border,#e0e0e0);",
+      "  border-radius:var(--page-radius-xl,0.75rem);",
+      "  padding:2rem;line-height:1.6;text-align:left;",
+      "  box-shadow:0 10px 15px -3px rgba(0,0,0,0.35),0 4px 6px -4px rgba(0,0,0,0.35);",
+      "  box-shadow:var(--page-shadow-lg,0 10px 15px -3px rgba(0,0,0,0.35),0 4px 6px -4px rgba(0,0,0,0.35));",
+      "}",
+      "#" + MODAL_ID + " .cxx-badge{",
+      "  display:inline-block;font-size:11px;font-weight:600;",
+      "  text-transform:uppercase;letter-spacing:0.06em;",
+      "  color:var(--orange-500,#f97316);",
+      "  background:rgba(249,115,22,0.16);",
+      "  background:color-mix(in srgb,var(--orange-500,#f97316) 16%,transparent);",
+      "  border-radius:var(--page-radius-full,9999px);",
+      "  padding:3px 10px;margin-bottom:1rem;",
+      "}",
+      "#" + MODAL_ID + " .cxx-title{",
+      "  margin:0 0 0.7rem;font-size:1.3rem;font-weight:800;",
+      "  letter-spacing:-0.02em;line-height:1.2;color:var(--page-text,#212121);",
+      "}",
+      "#" + MODAL_ID + " .cxx-body{",
+      "  margin:0 0 1.5rem;font-size:0.95rem;",
+      "  color:var(--page-text-secondary,#404040);",
+      "}",
+      "#" + MODAL_ID + " .cxx-btn{",
+      "  display:inline-flex;align-items:center;justify-content:center;",
+      "  width:100%;box-sizing:border-box;padding:0.7rem 1.5rem;",
+      "  font-family:inherit;font-size:14px;font-weight:800;",
+      "  color:var(--page-bg,#ffffff);background:var(--page-accent,#212121);",
+      "  border:1px solid var(--page-accent,#212121);",
+      "  border-radius:var(--page-radius-lg,0.5rem);cursor:pointer;",
+      "  transition:opacity 0.15s,transform 0.1s;",
+      "}",
+      "#" + MODAL_ID + " .cxx-btn:hover{opacity:0.85;}",
+      "#" + MODAL_ID + " .cxx-btn:active{transform:scale(0.97);}",
+      "@media (prefers-reduced-motion:reduce){",
+      "  #" + MODAL_ID + " .cxx-btn{transition:none;}",
+      "}",
+    ].join("");
 
     function acknowledged() {
       return document.cookie.indexOf(COOKIE + "=1") !== -1;
     }
 
     function persist() {
-      var v =
-        COOKIE + "=1; path=/; max-age=31536000; SameSite=Lax";
+      var v = COOKIE + "=1; path=/; max-age=31536000; SameSite=Lax";
       var h = location.hostname;
       if (h === "codexx-dtdk.com" || h.indexOf(".codexx-dtdk.com") !== -1) {
         // Parent-domain cookie → shared across every subdomain microfrontend.
@@ -37,76 +95,40 @@
       document.body.style.overflow = "";
     }
 
+    function ensureStyle() {
+      if (document.getElementById(STYLE_ID)) return;
+      var style = document.createElement("style");
+      style.id = STYLE_ID;
+      style.textContent = CSS;
+      (document.head || document.documentElement).appendChild(style);
+    }
+
     function show() {
       if (acknowledged()) return;
       if (document.getElementById(MODAL_ID)) return;
+
+      ensureStyle();
 
       var overlay = document.createElement("div");
       overlay.id = MODAL_ID;
       overlay.setAttribute("role", "dialog");
       overlay.setAttribute("aria-modal", "true");
       overlay.setAttribute("aria-labelledby", MODAL_ID + "-title");
-      overlay.style.cssText = [
-        "position:fixed",
-        "inset:0",
-        "z-index:2147483647",
-        "display:flex",
-        "align-items:center",
-        "justify-content:center",
-        "padding:1.25rem",
-        "background:rgba(8,10,14,0.72)",
-        "backdrop-filter:blur(4px)",
-        "-webkit-backdrop-filter:blur(4px)",
-        "font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif",
-      ].join(";");
 
       var card = document.createElement("div");
-      card.style.cssText = [
-        "max-width:30rem",
-        "width:100%",
-        "box-sizing:border-box",
-        "background:#14181f",
-        "color:#e8edf4",
-        "border:1px solid rgba(255,255,255,0.10)",
-        "border-radius:16px",
-        "padding:1.75rem",
-        "box-shadow:0 24px 60px rgba(0,0,0,0.55)",
-        "text-align:left",
-        "line-height:1.55",
-      ].join(";");
+      card.className = "cxx-card";
 
       var badge = document.createElement("div");
-      badge.textContent = "Preview";
-      badge.style.cssText = [
-        "display:inline-block",
-        "font-size:0.7rem",
-        "font-weight:700",
-        "text-transform:uppercase",
-        "letter-spacing:0.08em",
-        "color:#ffd479",
-        "background:rgba(255,200,90,0.12)",
-        "border:1px solid rgba(255,200,90,0.30)",
-        "border-radius:999px",
-        "padding:0.2rem 0.65rem",
-        "margin-bottom:0.9rem",
-      ].join(";");
+      badge.className = "cxx-badge";
+      badge.textContent = "In development";
 
       var title = document.createElement("h2");
+      title.className = "cxx-title";
       title.id = MODAL_ID + "-title";
       title.textContent = "CodeXX DTDK is in active development";
-      title.style.cssText = [
-        "margin:0 0 0.6rem",
-        "font-size:1.25rem",
-        "font-weight:700",
-        "color:#ffffff",
-      ].join(";");
 
       var body = document.createElement("p");
-      body.style.cssText = [
-        "margin:0 0 1.4rem",
-        "font-size:0.95rem",
-        "color:#c4ccd8",
-      ].join(";");
+      body.className = "cxx-body";
       body.textContent =
         "Some products, this website, and our cloud infrastructure are still " +
         "being built. A few components can't be downloaded or purchased yet, " +
@@ -115,21 +137,9 @@
         "in the open, and we appreciate your patience.";
 
       var btn = document.createElement("button");
+      btn.className = "cxx-btn";
       btn.type = "button";
       btn.textContent = "I understand";
-      btn.style.cssText = [
-        "display:block",
-        "width:100%",
-        "box-sizing:border-box",
-        "padding:0.7rem 1.25rem",
-        "font-size:0.95rem",
-        "font-weight:600",
-        "color:#0b0d11",
-        "background:#7cc4ff",
-        "border:none",
-        "border-radius:10px",
-        "cursor:pointer",
-      ].join(";");
       btn.addEventListener("click", function () {
         dismiss(overlay);
       });
