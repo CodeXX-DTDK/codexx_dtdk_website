@@ -23,21 +23,27 @@ Rules are namespaced by **vendor**, so two authors can both publish a `ToString`
       - ToString/
 </FileTree>
 
-A **vendor directory** is a rules root. Point `-r` at one:
+Copy the rule directory into your own project — this is the normal way to use the registry:
 
 ```sh
 git clone https://github.com/CodeXX-DTDK/codexx_rules_registry
-codegen -r codexx_rules_registry/rules/codegen/codexx -a ToString -i include/app/color.hpp
-```
-
-Or copy the single rule directory into your own project and forget the registry exists:
-
-```sh
 cp -r codexx_rules_registry/rules/codegen/codexx/ToString .codegen/rules/
 codegen -a ToString -i include/app/color.hpp
 ```
 
-The second form is the common one. A rule is a handful of text files; vendoring it into your repository means your build does not depend on anything remote.
+A rule is a handful of text files; vendoring it into your repository means it shows up in your diffs and your build depends on nothing remote.
+
+A **vendor directory** is itself a rules root, so you can also point `-r` at one without copying:
+
+```sh
+codegen -r ../codexx_rules_registry/rules/codegen/codexx -a ToString -i include/app/color.hpp
+```
+
+<Alert type="caution" title="Run codegen from your project">
+`codegen` resolves include paths, defines, and the C++ standard from the **workspace it is invoked in** — your CMake configuration or your `codexx.workspace.yaml`. Running it from a clone of the registry analyses the registry, not your code.
+
+The registry ships its own `codexx.workspace.yaml` purely so a rule's bundled `input.hpp` sample can be run in place; it covers the samples and nothing else.
+</Alert>
 
 <Alert type="info" title="index.json">
 The registry's root `index.json` is a machine-readable catalogue of every published rule at its current version — identity, description, output language, and tag. Fetch it raw; you do not need to clone to see what exists.
