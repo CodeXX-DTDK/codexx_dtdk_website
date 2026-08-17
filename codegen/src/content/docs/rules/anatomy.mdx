@@ -93,6 +93,10 @@ enum class MyEnum { A, B, C };
 
 The third segment of the anchor is the *qualified name* of the target entity (namespace path included). Anchors are scanned per-file and matched against the AST to find the corresponding entity. See [Inline Injection](/rules/inline-injection/) for the on-disk anchor lifecycle.
 
+## Published rules
+
+A rule shared through the [rules registry](/rules/registry/) adds three files to the directory above — `rule.json`, `README.md`, and `LICENSE`. The engine ignores all three, so a published rule and a hand-written one are the same thing to `codegen`; the extra files carry identity, version, and attribution for humans.
+
 <Alert type="info" title="Key Takeaways">
 - Up to five files in a rule directory: `config.yaml`, `transform.luau`, and `preamble.luau` are required; `grouping.luau` and `.env` are optional.
 - Handler is a pure function: JSON in, JSON out (`source`, optional `inline`, optional `includes`). Receives `_outputPath` (post-grouping route).

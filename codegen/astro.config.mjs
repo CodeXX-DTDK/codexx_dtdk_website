@@ -78,6 +78,7 @@ export default defineConfig({
             { label: "Grouping Logic", slug: "rules/grouping" },
             { label: "Inline Injection", slug: "rules/inline-injection" },
             { label: "Permissions Model", slug: "rules/permissions" },
+            { label: "Rules Registry", slug: "rules/registry" },
           ],
         },
         // Examples
