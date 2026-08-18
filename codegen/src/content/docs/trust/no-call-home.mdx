@@ -15,9 +15,20 @@ Your source code, your AST, and your type information never leave your machine u
 
 ---
 
-## codegen versus the DTDK Manager
+## What the guarantee covers
 
-The no-call-home guarantee covers **codegen** — the code generation engine that runs your rules. It is a distinct tool from the **DTDK Manager**, which installs, updates, and license-activates components and is, by design, a network client. Nothing the manager does affects codegen's runtime: once codegen is installed, running it executes rules with no network access. The guarantee on this page is about the engine, not the installer.
+The guarantee is about **rule execution** — what happens when codegen parses your headers and runs your rules. That path makes no outbound request, and the sandbox is what enforces it.
+
+Two things sit outside that path and are network clients by design:
+
+- The **DTDK Manager**, which installs, updates, and license-activates components. Nothing it does affects codegen's runtime: once codegen is installed, running it executes rules with no network access.
+- **`codegen --browse-rules-registry`**, which fetches the public [rules registry](/rules/registry/) so you can install a rule. It runs only when you type that flag, it exits before any generation begins, and it never runs as part of a build.
+
+Neither weakens the sentence above. Generation itself — the part that sees your AST — still makes zero outbound requests. If you never invoke the browser, codegen never opens a socket at all.
+
+<Alert type="info" title="Auditing this yourself">
+`--browse-rules-registry` talks to `raw.githubusercontent.com` and `api.github.com`, anonymously and without a token. Nothing about your code, your AST, or your machine is sent — the requests are plain reads of a public catalogue. A generation run (`codegen -i … -a …`) opens no sockets at all, which is straightforward to confirm with `strace`, `dtruss`, or Process Monitor.
+</Alert>
 
 ---
 
@@ -104,5 +115,6 @@ See [Supply Chain](/trust/supply-chain/) for provenance attestation, artifact si
 - HTTP permissions require an explicit domain allowlist. There is no allow-all flag.
 - License verification is fully offline: cryptographic signature check against a local token.
 - Logs are written locally only, never transmitted.
+- `--browse-rules-registry` is the one network path in the tool. It is user-invoked, never part of a build, and reads a public catalogue anonymously.
 - For full provenance documentation, see the [Supply Chain page](/trust/supply-chain/).
 </Alert>

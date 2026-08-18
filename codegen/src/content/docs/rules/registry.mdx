@@ -49,6 +49,39 @@ The registry ships its own `codexx.workspace.yaml` purely so a rule's bundled `i
 The registry's root `index.json` is a machine-readable catalogue of every published rule at its current version — identity, description, output language, and tag. Fetch it raw; you do not need to clone to see what exists.
 </Alert>
 
+## Installing from the browser
+
+`codegen` ships an interactive browser for the registry. It is available on every tier:
+
+```sh
+codegen --browse-rules-registry
+```
+
+It lists the catalogue, shows each rule's published versions, previews its README, and installs the one you pick into `.codegen/rules/` **relative to the directory you ran it from** — so run it from your project root, or pass `-r` to point somewhere else.
+
+| Key | Action |
+|---|---|
+| `/` | start typing a search; `Esc` stops |
+| `↑` `↓` | move within a panel |
+| `Tab` | switch between the registry and installed panels |
+| `Enter` | open the version list, then install the selected version |
+| `o` | open the rule's page on GitHub |
+| `f` | open the containing folder |
+| `d` | remove an installed rule (press twice to confirm) |
+| `q` | quit |
+
+The lower panel lists what you already have. Rules installed from the registry show their vendor and version, and are flagged when a newer version exists; hand-written rules are listed as `(local)`.
+
+<Alert type="caution" title="Name collisions are refused, not resolved">
+A rule installs to `.codegen/rules/<RuleName>/`, and that directory name **is** the C++ attribute token. So two vendors' `ToString` cannot coexist, and installing over an existing rule from a different vendor — or over a hand-written rule of the same name — is refused rather than overwritten. Rename or remove the existing one first.
+
+Reinstalling the *same* vendor's rule at a different version is an upgrade, and is allowed.
+</Alert>
+
+The browser needs no token and no account. It reads the public catalogue anonymously, and it does not start the workspace daemon or parse any of your code — see the [no-call-home guarantee](/trust/no-call-home/).
+
+If the registry is unreachable, the browser still opens and shows what you have installed, so you can review or remove rules offline.
+
 ## What a published rule contains
 
 A published rule is an ordinary rule directory (see [Rule Anatomy](/rules/anatomy/)) plus three files the registry requires:
