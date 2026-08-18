@@ -54,6 +54,7 @@ When `--use-workspace` is active, codegen builds (or warm-loads) the project's p
 | Flag | Default | Description |
 |---|---|---|
 | `--dry-run` | off | Don't write outputs. Emits a unified diff (zero context, `--- a/... / +++ b/... / @@`) of every would-be file change to stdout. Available on every licence tier; intended for CI and LLM-driven workflows. |
+| `-B`, `--browse-rules-registry` | off | Opens the interactive [rules registry](/rules/registry/) browser and exits; installs into `-r` (default `.codegen/rules`). Takes no `-i`. Available on every licence tier. |
 | `--show-tui` | off | With `--dry-run`, opens the interactive FTXUI diff viewer instead of printing plain output. Requires a Professional+ licence; on Community tier emits `E102` and falls back to a filename list. |
 | `-v, --verbose` | off | Per-entity progress log. |
 | `-c, --config <path>` | (unused) | Generic profile-config slot inherited from the support CLI; codegen does not currently consume this value. |
@@ -117,6 +118,9 @@ codegen -i ./include -a ToString --dry-run
 
 # Interactive TUI diff viewer (Professional+ licence)
 codegen -i ./include -a ToString --dry-run --show-tui
+
+# Browse the rules registry and install a rule (no input file needed)
+codegen --browse-rules-registry
 
 # Manual preprocessor flags + HTTP allowlist override
 codegen -i ./include -a SchemaSync \
