@@ -17,7 +17,7 @@ This means grouping influences output routing but cannot access handler results.
 
 ```json
 {
-  "params": { /* rule.params, copied from RuleName.config.yaml */ },
+  "params": { /* rule.params, copied from config.yaml */ },
   "entities": [
     {
       "registryId": 42,
@@ -58,7 +58,7 @@ These are the **only** per-entity fields exposed to grouping. There is no `attri
 
 ## Worked example: namespace fan-in
 
-```lua title="MyRule.grouping.luau"
+```lua title="grouping.luau"
 return function(input)
     local data = json.decode(input)
     if not data then error("failed to decode input") end

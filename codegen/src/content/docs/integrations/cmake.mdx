@@ -6,7 +6,7 @@ description: Wire codegen rules into your CMake build graph.
 import Alert from '@pelagornis/page/components/Alert.astro';
 
 <Alert type="caution">
-**🚧 Roadmap — WIP.** The `find_package(codegen)`, `codegen_rule()`, and `CODEGEN_OUTPUTS` helpers below are the design target for the [Team-tier](/licensing/tiers/) `cmake_integration` feature and are **not yet shipped**. The supported path today is `add_custom_command` driving the `codegen` binary; if you have a Professional or Team licence, `--use-workspace` reads includes/defines from `codexx.workspace.yaml` (or `compile_commands.json`) automatically. This page documents both the current and the planned path; track progress in the codegen changelog.
+**🚧 Roadmap — WIP.** The `find_package(codegen)`, `codegen_rule()`, and `CODEGEN_OUTPUTS` helpers below are the design target for a planned `cmake_integration` package and are **not yet shipped**. The supported path today is `add_custom_command` driving the `codegen` binary; workspace analysis is unconditional (codegen always talks to the workspace daemon), so no flag or licence is needed to enable it. This page documents both the current and the planned path; track progress in the codegen changelog.
 </Alert>
 
 ## Today: `add_custom_command`
@@ -37,11 +37,11 @@ add_dependencies(mylib codegen_color)
 
 By default the engine writes outputs next to the input header, so the `OUTPUT` path is predictable: `<input_stem>.g.cpp` for cpp rules, `<input_stem>.<ruleName><ext>` for other languages. Override with `outputDirectory` and `outputNameTemplate` in the rule's config.
 
-If you use `--use-workspace` (Professional/Team tiers only), run codegen from the project root so the build-system config is found. Pass `--workspace-dir` to point at a different directory.
+Workspace analysis is unconditional — codegen always connects to the workspace daemon serving `<root>/.codexx/daemon.sock`. Run codegen from the project root so the daemon's root matches, or pass `--workspace-dir` to point at a different directory.
 
 ## Planned: `find_package(codegen)` + `codegen_rule()`
 
-The Team-tier package will install a CMake config module (`codegenConfig.cmake`) and a `codegen_rule()` helper that wraps the underlying `add_custom_command` and exposes the generated files for `target_sources`:
+A future package will install a CMake config module (`codegenConfig.cmake`) and a `codegen_rule()` helper that wraps the underlying `add_custom_command` and exposes the generated files for `target_sources`:
 
 ```cmake title="CMakeLists.txt (planned)"
 find_package(codegen REQUIRED)
@@ -64,5 +64,5 @@ This page will be updated when the package ships.
 - The `find_package(codegen)` / `codegen_rule()` flow is **not yet implemented**.
 - Today, drive codegen with `add_custom_command` calling the binary directly.
 - Default output paths are predictable from the rule config (`<stem>.g.cpp` for cpp, `<stem>.<ruleName><ext>` otherwise).
-- The packaged helper is a Team-tier feature on the roadmap; this page tracks the target.
+- The packaged helper is a roadmap item, not yet shipped; this page tracks the target.
 </Alert>

@@ -51,7 +51,7 @@ The registry's root `index.json` is a machine-readable catalogue of every publis
 
 ## Installing from the browser
 
-`codegen` ships an interactive browser for the registry. It is available on every tier:
+`codegen` ships an interactive browser for the registry, free on every install:
 
 ```sh
 codegen --browse-rules-registry
@@ -92,7 +92,7 @@ A published rule is an ordinary rule directory (see [Rule Anatomy](/rules/anatom
 | `README.md` | What it generates, how to trigger it, what comes out |
 | `LICENSE` | Verbatim copy of the registry's MIT licence, so the grant travels with the rule |
 
-`codegen` reads only `config.yaml`, `transform.luau`, `preamble.luau`, and `grouping.luau`, and ignores everything else. A published rule therefore works exactly like a hand-written one — the extra files are metadata for humans and for the registry, not inputs to the engine.
+`codegen` reads only `config.yaml`, `transform.luau`, `preamble.luau`, `grouping.luau`, and `.env`, and ignores everything else — which is exactly why a published rule must never carry a `.env` (see [Publishing](#publishing)). A published rule therefore works exactly like a hand-written one — the extra files are metadata for humans and for the registry, not inputs to the engine.
 
 ### `rule.json`
 
@@ -137,13 +137,13 @@ python3 scripts/validate_registry.py --write-index
 CI runs that same script, so a green local run means a green PR. It checks manifest schema and identity, that your `LICENSE` is unmodified, that `README.md` says something, that the version increased, and two rules specific to publication:
 
 - **No `.env` file.** The loader reads per-rule dotenvs, so a published one is a published secret.
-- **No `shared/` libraries.** The `makeTypesystem` and `makeJSONCodegen` helpers come from the [Team-tier](/licensing/tiers/) shared directory; a rule that calls them fails for most of its audience. Published rules are self-contained.
+- **No `shared/` libraries.** The `makeTypesystem` and `makeJSONCodegen` helpers come from your local `<rulesDir>/../shared/` directory, which is never part of a published rule bundle; a rule that calls them breaks for anyone who installs it. Published rules are self-contained.
 
 Full details: [CONTRIBUTING.md](https://github.com/CodeXX-DTDK/codexx_rules_registry/blob/main/CONTRIBUTING.md).
 
 ## Trust
 
-Rules are Luau scripts, and they run inside the [sandbox](/rules/luau-sandbox/). Filesystem, network, and environment access are opt-in per rule and declared in `config.yaml` — see the [Permissions Model](/rules/permissions/).
+Rules are Luau scripts, and they run inside the [sandbox](/rules/luau-sandbox/). Network and environment access are opt-in per rule and declared in `config.yaml`; filesystem access is not available at all — see the [Permissions Model](/rules/permissions/).
 
 A rule that declares `permissions.http.allowlist` or `permissions.env.os_allowlist` is labelled and reviewed by a maintainer before it can merge, and its README must justify the request. Those permissions are allowed; they are never automatic.
 

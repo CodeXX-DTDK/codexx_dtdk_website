@@ -28,7 +28,7 @@ The input context is:
   "language": "cpp",
   "outputFile": "path/to/output.cpp",
   "ruleName": "<RuleName>",
-  "params": { /* rule.params from RuleName.config.yaml */ },
+  "params": { /* rule.params from RuleName/config.yaml */ },
   "entities": [
     {
       "registryId": 42,
@@ -48,7 +48,7 @@ The return value is a raw string — not JSON. Whatever you return is buffered o
 
 ## Example: C++ includes
 
-```lua title="MyRule.preamble.luau"
+```lua title=".codegen/rules/MyRule/preamble.luau"
 return function(input)
     return "#include <string_view>\n#include <vector>\n\n"
 end
@@ -70,7 +70,7 @@ The engine collects all preamble results from the rules contributing entities to
 
 This is what makes fan-in clean: dozens of entities from one rule routed into `api-reference.md` produce exactly one `# API Reference` header.
 
-It also means: preambles don't have visibility into which entities will land in their output file. They run before grouping. If you find yourself wanting to conditionalise preamble content on entity data ("only include this header if the entity has template parameters"), that's a signal to emit the include from the handler's `includes` field instead — the engine will deduplicate those across the file too.
+It also means: preambles don't have visibility into full entity data. They run after grouping and after the handler, but only ever see the summary fields listed above (plus each entity's handler-emitted `includes`) — never the full AST node or attribute list. If you find yourself wanting to conditionalise preamble content on entity data ("only include this header if the entity has template parameters"), that's a signal to emit the include from the handler's `includes` field instead — the engine will deduplicate those across the file too.
 
 ## Preamble vs handler
 

@@ -26,7 +26,7 @@ These are **fan-in** patterns. Many entities, one output file. The inverse — *
 
 Grouping runs **before** handlers, as the second phase of entity routing. It takes all collected candidate entities and returns a map overriding their default output paths:
 
-```lua title=".codegen/rules/MyRule/MyRule.grouping.luau"
+```lua title=".codegen/rules/MyRule/grouping.luau"
 return function(input)
     local data = json.decode(input)
     local result = {}

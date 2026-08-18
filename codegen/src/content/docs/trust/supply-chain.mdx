@@ -55,7 +55,7 @@ A rule is not fetched, resolved, or installed. You clone or copy a directory of 
 Two controls sit either side of that:
 
 - **At publication** — rules land only through pull requests reviewed by a maintainer. A rule requesting network or environment access is labelled and blocked until that request is justified. Publishing is intentionally not self-service.
-- **At execution** — a rule runs inside the [Luau sandbox](/rules/luau-sandbox/), where filesystem, network, and environment access are opt-in per rule and declared in `config.yaml` (see the [Permissions Model](/rules/permissions/)).
+- **At execution** — a rule runs inside the [Luau sandbox](/rules/luau-sandbox/), where network and environment access are opt-in per rule and declared in `config.yaml` — filesystem access is not available at all, granted or otherwise. See the [Permissions Model](/rules/permissions/).
 
 Neither control substitutes for reading the rule. Review is what raises the floor; the code still runs on your machine, during your build, and it is a few dozen lines you can read in a minute.
 

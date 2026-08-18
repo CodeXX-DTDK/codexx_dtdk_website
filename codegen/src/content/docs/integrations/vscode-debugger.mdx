@@ -7,7 +7,7 @@ import { Steps } from '@astrojs/starlight/components';
 import Alert from '@pelagornis/page/components/Alert.astro';
 
 <Alert type="info">
-The VS Code DAP debugger is a **Professional tier** feature. Today the gate is the `LUAU_ENV_ENABLE_DEBUGGER` compile-time flag — when present, `--debug` works on any tier. The licence gate ships in a future release.
+`--debug` is free — no licence required. `LUAU_ENV_ENABLE_DEBUGGER` is a compile-time flag, but shipped builds always link the debug-enabled Luau environment, so the flag is effectively always on.
 </Alert>
 
 ## Overview
@@ -82,7 +82,7 @@ The Variables panel shows the full table including `_namespaces`, `_registryId`,
 - The debugger attaches to a single rule run; it doesn't keep a session across re-invocations.
 - Hot-reload (editing the script while paused) isn't supported. Restart the debug session after edits.
 - The `--debug-port` is required for non-default ports; there's no port discovery.
-- Debugger support requires the binary to be built with `LUAU_ENV_ENABLE_DEBUGGER`. The default build profiles enable it; release builds may not.
+- Debugger support sits behind the `LUAU_ENV_ENABLE_DEBUGGER` compile-time flag, but shipped builds always link `luau_environment_dbg`, which defines it publicly — `--debug` is available in every shipped build.
 
 <Alert type="info" title="Key Takeaways">
 - Use the `luau` DAP launch type with `request: "attach"`; there is no codegen-specific extension.

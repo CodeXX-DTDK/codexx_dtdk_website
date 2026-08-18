@@ -4,15 +4,10 @@
   "version": "0.0.1",
   "scripts": {
     "dev": "astro dev",
-    "dev:sandbox": "astro dev --mode sandbox",
     "start": "astro dev",
     "build": "astro build",
     "preview": "astro preview",
-    "astro": "astro",
-    "test": "node dev/test-suite.mjs",
-    "test:webhook": "node dev/test-suite.mjs --group W",
-    "test:cli": "node dev/test-suite.mjs --group L",
-    "test:live": "node dev/test-suite-live.mjs"
+    "astro": "astro"
   },
   "dependencies": {
     "@astrojs/starlight": "^0.38.4",
