@@ -7,7 +7,7 @@ import Alert from '@pelagornis/page/components/Alert.astro';
 
 ## Phase 1: Rule load
 
-The engine reads `<rulesDir>/<RuleName>/` for each `-a <RuleName>` on the CLI: handler, preamble, optional grouping, optional `.env`, and `config.yaml` (with `extends:` chasing as needed). It also loads `<rulesDir>/../shared/*.luau` (alphabetical by filename, concatenated) as the shared prelude and `<rulesDir>/../shared/.env` as the baseline dotenv. CLI overrides (`-P`, `--env`, `--allow-http`, `--allow-env`) are folded in.
+The engine resolves each `-a <name>` to `<rulesDir>/<RuleName>/` or `<rulesDir>/<vendor>/<RuleName>/` and reads: handler, preamble, optional grouping, optional `.env`, and `config.yaml` (with `extends:` chasing as needed). It also loads `<rulesDir>/../shared/*.luau` (alphabetical by filename, concatenated) as the flat prelude, reads `<rulesDir>/../shared/<vendor>/*.luau` as [components](/rules/anatomy/#components) — sources only; nothing runs until a script requires one — and `<rulesDir>/../shared/.env` as the baseline dotenv. CLI overrides (`-P`, `--env`, `--allow-http`, `--allow-env`) are folded in.
 
 ## Phase 2: Anchor scan + AST build
 

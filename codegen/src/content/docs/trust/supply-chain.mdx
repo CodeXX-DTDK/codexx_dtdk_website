@@ -48,9 +48,13 @@ A build that fails any gate is never published.
 
 ## Third-party rules are a different question
 
-Everything above concerns the components CodeXX ships. Rules published to the [rules registry](/rules/registry/) are the one place third-party code enters your build, and they are governed differently — deliberately so.
+Everything above concerns the tool components CodeXX ships. Rules and Luau components published to the [rules registry](/rules/registry/) are where third-party code enters your build, and they are governed differently — deliberately so.
 
-A rule is not fetched, resolved, or installed. You clone or copy a directory of Luau text into your own repository, where it is versioned alongside your code and visible in every diff. There is no resolution step, so the dependency-confusion class of attack has nothing to attach to, and there is no install-time execution because there is no install.
+A rule is a directory of Luau text that ends up in your own repository, versioned alongside your code and visible in every diff. You can clone or copy it by hand, or let `codegen --browse-rules-registry` download it — either way the result is text you own, not a package a resolver picked.
+
+**There is still no resolution step.** A rule names the components it needs by exact identity and version, and that list must be complete: the registry rejects a rule whose declarations do not cover everything it will load. Nothing is discovered at install time, nothing is solved, and no name is looked up in more than one place — so the dependency-confusion class of attack has nothing to attach to.
+
+**There is still no install-time execution.** Installing places files. Component code runs when a rule requires it, during generation, inside the [sandbox](/trust/sandbox/) — not while it is being written to disk.
 
 Two controls sit either side of that:
 

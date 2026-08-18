@@ -72,8 +72,10 @@ It lists the catalogue, shows each rule's published versions, previews its READM
 
 The lower panel lists what you already have. Rules installed from the registry show their vendor and version, and are flagged when a newer version exists; hand-written rules are listed as `(local)`.
 
-<Alert type="caution" title="Name collisions are refused, not resolved">
-A rule installs to `.codegen/rules/<RuleName>/`, and that directory name **is** the C++ attribute token. So two vendors' `ToString` cannot coexist, and installing over an existing rule from a different vendor — or over a hand-written rule of the same name — is refused rather than overwritten. Rename or remove the existing one first.
+<Alert type="caution" title="Where a rule lands, and when a name collides">
+A **namespaced** rule installs to `.codegen/rules/<vendor>/<RuleName>/` and matches `[[<vendor>::<RuleName>]]`, so two vendors' `ToString` coexist happily and you can use both in one project.
+
+A rule published before namespacing installs flat, to `.codegen/rules/<RuleName>/`, and matches `[[codegen::<RuleName>]]` — its README and sample header say so, and moving it would stop it matching them. There, the name is the attribute, so installing over an existing rule from a different vendor — or over a hand-written rule of the same name — is refused rather than overwritten. Rename or remove the existing one first.
 
 Reinstalling the *same* vendor's rule at a different version is an upgrade, and is allowed.
 </Alert>
@@ -108,11 +110,47 @@ A published rule is an ordinary rule directory (see [Rule Anatomy](/rules/anatom
   "license": "MIT",
   "keywords": ["enum", "reflection"],
   "outputLanguage": "cpp",
+  "namespaced": true,
+  "uses": [{ "component": "acme.typesystem", "range": ">=1.2.0" }],
   "requires": [{ "component": "codegen", "range": ">=0.1.0 <1.0.0" }]
 }
 ```
 
-`id` is the rule's identity: the vendor tag and rule name, each kebab-cased, joined by a single `.`. Case boundaries become dashes, so `JSONSerializable` becomes `json-serializable`. `requires[].range` accepts `>=X.Y.Z` or `>=X.Y.Z <A.B.C` — no caret, no tilde.
+`id` is the rule's identity: the vendor tag and rule name, each kebab-cased, joined by a single `.`. Case boundaries become dashes, so `JSONSerializable` becomes `json-serializable`. `requires[].range` accepts `>=X.Y.Z` or `>=X.Y.Z <A.B.C` — no caret, no tilde, and `codegen` **enforces** it: a build outside the range is told to update rather than installing a rule it cannot run.
+
+`namespaced: true` installs the rule under its vendor and switches its attribute to `[[<vendor>::<RuleName>]]`. `uses` names the components it needs — see [Components](#components).
+
+## Components
+
+A **component** is a reusable Luau module. Publish one when two rules — yours or anyone's — would otherwise carry the same helper twice.
+
+```
+components/codegen-component/<vendor>/<name>/
+    component.json   manifest — identity, version, authors
+    README.md        what it provides
+    LICENSE          the registry's MIT, verbatim
+    component.luau   the module; it must `return` its value
+```
+
+A rule declares what it uses, and the browser installs them together:
+
+```json title="rule.json"
+"uses": [{ "component": "acme.typesystem", "range": ">=1.2.0" }]
+```
+
+```lua title="transform.luau"
+local ts = require("acme/typesystem")
+```
+
+Components install to `.codegen/shared/<vendor>/`, so two vendors' same-named components never collide.
+
+<Alert type="info" title="Declared, not resolved">
+A rule's `uses` must be **closed**: if you use `acme.typesystem` and that uses `acme.base`, your rule lists both. The validator enforces it.
+
+The result is that installation is a flat download — nothing is discovered at install time and no version is solved, which is what keeps the [no-dependency-confusion](/trust/supply-chain/) property intact. The cost is that a component adding a dependency is a breaking change for its consumers; it surfaces when the component is published, not on a user's machine.
+</Alert>
+
+Component names are lowercase. Two names differing only in case are one file on Windows and macOS and two on Linux, so a mixed-case name would resolve differently depending on who installed it.
 
 ## Versioning
 
@@ -137,7 +175,8 @@ python3 scripts/validate_registry.py --write-index
 CI runs that same script, so a green local run means a green PR. It checks manifest schema and identity, that your `LICENSE` is unmodified, that `README.md` says something, that the version increased, and two rules specific to publication:
 
 - **No `.env` file.** The loader reads per-rule dotenvs, so a published one is a published secret.
-- **No `shared/` libraries.** The `makeTypesystem` and `makeJSONCodegen` helpers come from your local `<rulesDir>/../shared/` directory, which is never part of a published rule bundle; a rule that calls them breaks for anyone who installs it. Published rules are self-contained.
+- **Every `require` must be declared.** A rule may use [components](#components) — it just has to name them, in `rule.json`'s `uses`, or ship them itself. The validator reads your scripts and checks it. `require(someVariable)` is refused outright: a rule whose dependencies cannot be enumerated cannot be validated.
+- **`makeTypesystem` / `makeJSONCodegen` / `makeBytePackCodegen`** are first-party internals of CodeXX's own tree, published nowhere. Depend on a published component instead.
 
 Full details: [CONTRIBUTING.md](https://github.com/CodeXX-DTDK/codexx_rules_registry/blob/main/CONTRIBUTING.md).
 
