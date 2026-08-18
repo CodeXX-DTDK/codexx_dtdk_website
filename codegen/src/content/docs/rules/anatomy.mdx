@@ -54,17 +54,17 @@ A **component** is a reusable Luau module a rule reaches with `require`:
 - .codegen/shared/
   - helpers.luau flat — legacy prelude, and `require("helpers")`
   - acme/
-    - typesystem.luau `require("acme/typesystem")`
+    - typemap.luau `require("acme/typemap")`
     - codecs/
       - init.luau `require("acme/codecs")`
 </FileTree>
 
 ```lua title="transform.luau"
-local ts = require("acme/typesystem")
+local typemap = require("acme/typemap")
 
 return function(input)
     local node = json.decode(input)
-    return json.encode({ source = ts.render(node) })
+    return json.encode({ source = typemap.render(node) })
 end
 ```
 

@@ -129,7 +129,7 @@ The CLI flag `-P key=value` (repeatable) overrides params per invocation — it 
 
 ## `node_kinds`
 
-A list of `NodeKind` enum names. Defaults to `["Struct"]` when omitted. Controls which AST node kinds the rule's attribute matcher will fire on. Valid entries are listed in `engine/node_introspection.cpp` (a few common ones: `Struct`, `Class`, `Union`, `Function`, `Variable`, `Constructor`, `Destructor`, `Operator`, `EnumSpecifier`).
+A list of `NodeKind` enum names. Defaults to `["Struct"]` when omitted. Controls which AST node kinds the rule's attribute matcher will fire on. Valid entries are the codex `NodeKind` names; the common ones are `Struct`, `Class`, `Union`, `Function`, `Variable`, `Constructor`, `Destructor`, `Operator` and `EnumSpecifier`.
 
 Entries are forwarded verbatim to the daemon with no client-side validation — an unknown entry does not fail the load and does not warn.
 
@@ -139,7 +139,7 @@ The components this rule requires, by `require` name:
 
 ```yaml
 uses:
-  - acme/typesystem
+  - acme/typemap
   - acme/codecs
 ```
 

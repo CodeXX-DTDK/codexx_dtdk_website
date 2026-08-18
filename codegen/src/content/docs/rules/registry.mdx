@@ -111,7 +111,7 @@ A published rule is an ordinary rule directory (see [Rule Anatomy](/rules/anatom
   "keywords": ["enum", "reflection"],
   "outputLanguage": "cpp",
   "namespaced": true,
-  "uses": [{ "component": "acme.typesystem", "range": ">=1.2.0" }],
+  "uses": [{ "component": "acme.typemap", "range": ">=1.2.0" }],
   "requires": [{ "component": "codegen", "range": ">=0.1.0 <1.0.0" }]
 }
 ```
@@ -135,17 +135,17 @@ components/codegen-component/<vendor>/<name>/
 A rule declares what it uses, and the browser installs them together:
 
 ```json title="rule.json"
-"uses": [{ "component": "acme.typesystem", "range": ">=1.2.0" }]
+"uses": [{ "component": "acme.typemap", "range": ">=1.2.0" }]
 ```
 
 ```lua title="transform.luau"
-local ts = require("acme/typesystem")
+local typemap = require("acme/typemap")
 ```
 
 Components install to `.codegen/shared/<vendor>/`, so two vendors' same-named components never collide.
 
 <Alert type="info" title="Declared, not resolved">
-A rule's `uses` must be **closed**: if you use `acme.typesystem` and that uses `acme.base`, your rule lists both. The validator enforces it.
+A rule's `uses` must be **closed**: if you use `acme.typemap` and that uses `acme.base`, your rule lists both. The validator enforces it.
 
 The result is that installation is a flat download — nothing is discovered at install time and no version is solved, which is what keeps the [no-dependency-confusion](/trust/supply-chain/) property intact. The cost is that a component adding a dependency is a breaking change for its consumers; it surfaces when the component is published, not on a user's machine.
 </Alert>
@@ -176,7 +176,8 @@ CI runs that same script, so a green local run means a green PR. It checks manif
 
 - **No `.env` file.** The loader reads per-rule dotenvs, so a published one is a published secret.
 - **Every `require` must be declared.** A rule may use [components](#components) — it just has to name them, in `rule.json`'s `uses`, or ship them itself. The validator reads your scripts and checks it. `require(someVariable)` is refused outright: a rule whose dependencies cannot be enumerated cannot be validated.
-- **`makeTypesystem` / `makeJSONCodegen` / `makeBytePackCodegen`** are first-party internals of CodeXX's own tree, published nowhere. Depend on a published component instead.
+
+Between them those two close the same gap: a published rule cannot lean on whatever helpers happen to exist in the tree it was written in. Declaring `uses` also opts the rule out of the consumer's flat `shared/` prelude, so everything it calls has to come from the rule itself or from a component it names.
 
 Full details: [CONTRIBUTING.md](https://github.com/CodeXX-DTDK/codexx_rules_registry/blob/main/CONTRIBUTING.md).
 
