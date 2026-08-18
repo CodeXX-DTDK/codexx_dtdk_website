@@ -133,9 +133,25 @@ A list of `NodeKind` enum names. Defaults to `["Struct"]` when omitted. Controls
 
 Entries are forwarded verbatim to the daemon with no client-side validation — an unknown entry does not fail the load and does not warn.
 
+## `uses`
+
+The components this rule requires, by `require` name:
+
+```yaml
+uses:
+  - acme/typesystem
+  - acme/codecs
+```
+
+Checked at **load** time: a rule naming a component that is not installed fails before any script runs and before any file is written, rather than dying per-entity at the first `require`.
+
+Declaring the key at all — even as an empty list — also opts the rule **out of the flat `shared/` prelude** (see [`shared`](#shared) below). A rule that names what it needs should not additionally absorb whatever else is sitting in the consumer's tree; that is the isolation a published rule wants, and it is unavailable to a rule that declares nothing.
+
 ## `shared`
 
 Controls which `<rulesDir>/../shared/*.luau` scripts get prepended to this rule's transform. Both keys take a list of fnmatch-style globs (`*`, `?`, `[abc]`) matched against the script's filename **stem** (i.e. `json_helpers.luau` matches as `json_helpers`).
+
+Applies to the **flat** scripts only. Namespaced components under `shared/<vendor>/` are reached with `require` and are never part of the prelude, so these globs do not affect them.
 
 | Key | Behaviour |
 |---|---|
@@ -144,7 +160,7 @@ Controls which `<rulesDir>/../shared/*.luau` scripts get prepended to this rule'
 | `shared.include: ["a", "b_*"]` | Include only the matching stems. |
 | `shared.exclude: [...]` | Subtract matching stems from whatever the include step yielded. |
 
-Independence assumption: shared scripts are concatenated in alphabetical filename order with no `require`-style dependency tracking. If your shared scripts depend on each other, name them so dependencies sort before dependents.
+Independence assumption: flat shared scripts are concatenated in alphabetical filename order with no dependency tracking. If they depend on each other, name them so dependencies sort before dependents — or make them [components](/rules/anatomy/#components), where `require` resolves the order for you.
 
 ## Companion files (not part of the YAML)
 
@@ -155,7 +171,8 @@ Independence assumption: shared scripts are concatenated in alphabetical filenam
 
 Plus the workspace-shared directory:
 
-- `<rulesDir>/../shared/*.luau` — auto-loaded in alphabetical filename order, filtered through each rule's `shared.include` / `shared.exclude`, and prepended to that rule's transform. Free for everyone, loaded unconditionally.
+- `<rulesDir>/../shared/*.luau` — auto-loaded in alphabetical filename order, filtered through each rule's `shared.include` / `shared.exclude`, and prepended to that rule's transform. Skipped entirely for a rule that declares [`uses`](#uses).
+- `<rulesDir>/../shared/<vendor>/*.luau` — components, reached with `require("<vendor>/<name>")`. Never concatenated.
 - `<rulesDir>/../shared/.env` — baseline dotenv; per-rule entries override.
 
 ## Full annotated example

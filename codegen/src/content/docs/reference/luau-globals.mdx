@@ -158,11 +158,37 @@ Enabled when `permissions.env.os_allowlist` is non-empty, or when any dotenv sou
 
 The env module exposes the allowlisted OS env vars and the merged dotenv (CLI `--env` > per-rule `.env` > shared `.env`). See the [Permissions](/rules/permissions/) page for the surface API.
 
+## `require`
+
+Present **only when components are installed**, and only able to name one of them:
+
+```lua
+local ts = require("acme/typesystem")
+```
+
+The set of loadable modules is fixed before any script runs. `codegen` reads every component
+source from disk itself and hands the resulting map to the sandbox; `require` is a lookup in
+that map by exact string and is **never joined to a path**. There is no search path, no
+filesystem access, and no way to name anything the tool did not already read — a component
+that is not installed cannot be reached, however it is spelled.
+
+| Behaviour | |
+|---|---|
+| Argument | Must be a string. A component that is not installed raises an error naming what *is*. |
+| Return | Whatever the component returned. A component that returns nothing is an error. |
+| Identity | `require` twice in one run yields the same value; a fresh one per entity, matching how shared scripts have always behaved. |
+| Cycles | Detected and reported as a cycle, with the chain. |
+| Availability | Transform, preamble and grouping scripts alike. |
+
+A tree with no components installed gets no `require` global at all.
+
+See [Rule Anatomy](/rules/anatomy/#components) for the on-disk layout.
+
 ## Absent globals
 
 The following are explicitly **not** provided:
 
-- `require` and any module loading mechanism, and `package`
+- `package`, and any module *search* mechanism — `require` resolves only from the fixed set above
 - `io` (file I/O) — there is no filesystem module of any kind, and no `fs` capability
 - `debug` (Lua debug library; the DAP debugger is a separate feature, see [VS Code DAP Debugger](/integrations/vscode-debugger/))
 - `loadstring` / `loadfile`

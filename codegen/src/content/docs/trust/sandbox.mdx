@@ -23,7 +23,9 @@ The worst a malicious rule can do in the default sandbox is produce incorrect ou
 
 ## Auditability
 
-LuaU rule scripts are small, readable files. A complete rule is typically 30–80 lines. Auditing a third-party rule for safety takes minutes, not hours. The language is deliberately constrained, there is no way to obfuscate behavior behind dynamic `require` chains or runtime code evaluation.
+LuaU rule scripts are small, readable files. A complete rule is typically 30–80 lines. Auditing a third-party rule for safety takes minutes, not hours. The language is deliberately constrained: there is no `loadstring`, no `loadfile`, and no runtime code evaluation of any kind.
+
+A rule may `require` a [component](/rules/anatomy/#components), and that is the one thing it can pull in — but it is not a dynamic chain. The complete set of loadable modules is fixed before any script runs: `codegen` reads each component from your `.codegen/shared/` directory itself and hands the sandbox a closed map, so a `require` is a lookup in that map, never a path and never a fetch. Everything a rule can reach is therefore sitting in your own repository, in your diffs, readable before you run it.
 
 ## Reproducibility
 
