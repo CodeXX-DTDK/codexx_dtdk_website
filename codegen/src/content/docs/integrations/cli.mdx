@@ -3,13 +3,11 @@ title: CLI Reference
 description: Complete reference for the codegen command-line interface.
 ---
 
-import Alert from '@pelagornis/page/components/Alert.astro';
 
 ## Synopsis
 
 ```sh
 codegen -i <input> [-r <rules-dir>] -a <RuleName> [-a <RuleName>...] [OPTIONS]
-codegen license <subcommand> [args]
 ```
 
 Rules are loaded from `<rules-dir>/<RuleName>/` for each `-a` on the command line. The rules directory defaults to `.codegen/rules`. The input is a single header or a directory (recursively scanned for `.h` / `.hpp`).
@@ -33,19 +31,18 @@ Rules are loaded from `<rules-dir>/<RuleName>/` for each `-a` on the command lin
 
 | Flag | Description |
 |---|---|
-| `-D, --define NAME[=VALUE]` | Preprocessor define. Repeatable. |
-| `-I, --include-path <path>` | Include search path. Repeatable. |
-| `--use-workspace` | Source analysis from the shared workspace intelligence cache instead of the one-shot pipeline. Reads per-file includes and defines from the build-system config (`codexx.workspace.yaml` or CMake file-api), reuses cached ASTs so **warm runs skip re-parsing**, and resolves symbols and types against a whole-workspace semantic snapshot (better cross-header type resolution than a single-invocation parse). Default workspace root is the CWD. **Requires Professional or Team licence** — emits `E102` and exits otherwise. |
-| `--workspace-dir <path>` | Override workspace root for `--use-workspace`. |
+| `-D, --define NAME[=VALUE]` | **Inert.** Parsed into `defines` but never read; ADR-075 Phase B removed build-system probing. Repeatable. |
+| `-I, --include-path <path>` | **Inert.** Same as `-D` — parsed, never read. Repeatable. |
+| `--workspace-dir <path>` | Project root for the workspace daemon connection. Defaults to the current directory. |
 
-When `--use-workspace` is active, codegen builds (or warm-loads) the project's persistent workspace cache — the same ADR-033 cache that backs the LSP and MCP servers — before generation, then reads its facts through the [semantic query API](/concepts/semantic-query/). The first run over a project parses and populates the cache under `.codexx/cache`; subsequent runs restore ASTs from it and only re-analyse, which is where the speed-up comes from. Rules still run only on the files you pass as `-i` input; the cache's transitive dependencies are indexed for resolution but never generated against. Without the flag, codegen falls back to the self-contained one-shot pipeline (parse every input, every run) and the same rule API still works — it just resolves types against that single invocation rather than the whole workspace.
+Source analysis always goes through the workspace daemon — there is no one-shot fallback pipeline and no flag to turn analysis on or off. The daemon must already be serving the root at `<root>/.codexx/daemon.sock` (codegen never auto-spawns it); if it isn't reachable the run fails with `E018`. `--workspace-dir` only selects which root to connect to.
 
 ## Permissions / params
 
 | Flag | Description |
 |---|---|
 | `-P, --param KEY=VALUE` | Override `params:<KEY>` for every loaded rule. Value is parsed as JSON when possible, otherwise stored as a string. Repeatable. |
-| `--allow-http <pattern>` | Append a substring to the HTTP allowlist for every loaded rule. Repeatable. |
+| `--allow-http <pattern>` | Merge a host pattern into the HTTP allowlist for every loaded rule. `*` matches any host, `*.example.com` matches subdomains only (not the apex); otherwise the pattern is matched by exact host equality, not URL substring. Repeatable. |
 | `--allow-env <NAME>` | Append an OS env name to the env allowlist for every loaded rule. Repeatable. |
 | `--env KEY=VALUE` | Override a dotenv entry. Repeatable; takes precedence over per-rule and shared `.env`. |
 
@@ -53,15 +50,16 @@ When `--use-workspace` is active, codegen builds (or warm-loads) the project's p
 
 | Flag | Default | Description |
 |---|---|---|
-| `--dry-run` | off | Don't write outputs. Emits a unified diff (zero context, `--- a/... / +++ b/... / @@`) of every would-be file change to stdout. Available on every licence tier; intended for CI and LLM-driven workflows. |
-| `-B`, `--browse-rules-registry` | off | Opens the interactive [rules registry](/rules/registry/) browser and exits; installs into `-r` (default `.codegen/rules`). Takes no `-i`. Available on every licence tier. |
-| `--show-tui` | off | With `--dry-run`, opens the interactive FTXUI diff viewer instead of printing plain output. Requires a Professional+ licence; on Community tier emits `E102` and falls back to a filename list. |
+| `--dry-run` | off | Don't write outputs. Emits a unified diff (zero context, `--- a/... / +++ b/... / @@`) of every would-be file change to stdout. Intended for CI and LLM-driven workflows. |
+| `-B`, `--browse-rules-registry` | off | Opens the interactive [rules registry](/rules/registry/) browser and exits; installs into `-r` (default `.codegen/rules`). Takes no `-i`. |
+| `--show-tui` | off | Opens the interactive FTXUI diff viewer instead of printing plain output. Only consulted when `--dry-run` is also set — silently ignored otherwise. Accepting a change in the viewer writes the files. |
 | `-v, --verbose` | off | Per-entity progress log. |
-| `-c, --config <path>` | (unused) | Generic profile-config slot inherited from the support CLI; codegen does not currently consume this value. |
-| `-p, --profile <name>` | (unused) | Generic named-profile slot inherited from the support CLI; not currently consumed. |
+| `--version` | — | Print the channel-qualified version (e.g. `insider/codegen@0.1.0-rc.1`) and exit `0`. Handled before argument validation, so it needs no `-i`. |
+| `-c, --config <path>` | (unused) | **Inert.** Generic profile-config slot inherited from the support CLI; parsed, never read. |
+| `-p, --profile <name>` | (unused) | **Inert.** Generic named-profile slot inherited from the support CLI; parsed, never read. |
 | `-h, --help` | — | Print usage and exit `0`. |
 
-## Debugger flags (only present when built with `LUAU_ENV_ENABLE_DEBUGGER`)
+## Debugger flags
 
 | Flag | Default | Description |
 |---|---|---|
@@ -69,35 +67,14 @@ When `--use-workspace` is active, codegen builds (or warm-loads) the project's p
 | `--debug-port <port>` | `50001` | TCP port the DAP server listens on. |
 | `--debug-source-root <path>` | absolute path to `--rules-dir` | Source root reported to the IDE for file navigation. |
 
-The Professional-tier `vscode_dap_debugger` capability is not currently enforced at runtime — when the binary is built with the debugger enabled, `--debug` works on any tier. The licence gate ships in a future release.
-
-## License subcommands
-
-```
-codegen license check              Show current licence status
-codegen license fingerprint        Print this machine's fingerprint
-```
-
-The `license` subcommand short-circuits the regular pipeline (no rules are loaded). Activation and deactivation moved to the **CodeXX DTDK manager** (`codexx_dtdk_manager`); `codegen license activate` / `deactivate` now print a pointer to the manager and exit non-zero. Output formats:
-
-```
-$ codegen license check
-License valid.
-  Tier:    Professional
-  Email:   user@example.com
-  Offline: yes (cached token)
-  Expiry:  2026-12-31T23:59:59Z          # only if the licence carries an expiry
-
-$ codegen license fingerprint
-<64-char hex SHA-256>
-```
+These flags sit behind the `LUAU_ENV_ENABLE_DEBUGGER` compile-time macro, but shipped builds link `luau_environment_dbg`, which defines that macro publicly — so in practice the debugger flags are always present and free on every build.
 
 ## Exit codes
 
 | Code | Meaning |
 |---|---|
 | `0` | Success — all entities processed and all files written (or the dry-run preview completed). |
-| `1` | Recoverable failure — bad CLI, missing input, rule load failure, preamble error, licence error, etc. |
+| `1` | Recoverable failure — bad CLI, missing input, rule load failure, preamble error, etc. |
 | `2` | Fatal — handler internal error or LuaU environment creation failure. |
 
 ## Examples
@@ -109,21 +86,19 @@ codegen -i ./include -r .codegen/rules -a ToString
 # Multiple rules in one invocation
 codegen -i ./include -a ToString -a MarkdownDocs
 
-# Workspace-backed run: reuse the cached ASTs + whole-workspace semantic snapshot
-# (config from CMake / workspace YAML; warm runs skip re-parsing)
-codegen --use-workspace --workspace-dir . -i src/api.hpp -a TypeScriptTypes
+# Point at a workspace daemon serving a different project root
+codegen --workspace-dir . -i src/api.hpp -a TypeScriptTypes
 
-# Dry-run preview (unified diff to stdout — works on every tier, ideal for CI / LLMs)
+# Dry-run preview (unified diff to stdout — ideal for CI / LLMs)
 codegen -i ./include -a ToString --dry-run
 
-# Interactive TUI diff viewer (Professional+ licence)
+# Interactive TUI diff viewer
 codegen -i ./include -a ToString --dry-run --show-tui
 
 # Browse the rules registry and install a rule (no input file needed)
 codegen --browse-rules-registry
 
-# Manual preprocessor flags + HTTP allowlist override
+# HTTP allowlist override (host-matched, not URL substring)
 codegen -i ./include -a SchemaSync \
-        -I third_party/include -D BUILD_FEATURE=1 \
-        --allow-http "https://schema.example.com/"
+        --allow-http "schema.example.com"
 ```

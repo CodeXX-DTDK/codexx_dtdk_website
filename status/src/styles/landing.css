@@ -1,7 +1,7 @@
 /*
   Design tokens copied 1:1 from the codegen site's Pelagornis theme
-  (@pelagornis/page styles/theme.css) so the landing matches the pricing /
-  activation pages exactly — same neutrals, accent, radii, shadows. Kept inline
+  (@pelagornis/page styles/theme.css) so the landing matches the docs site
+  exactly — same neutrals, accent, radii, shadows. Kept inline
   (rather than importing the package) so the landing stays a self-contained pure
   Astro page with no global base/layout/reset bleed. Theme is driven by the
   data-theme attribute, set by the inline script in index.astro and shared with

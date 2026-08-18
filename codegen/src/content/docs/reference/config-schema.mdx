@@ -3,7 +3,6 @@ title: Config Schema (.yaml)
 description: Complete reference for the codegen rule configuration file format.
 ---
 
-import Alert from '@pelagornis/page/components/Alert.astro';
 
 Each rule lives in `<rulesDir>/<RuleName>/` and ships with a `config.yaml` (always named `config.yaml` — the directory name is what carries the rule identity). This page is the authoritative schema reference for that file.
 
@@ -44,11 +43,11 @@ shared:                     # optional, controls which shared/*.luau scripts loa
 
 ## `version`
 
-Must be the integer `1`. Any other value emits `E002` and aborts.
+Must be the integer `1`. Any other integer emits `E002` and aborts. A non-integer `version:` is silently ignored; omitting the key entirely is accepted.
 
 ## `extends`
 
-Optional path (relative to this config file) to a base config. The base is loaded first, then values in this file override matching keys. Chains deeper than 8 levels emit `E001`. A missing target emits `E001`.
+Optional path (relative to this config file) to a base config. The base is loaded first, then values in this file override matching keys. Chains deeper than 8 levels emit `E015`. A missing target emits `E015`.
 
 ## `output.language`
 
@@ -66,7 +65,7 @@ Selects the default file extension and the C++-specific assembly path (banner, s
 | `html` | `.html` |
 | `mdx` | `.mdx` |
 
-Any other value emits `E001`. Defaults to `cpp` when omitted.
+Any other value emits `E015`. Defaults to `cpp` when omitted.
 
 Only `cpp` triggers the C++ assembly path: `// Generated with Codegen - DO NOT EDIT!!!` banner, `#pragma once` for header outputs, automatic self-include of the input header, and project-include rebasing when `outputDirectory` relocates the output.
 
@@ -126,13 +125,13 @@ Free-form YAML, converted to JSON and exposed to every script as `params`:
 - Handler (transform) script: `params` is added under the `params` key on the entity payload.
 - Grouping script: `params` is a sibling of `entities` on the input object.
 
-The CLI flag `-P key=value` (repeatable) overrides params per invocation. The value is parsed as JSON when possible, otherwise stored as a string.
+The CLI flag `-P key=value` (repeatable) overrides params per invocation — it is applied to **every** loaded rule's `params`, not scoped to one rule. The value is parsed as JSON when possible, otherwise stored as a string. An entry without `=` is silently dropped.
 
 ## `node_kinds`
 
 A list of `NodeKind` enum names. Defaults to `["Struct"]` when omitted. Controls which AST node kinds the rule's attribute matcher will fire on. Valid entries are listed in `engine/node_introspection.cpp` (a few common ones: `Struct`, `Class`, `Union`, `Function`, `Variable`, `Constructor`, `Destructor`, `Operator`, `EnumSpecifier`).
 
-Unknown entries emit a `warning: unknown node_kind '<name>'` line on stderr but do not fail the load.
+Entries are forwarded verbatim to the daemon with no client-side validation — an unknown entry does not fail the load and does not warn.
 
 ## `shared`
 
@@ -156,7 +155,7 @@ Independence assumption: shared scripts are concatenated in alphabetical filenam
 
 Plus the workspace-shared directory:
 
-- `<rulesDir>/../shared/*.luau` — auto-loaded in alphabetical filename order, filtered through each rule's `shared.include` / `shared.exclude`, and prepended to that rule's transform. Team-tier feature; today the directory is loaded unconditionally and the licence gate ships later.
+- `<rulesDir>/../shared/*.luau` — auto-loaded in alphabetical filename order, filtered through each rule's `shared.include` / `shared.exclude`, and prepended to that rule's transform. Free for everyone, loaded unconditionally.
 - `<rulesDir>/../shared/.env` — baseline dotenv; per-rule entries override.
 
 ## Full annotated example
@@ -175,7 +174,7 @@ output:
 permissions:
   http:
     allowlist:
-      - "https://schema-registry.internal.example.com/"
+      - "schema-registry.internal.example.com"
   env:
     os_allowlist:
       - "BUILD_CHANNEL"

@@ -13,7 +13,7 @@ Two opt-in capabilities can be granted in the rule's config: HTTP and env.
 
 ## HTTP
 
-```yaml title="MyRule.config.yaml"
+```yaml title="config.yaml"
 version: 1
 
 output:
@@ -50,7 +50,7 @@ permissions:
 
 The CLI flag `--allow-env <NAME>` (repeatable) appends entries at run time.
 
-**Per-rule dotenv** at `<rulesDir>/<RuleName>/.env`. Standard format: `KEY=VALUE`, optional surrounding quotes, `#` line comments, blank lines ignored. Loaded automatically when present; no allowlist required.
+**Per-rule dotenv** at `<rulesDir>/<RuleName>/.env`. Standard format: `KEY=VALUE`, optional surrounding quotes, full-line `#` comments, blank lines ignored. A trailing `#` after a value on a `KEY=VALUE` line is **not** stripped — it stays part of the value. Loaded automatically when present; no allowlist required.
 
 **Shared dotenv** at `<rulesDir>/../shared/.env` (e.g. `.codegen/shared/.env`). Loaded as a baseline; per-rule entries with the same key override.
 

@@ -61,7 +61,7 @@ Functions whose return type is `json` hand back a JSON **string** — call `json
 | `base_classes(symbolId)` | `string -> json\|nil` | JSON array of the symbol's direct base-class symbol-ID strings. |
 | `members(symbolId)` | `string -> json\|nil` | JSON array of the symbol's direct member symbol-ID strings. |
 
-The deepest facts (`type_of`, `type_symbol_of`, `references`) are richest under [`--use-workspace`](/integrations/cli/#preprocessor--parser), which resolves against a whole-workspace snapshot; symbol lookups (`find_symbols`, `symbol_summary`, `base_classes`, `members`) work in every mode. Like the introspection API, every function returns `nil` on bad arguments or when the query has no answer.
+All of these — including the deepest facts (`type_of`, `type_symbol_of`, `references`) — resolve against a whole-workspace snapshot: workspace analysis runs unconditionally on every invocation, via a connection to the workspace daemon. Like the introspection API, every function returns `nil` on bad arguments or when the query has no answer.
 
 ## Context objects
 
@@ -135,6 +135,8 @@ Available subset (the LuaU sandbox restricts the unsafe parts):
 | `string` | `format`, `find`, `gmatch`, `gsub`, `sub`, `len`, `rep`, `upper`, `lower` |
 | `math` | `floor`, `ceil`, `min`, `max`, `abs`, `huge`, `pi` |
 | Globals | `ipairs`, `pairs`, `tostring`, `tonumber`, `error`, `pcall`, `xpcall`, `type`, `select`, `assert`, `unpack` |
+| `os` | opened as part of the base stdlib, then frozen along with every other global by `luaL_sandbox` |
+| `coroutine` | opened as part of the base stdlib; the engine also drives it internally for `http.get`, so don't assume a script-created coroutine behaves independently of that |
 
 ## Permission-gated globals
 
@@ -160,13 +162,13 @@ The env module exposes the allowlisted OS env vars and the merged dotenv (CLI `-
 
 The following are explicitly **not** provided:
 
-- `require` and any module loading mechanism
-- `io` (file I/O)
-- `os` (process/time/system access — `os.getenv` is **not** the env capability; that's a separate module)
+- `require` and any module loading mechanism, and `package`
+- `io` (file I/O) — there is no filesystem module of any kind, and no `fs` capability
 - `debug` (Lua debug library; the DAP debugger is a separate feature, see [VS Code DAP Debugger](/integrations/vscode-debugger/))
-- `coroutine` (the engine drives the coroutine for `http.get` internally; user scripts cannot create their own)
 - `loadstring` / `loadfile`
 - Any FFI
+
+`os.getenv` reading an arbitrary OS variable is **not** the env capability — that's the separate `env` module below, gated by `os_allowlist`.
 
 <Alert type="info" title="Key Takeaways">
 - `json.encode` / `json.decode`, the native introspection API, and the semantic query API are always present.

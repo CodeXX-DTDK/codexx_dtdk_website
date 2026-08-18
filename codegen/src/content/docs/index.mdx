@@ -9,10 +9,6 @@ hero:
       link: /getting-started/quick-start/
       icon: right-arrow
       variant: primary
-    - text: See Pricing
-      link: /pricing
-      icon: external
-      variant: minimal
 ---
 
 import { CardGrid } from '@astrojs/starlight/components';
@@ -70,19 +66,21 @@ This split is what makes everything below possible.
     servers. Generate against what your types *mean*, not just how they're spelled.
   </Card>
   <Card title="Workspace-cache acceleration">
-    With [`--use-workspace`](/integrations/cli/), codegen reads from the shared workspace
-    intelligence cache: warm runs restore parsed ASTs and skip re-parsing, and types resolve
-    against a whole-workspace snapshot for accurate cross-header resolution. Available on
-    Professional and Team tiers.
+    codegen connects to the [workspace daemon](/integrations/cli/) on every run — there's no
+    flag to opt in or out. AST subtrees and semantic queries are served from the shared
+    workspace intelligence cache, and types resolve against a whole-workspace snapshot for
+    accurate cross-header resolution. The daemon must already be serving `--workspace-dir`
+    (defaults to the current directory).
   </Card>
   <Card title="Rules testable in isolation">
     Feed a JSON blob to a rule, assert on the output. No compiler, no project, no fixtures.
     The same property that makes rules LLM-friendly makes them unit-testable in seconds.
   </Card>
   <Card title="Isolated execution">
-    LuaU runs in a sandboxed VM. Rules have no filesystem access, no network access,
-    no process spawning — unless you explicitly grant permissions in the config.
-    A malicious rule in a third-party library cannot exfiltrate your source code.
+    LuaU runs in a sandboxed VM. Rules have no filesystem access and no process
+    spawning — neither is grantable. Network access is the one escape hatch, and only
+    for hosts you allowlist in the config. A malicious rule in a third-party library
+    cannot exfiltrate your source code.
   </Card>
   <Card title="Inline injection">
     Rules can emit a `source` (to a `.g.cpp` file) and an `inline` list — declarations
@@ -100,45 +98,6 @@ This split is what makes everything below possible.
 
 ## Licensing
 
-<CardGrid>
-  <Card title="Community">
-    **Free forever**
-
-    For open-source projects and personal exploration.
-
-    - CLI-only interface
-    - All built-in rule examples included
-    - Community support (GitHub Issues)
-
-    _No commercial use._
-  </Card>
-  <Card title="Professional">
-    **€12 / month · €99 / year · Individual**
-
-    For solo developers building commercial software.
-
-    - Everything in Community
-    - **TUI diff viewer:** review generated changes before applying
-    - **VS Code DAP debugger:** step through LuaU rules in the editor
-
-    _14-day free trial. Annual saves ~31% (€8.25 / month effective)._
-  </Card>
-  <Card title="Team">
-    **from €24 / seat / month · €230 / seat / year · Organization**
-
-    For engineering teams that ship at scale.
-
-    - Everything in Professional
-    - **CMake integration:** rules run as part of the build graph
-    - **Shared `.codegen/shared/` libraries:** standardise grouping and preambles
-    - **Priority support:** direct response SLA
-
-    _30-day free trial. Volume discounts: 15% at 5+ seats, 25% at 20+ seats._
-  </Card>
-</CardGrid>
-
-<div style="text-align: center; margin: 2rem 0;">
-
-[Compare tiers in detail ⇒](/licensing/tiers/)
-
-</div>
+**codegen is free.** There are no tiers and no feature gates — the TUI diff viewer,
+the VS Code DAP debugger, and shared `.codegen/shared/` libraries are all available
+to everyone, on every install.
