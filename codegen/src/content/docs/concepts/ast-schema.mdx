@@ -23,12 +23,12 @@ The engine takes the codex `toJSON` output and:
   "kind": "Struct",
   "identifier": {
     "name": "ConnectionOptions",
-    "templateArguments": []
+    "templateArgs": []
   },
   "_namespaces": ["network", "internal"],
   "memberVariables": [ /* see below */ ],
   "attributes": [
-    { "ns": "codegen", "name": "MarkdownDocs", "arguments": [] }
+    { "ns": "codegen", "name": "MarkdownDocs", "args": [] }
   ]
 }
 ```
@@ -37,10 +37,10 @@ The engine takes the codex `toJSON` output and:
 |---|---|---|
 | `kind` | string | `"Struct"`, `"Class"`, or `"Union"` |
 | `identifier.name` | string | Unqualified type name |
-| `identifier.templateArguments` | array | Template parameter / argument nodes (if templated) |
+| `identifier.templateArgs` | array | Template parameter / argument nodes (if templated) |
 | `_namespaces` | string[] | Enclosing namespace stack, outermost first |
 | `memberVariables` | array | Member variable nodes (see below) |
-| `attributes` | array | C++ attributes on this declaration. Each entry has `ns`, `name`, `arguments` |
+| `attributes` | array | C++ attributes on this declaration. Each entry has `ns`, `name`, `args` |
 
 ### Building the qualified name
 
@@ -88,7 +88,7 @@ Forward declarations have `kind = "Enumerator"` (codex `NodeKind::Enum`). Anchor
   "typeSignature": {
     "identifier": {
       "name": "uint16_t",
-      "templateArguments": []
+      "templateArgs": []
     },
     "isConst": false,
     "isPointer": false,
@@ -115,7 +115,7 @@ end
 local function typeName(tSig)
     if not tSig or not tSig.identifier then return "?" end
     local name = tSig.identifier.name
-    local args = tSig.identifier.templateArguments or {}
+    local args = tSig.identifier.templateArgs or {}
     -- e.g. name = "vector", args = [{ identifier = { name = "string" }, ... }]
     return name
 end
@@ -136,7 +136,7 @@ The shape printed is the same the handler decodes, minus the `_namespaces`, `_re
 <Alert type="info" title="Key Takeaways">
 - Structs/classes/unions carry `_namespaces` (outermost-first), `memberVariables`, and `attributes` (note: `attributes`, the C++ term, not `annotations`).
 - Enum declarations with a body have `kind = "EnumeratorSpecifier"`; forward declarations have `kind = "Enumerator"`.
-- Member variables have a `typeSignature`; templates recurse via `identifier.templateArguments`.
+- Member variables have a `typeSignature`; templates recurse via `identifier.templateArgs`.
 - Heavy fields are stripped before the handler sees the JSON; recover them with the native introspection API.
 - Use `ast-dump -m codex -i <file>` to preview the exact JSON your handler will receive.
 </Alert>

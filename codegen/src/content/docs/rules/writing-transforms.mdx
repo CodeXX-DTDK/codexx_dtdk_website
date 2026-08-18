@@ -49,7 +49,7 @@ local function mapType(tSig)
 
     -- Handle generics recursively
     if name == "vector" then
-        local args = tSig.identifier.templateArguments or {}
+        local args = tSig.identifier.templateArgs or {}
         return "Array<" .. mapType(args[1]) .. ">"
     end
 
@@ -130,7 +130,7 @@ end
 
 **Returning plain text instead of JSON.** The handler must return `json.encode({...})`. Returning a plain string emits `E009`.
 
-**Reading `node.annotations`.** The actual key is `attributes` (`node.attributes[i].ns`, `node.attributes[i].name`, `node.attributes[i].arguments`). Codex uses C++ attribute terminology throughout.
+**Reading `node.annotations`.** The actual key is `attributes` (`node.attributes[i].ns`, `node.attributes[i].name`, `node.attributes[i].args`). Codex uses C++ attribute terminology throughout.
 
 **Mutating the input table.** LuaU tables are shared by reference within a single invocation. Don't mutate `node`; build new tables for output.
 

@@ -2,6 +2,19 @@
 title: Preprocessor Nodes
 ---
 
+## `FunctionLikeMacroNode` _(extends `PreprocessorNode`)_
+
+_kind discriminant: `"FunctionLikeMacro"`_
+
+| Field | Type |
+|---|---|
+| `name` | `string` |
+| `body` | `string` |
+| `parameters` | `MacroParameter[]` |
+
+---
+
+
 ## `IncludeNode` _(extends `PreprocessorNode`)_
 
 _kind discriminant: `"IncludeDirective"`_
@@ -26,26 +39,13 @@ _kind discriminant: `"ObjectLikeMacro"`_
 ---
 
 
-## `FunctionLikeMacroNode` _(extends `PreprocessorNode`)_
-
-_kind discriminant: `"FunctionLikeMacro"`_
-
-| Field | Type |
-|---|---|
-| `name` | `string` |
-| `body` | `string` |
-| `parameters` | `MacroParameter[]` |
-
----
-
-
 ## `PragmaNode` _(extends `PreprocessorNode`)_
 
 _kind discriminant: `"Pragma"`_
 
 | Field | Type |
 |---|---|
-| `pragmaKind` | `Unknown` |
+| `pragmaKind` | `string` |
 | `rawArg` | `string` |
 | `packAction` | `string` |
 | `packAlignment` | `number` |

@@ -64,7 +64,7 @@ Open `transform.luau` and add entries to the `primitives` table or new `if name 
 ```lua
 -- Add std::set<T> -> Set<T>
 if name == "set" then
-    local args = tSig.identifier.templateArguments or {}
+    local args = tSig.identifier.templateArgs or {}
     if args[1] then return "Set<" .. cppToTs(args[1]) .. ">" end
     return "Set<unknown>"
 end
