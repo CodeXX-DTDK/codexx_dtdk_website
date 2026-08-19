@@ -13,30 +13,11 @@ _kind discriminant: `"Block"`_
 ---
 
 
-## `IfNode` _(extends `StatementNode`)_
+## `BreakNode` _(extends `StatementNode`)_
 
-_kind discriminant: `"IfStatement"`_
+_kind discriminant: `"BreakStatement"`_
 
-| Field | Type |
-|---|---|
-| `isConstexpr` | `boolean` |
-| `initStatement` | `Node?` |
-| `condition` | `Node?` |
-| `thenBody` | `BlockNode?` |
-| `elseBody` | `Node?` |
-
----
-
-
-## `SwitchNode` _(extends `StatementNode`)_
-
-_kind discriminant: `"SwitchStatement"`_
-
-| Field | Type |
-|---|---|
-| `initStatement` | `Node?` |
-| `condition` | `Node?` |
-| `cases` | `Node[]` |
+_No own serialized fields._
 
 ---
 
@@ -53,11 +34,15 @@ _kind discriminant: `"CaseLabel"`_
 ---
 
 
-## `BreakNode` _(extends `StatementNode`)_
+## `CatchClauseNode` _(extends `StatementNode`)_
 
-_kind discriminant: `"BreakStatement"`_
+_kind discriminant: `"CatchClause"`_
 
-_No own serialized fields._
+| Field | Type |
+|---|---|
+| `isCatchAll` | `boolean` |
+| `parameter` | `Node?` |
+| `body` | `BlockNode?` |
 
 ---
 
@@ -71,40 +56,6 @@ _No own serialized fields._
 ---
 
 
-## `ReturnNode` _(extends `StatementNode`)_
-
-_kind discriminant: `"ReturnStatement"`_
-
-| Field | Type |
-|---|---|
-| `value` | `Node?` |
-
----
-
-
-## `GotoNode` _(extends `StatementNode`)_
-
-_kind discriminant: `"GotoStatement"`_
-
-| Field | Type |
-|---|---|
-| `label` | `string` |
-
----
-
-
-## `LabeledStatementNode` _(extends `StatementNode`)_
-
-_kind discriminant: `"LabeledStatement"`_
-
-| Field | Type |
-|---|---|
-| `label` | `string` |
-| `body` | `Node?` |
-
----
-
-
 ## `DefaultLabelNode` _(extends `StatementNode`)_
 
 _kind discriminant: `"DefaultLabel"`_
@@ -112,19 +63,6 @@ _kind discriminant: `"DefaultLabel"`_
 | Field | Type |
 |---|---|
 | `statements` | `Node[]` |
-
----
-
-
-## `WhileNode` _(extends `StatementNode`)_
-
-_kind discriminant: `"WhileStatement"`_
-
-| Field | Type |
-|---|---|
-| `initStatement` | `Node?` |
-| `condition` | `Node?` |
-| `body` | `BlockNode?` |
 
 ---
 
@@ -169,15 +107,64 @@ _kind discriminant: `"ForRangeStatement"`_
 ---
 
 
-## `CatchClauseNode` _(extends `StatementNode`)_
+## `GotoNode` _(extends `StatementNode`)_
 
-_kind discriminant: `"CatchClause"`_
+_kind discriminant: `"GotoStatement"`_
 
 | Field | Type |
 |---|---|
-| `isCatchAll` | `boolean` |
-| `parameter` | `Node?` |
-| `body` | `BlockNode?` |
+| `label` | `string` |
+
+---
+
+
+## `IfNode` _(extends `StatementNode`)_
+
+_kind discriminant: `"IfStatement"`_
+
+| Field | Type |
+|---|---|
+| `isConstexpr` | `boolean` |
+| `initStatement` | `Node?` |
+| `condition` | `Node?` |
+| `thenBody` | `BlockNode?` |
+| `elseBody` | `Node?` |
+
+---
+
+
+## `LabeledStatementNode` _(extends `StatementNode`)_
+
+_kind discriminant: `"LabeledStatement"`_
+
+| Field | Type |
+|---|---|
+| `label` | `string` |
+| `body` | `Node?` |
+
+---
+
+
+## `ReturnNode` _(extends `StatementNode`)_
+
+_kind discriminant: `"ReturnStatement"`_
+
+| Field | Type |
+|---|---|
+| `value` | `Node?` |
+
+---
+
+
+## `SwitchNode` _(extends `StatementNode`)_
+
+_kind discriminant: `"SwitchStatement"`_
+
+| Field | Type |
+|---|---|
+| `initStatement` | `Node?` |
+| `condition` | `Node?` |
+| `cases` | `Node[]` |
 
 ---
 
@@ -190,5 +177,18 @@ _kind discriminant: `"TryStatement"`_
 |---|---|
 | `body` | `BlockNode?` |
 | `catchClauses` | `CatchClauseNode[]` |
+
+---
+
+
+## `WhileNode` _(extends `StatementNode`)_
+
+_kind discriminant: `"WhileStatement"`_
+
+| Field | Type |
+|---|---|
+| `initStatement` | `Node?` |
+| `condition` | `Node?` |
+| `body` | `BlockNode?` |
 
 ---
