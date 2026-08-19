@@ -13,101 +13,94 @@ _kind discriminant: `"AttributeDeclaration"`_
 ---
 
 
-## `TemplateNode` _(extends `DeclarationNode`)_
+## `ClassNode` _(extends `DeclarationNode`)_
 
-_kind discriminant: `"Template"`_
+_kind discriminant: `"Class"`_
 
 | Field | Type |
 |---|---|
-| `parameters` | `TemplateParameter[]` |
-| `requiresClause` | `Node?` |
+| `isFinal` | `boolean` |
+| `isForwardDeclaration` | `boolean` |
+| `attributes` | `Attribute[]` |
+| `alignasExprs` | `string[]` |
+| `identifier` | `IdentifierNode?` |
+| `templateDecl` | `Node?` |
+| `templateArgs` | `TemplateArgument[]` |
+| `baseClasses` | `{ access: string, identifier: IdentifierNode? }[]` |
+| `derivedClasses` | `string[]` |
+| `memberVariables` | `{ access: string, identifier: Node? }[]` |
+| `memberFunctions` | `{ access: string, identifier: Node? }[]` |
+| `staticMemberVariables` | `{ access: string, identifier: Node? }[]` |
+| `staticMemberFunctions` | `{ access: string, identifier: Node? }[]` |
+| `constructors` | `{ access: string, identifier: Node? }[]` |
+| `destructors` | `{ access: string, identifier: Node? }[]` |
+| `operators` | `{ access: string, identifier: Node? }[]` |
+| `friends` | `{ access: string, identifier: Node? }[]` |
+| `nestedTypes` | `{ access: string, identifier: Node? }[]` |
+| `statements` | `Node[]` |
 
 ---
 
 
-## `NamespaceNode` _(extends `DeclarationNode`)_
+## `ConceptNode` _(extends `DeclarationNode`)_
 
-_kind discriminant: `"Namespace"`_
-
-| Field | Type |
-|---|---|
-| `segments` | `NamespaceSegment[]` |
-| `isAnonymous` | `boolean` |
-| `isInline` | `boolean` |
-| `children` | `Node[]` |
-
----
-
-
-## `UsingNamespaceNode` _(extends `DeclarationNode`)_
-
-_kind discriminant: `"UsingNamespace"`_
+_kind discriminant: `"Concept"`_
 
 | Field | Type |
 |---|---|
 | `identifier` | `IdentifierNode?` |
-
----
-
-
-## `StaticAssertNode` _(extends `DeclarationNode`)_
-
-_kind discriminant: `"StaticAssert"`_
-
-| Field | Type |
-|---|---|
-| `condition` | `Node?` |
-| `message` | `string` |
-
----
-
-
-## `NamespaceAliasNode` _(extends `DeclarationNode`)_
-
-_kind discriminant: `"NamespaceAlias"`_
-
-| Field | Type |
-|---|---|
-| `aliasName` | `string` |
-| `targetNamespace` | `IdentifierNode?` |
-
----
-
-
-## `TypedefNode` _(extends `DeclarationNode`)_
-
-_kind discriminant: `"Typedef"`_
-
-| Field | Type |
-|---|---|
-| `aliasName` | `string` |
-| `typeDecl` | `DeclarationNode?` |
-| `targetType` | `TypeSignature?` |
-
----
-
-
-## `TypeAliasNode` _(extends `DeclarationNode`)_
-
-_kind discriminant: `"TypeAlias"`_
-
-| Field | Type |
-|---|---|
-| `aliasName` | `string` |
-| `targetType` | `TypeSignature` |
+| `constraintExpr` | `Node?` |
 | `templateDecl` | `Node?` |
 
 ---
 
 
-## `UsingDeclarationNode` _(extends `DeclarationNode`)_
+## `ConstructorNode` _(extends `DeclarationNode`)_
 
-_kind discriminant: `"UsingDeclaration"`_
+_kind discriminant: `"Constructor"`_
 
 | Field | Type |
 |---|---|
-| `aliasName` | `string` |
-| `targetType` | `TypeSignature` |
+| `isExplicit` | `boolean` |
+| `explicitCondition` | `Node?` |
+| `isNoexcept` | `boolean` |
+| `noexceptCondition` | `Node?` |
+| `isDefaulted` | `boolean` |
+| `isDeleted` | `boolean` |
+| `isConstexpr` | `boolean` |
+| `isInline` | `boolean` |
+| `isCopyConstructor` | `boolean` |
+| `isMoveConstructor` | `boolean` |
+| `requiresClause` | `Node?` |
+| `body` | `BlockNode?` |
+| `attributes` | `Attribute[]` |
+| `identifier` | `IdentifierNode?` |
+| `parameters` | `FunctionParameter[]` |
+| `templateDecl` | `Node?` |
+| `templateArgs` | `TemplateArgument[]` |
+| `memberInits` | `MemberInitializer[]` |
+
+---
+
+
+## `DestructorNode` _(extends `DeclarationNode`)_
+
+_kind discriminant: `"Destructor"`_
+
+| Field | Type |
+|---|---|
+| `isVirtual` | `boolean` |
+| `isPureVirtual` | `boolean` |
+| `isDefaulted` | `boolean` |
+| `isDeleted` | `boolean` |
+| `isNoexcept` | `boolean` |
+| `noexceptCondition` | `Node?` |
+| `isInline` | `boolean` |
+| `isConstexpr` | `boolean` |
+| `requiresClause` | `Node?` |
+| `body` | `BlockNode?` |
+| `attributes` | `Attribute[]` |
+| `identifier` | `IdentifierNode?` |
 
 ---
 
@@ -139,65 +132,39 @@ _kind discriminant: `"Enumerator"`_
 ---
 
 
-## `VariableNode` _(extends `DeclarationNode`)_
+## `ExportDeclarationNode` _(extends `DeclarationNode`)_
 
-_kind discriminant: `"Variable"`_
+_kind discriminant: `"ExportDeclaration"`_
 
 | Field | Type |
 |---|---|
-| `isStatic` | `boolean` |
-| `isConstexpr` | `boolean` |
-| `isThreadLocal` | `boolean` |
-| `isInline` | `boolean` |
-| `isExtern` | `boolean` |
-| `isConstinit` | `boolean` |
-| `attributes` | `Attribute[]` |
-| `alignasExprs` | `string[]` |
-| `typeSignature` | `TypeSignature` |
+| `children` | `Node[]` |
+
+---
+
+
+## `ExternCNode` _(extends `DeclarationNode`)_
+
+_kind discriminant: `"ExternC"`_
+
+| Field | Type |
+|---|---|
+| `language` | `string` |
+| `isBlock` | `boolean` |
+| `children` | `Node[]` |
+
+---
+
+
+## `FriendNode` _(extends `DeclarationNode`)_
+
+_kind discriminant: `"Friend"`_
+
+| Field | Type |
+|---|---|
+| `kind` | `string` |
 | `identifier` | `IdentifierNode?` |
-| `defaultValue` | `Node?` |
-
----
-
-
-## `VariableGroupNode` _(extends `DeclarationNode`)_
-
-_kind discriminant: `"VariableGroup"`_
-
-| Field | Type |
-|---|---|
-| `variables` | `VariableNode[]` |
-
----
-
-
-## `StructuredBindingNode` _(extends `DeclarationNode`)_
-
-_kind discriminant: `"StructuredBinding"`_
-
-| Field | Type |
-|---|---|
-| `names` | `string[]` |
-| `typeSignature` | `TypeSignature` |
-| `initializer` | `Node?` |
-| `isStatic` | `boolean` |
-| `isConstexpr` | `boolean` |
-| `isConstinit` | `boolean` |
-| `isThreadLocal` | `boolean` |
-| `isInline` | `boolean` |
-
----
-
-
-## `ConceptNode` _(extends `DeclarationNode`)_
-
-_kind discriminant: `"Concept"`_
-
-| Field | Type |
-|---|---|
-| `identifier` | `IdentifierNode?` |
-| `constraintExpr` | `Node?` |
-| `templateDecl` | `Node?` |
+| `definition` | `Node?` |
 
 ---
 
@@ -225,7 +192,7 @@ _kind discriminant: `"Function"`_
 | `isDefaulted` | `boolean` |
 | `isDeleted` | `boolean` |
 | `isTrailingReturn` | `boolean` |
-| `refQualifier` | `RefQualifier` |
+| `refQualifier` | `string` |
 | `requiresClause` | `Node?` |
 | `body` | `BlockNode?` |
 | `attributes` | `Attribute[]` |
@@ -234,55 +201,64 @@ _kind discriminant: `"Function"`_
 | `parameters` | `FunctionParameter[]` |
 | `templateDecl` | `Node?` |
 | `templateArgs` | `TemplateArgument[]` |
+| `memberInits` | `MemberInitializer[]` |
 
 ---
 
 
-## `ConstructorNode` _(extends `DeclarationNode`)_
+## `ModuleImportNode` _(extends `DeclarationNode`)_
 
-_kind discriminant: `"Constructor"`_
+_kind discriminant: `"ModuleImport"`_
 
 | Field | Type |
 |---|---|
-| `isExplicit` | `boolean` |
-| `explicitCondition` | `Node?` |
-| `isNoexcept` | `boolean` |
-| `noexceptCondition` | `Node?` |
-| `isDefaulted` | `boolean` |
-| `isDeleted` | `boolean` |
-| `isConstexpr` | `boolean` |
-| `isInline` | `boolean` |
-| `isCopyConstructor` | `boolean` |
-| `isMoveConstructor` | `boolean` |
-| `requiresClause` | `Node?` |
-| `body` | `BlockNode?` |
-| `attributes` | `Attribute[]` |
-| `identifier` | `IdentifierNode?` |
-| `parameters` | `FunctionParameter[]` |
-| `templateDecl` | `Node?` |
-| `templateArgs` | `TemplateArgument[]` |
+| `moduleName` | `string` |
+| `partition` | `string` |
+| `header` | `string` |
+| `isSystem` | `boolean` |
+| `isExported` | `boolean` |
 
 ---
 
 
-## `DestructorNode` _(extends `DeclarationNode`)_
+## `ModuleNode` _(extends `DeclarationNode`)_
 
-_kind discriminant: `"Destructor"`_
+_kind discriminant: `"Module"`_
 
 | Field | Type |
 |---|---|
-| `isVirtual` | `boolean` |
-| `isPureVirtual` | `boolean` |
-| `isDefaulted` | `boolean` |
-| `isDeleted` | `boolean` |
-| `isNoexcept` | `boolean` |
-| `noexceptCondition` | `Node?` |
+| `moduleName` | `string` |
+| `partition` | `string` |
+| `isExported` | `boolean` |
+| `isGlobalFragment` | `boolean` |
+| `isPrivateFragment` | `boolean` |
+| `children` | `Node[]` |
+
+---
+
+
+## `NamespaceAliasNode` _(extends `DeclarationNode`)_
+
+_kind discriminant: `"NamespaceAlias"`_
+
+| Field | Type |
+|---|---|
+| `aliasName` | `string` |
+| `targetNamespace` | `IdentifierNode?` |
+
+---
+
+
+## `NamespaceNode` _(extends `DeclarationNode`)_
+
+_kind discriminant: `"Namespace"`_
+
+| Field | Type |
+|---|---|
+| `segments` | `NamespaceSegment[]` |
+| `isAnonymous` | `boolean` |
 | `isInline` | `boolean` |
-| `isConstexpr` | `boolean` |
-| `requiresClause` | `Node?` |
-| `body` | `BlockNode?` |
-| `attributes` | `Attribute[]` |
-| `identifier` | `IdentifierNode?` |
+| `children` | `Node[]` |
 
 ---
 
@@ -309,7 +285,7 @@ _kind discriminant: `"Operator"`_
 | `isDefaulted` | `boolean` |
 | `isDeleted` | `boolean` |
 | `isTrailingReturn` | `boolean` |
-| `refQualifier` | `RefQualifier` |
+| `refQualifier` | `string` |
 | `requiresClause` | `Node?` |
 | `body` | `BlockNode?` |
 | `attributes` | `Attribute[]` |
@@ -319,6 +295,103 @@ _kind discriminant: `"Operator"`_
 | `parameters` | `FunctionParameter[]` |
 | `templateDecl` | `Node?` |
 | `templateArgs` | `TemplateArgument[]` |
+
+---
+
+
+## `StaticAssertNode` _(extends `DeclarationNode`)_
+
+_kind discriminant: `"StaticAssert"`_
+
+| Field | Type |
+|---|---|
+| `condition` | `Node?` |
+| `message` | `string` |
+
+---
+
+
+## `StructNode` _(extends `DeclarationNode`)_
+
+_kind discriminant: `"Struct"`_
+
+| Field | Type |
+|---|---|
+| `isFinal` | `boolean` |
+| `isForwardDeclaration` | `boolean` |
+| `attributes` | `Attribute[]` |
+| `alignasExprs` | `string[]` |
+| `identifier` | `IdentifierNode?` |
+| `templateDecl` | `Node?` |
+| `templateArgs` | `TemplateArgument[]` |
+| `baseClasses` | `{ access: string, identifier: IdentifierNode? }[]` |
+| `derivedClasses` | `string[]` |
+| `memberVariables` | `Node[]` |
+| `memberFunctions` | `Node[]` |
+| `staticMemberVariables` | `Node[]` |
+| `staticMemberFunctions` | `Node[]` |
+| `constructors` | `Node[]` |
+| `destructors` | `Node[]` |
+| `operators` | `Node[]` |
+| `friends` | `Node[]` |
+| `nestedTypes` | `Node[]` |
+| `statements` | `Node[]` |
+
+---
+
+
+## `StructuredBindingNode` _(extends `DeclarationNode`)_
+
+_kind discriminant: `"StructuredBinding"`_
+
+| Field | Type |
+|---|---|
+| `names` | `string[]` |
+| `typeSignature` | `TypeSignature` |
+| `initializer` | `Node?` |
+| `isStatic` | `boolean` |
+| `isConstexpr` | `boolean` |
+| `isConstinit` | `boolean` |
+| `isThreadLocal` | `boolean` |
+| `isInline` | `boolean` |
+
+---
+
+
+## `TemplateNode` _(extends `DeclarationNode`)_
+
+_kind discriminant: `"Template"`_
+
+| Field | Type |
+|---|---|
+| `parameters` | `TemplateParameter[]` |
+| `requiresClause` | `Node?` |
+
+---
+
+
+## `TypeAliasNode` _(extends `DeclarationNode`)_
+
+_kind discriminant: `"TypeAlias"`_
+
+| Field | Type |
+|---|---|
+| `aliasName` | `string` |
+| `targetType` | `TypeSignature` |
+| `templateDecl` | `Node?` |
+
+---
+
+
+## `TypedefNode` _(extends `DeclarationNode`)_
+
+_kind discriminant: `"Typedef"`_
+
+| Field | Type |
+|---|---|
+| `aliasName` | `string` |
+| `typeDecl` | `DeclarationNode?` |
+| `targetType` | `TypeSignature?` |
 
 ---
 
@@ -348,126 +421,56 @@ _kind discriminant: `"Union"`_
 ---
 
 
-## `FriendNode` _(extends `DeclarationNode`)_
+## `UsingDeclarationNode` _(extends `DeclarationNode`)_
 
-_kind discriminant: `"Friend"`_
+_kind discriminant: `"UsingDeclaration"`_
 
 | Field | Type |
 |---|---|
-| `kind` | `string` |
+| `aliasName` | `string` |
+| `targetType` | `TypeSignature` |
+
+---
+
+
+## `UsingNamespaceNode` _(extends `DeclarationNode`)_
+
+_kind discriminant: `"UsingNamespace"`_
+
+| Field | Type |
+|---|---|
 | `identifier` | `IdentifierNode?` |
 
 ---
 
 
-## `StructNode` _(extends `DeclarationNode`)_
+## `VariableGroupNode` _(extends `DeclarationNode`)_
 
-_kind discriminant: `"Struct"`_
+_kind discriminant: `"VariableGroup"`_
 
 | Field | Type |
 |---|---|
-| `isFinal` | `boolean` |
-| `isForwardDeclaration` | `boolean` |
+| `variables` | `VariableNode[]` |
+
+---
+
+
+## `VariableNode` _(extends `DeclarationNode`)_
+
+_kind discriminant: `"Variable"`_
+
+| Field | Type |
+|---|---|
+| `isStatic` | `boolean` |
+| `isConstexpr` | `boolean` |
+| `isThreadLocal` | `boolean` |
+| `isInline` | `boolean` |
+| `isExtern` | `boolean` |
+| `isConstinit` | `boolean` |
 | `attributes` | `Attribute[]` |
 | `alignasExprs` | `string[]` |
+| `typeSignature` | `TypeSignature` |
 | `identifier` | `IdentifierNode?` |
-| `templateDecl` | `Node?` |
-| `templateArgs` | `TemplateArgument[]` |
-| `baseClasses` | `[?, IdentifierNode][]` |
-| `derivedClasses` | `string[]` |
-| `memberVariables` | `Node[]` |
-| `memberFunctions` | `Node[]` |
-| `staticMemberVariables` | `Node[]` |
-| `staticMemberFunctions` | `Node[]` |
-| `constructors` | `Node[]` |
-| `destructors` | `Node[]` |
-| `operators` | `Node[]` |
-| `friends` | `Node[]` |
-| `nestedTypes` | `Node[]` |
-| `statements` | `Node[]` |
-
----
-
-
-## `ClassNode` _(extends `DeclarationNode`)_
-
-_kind discriminant: `"Class"`_
-
-| Field | Type |
-|---|---|
-| `isFinal` | `boolean` |
-| `isForwardDeclaration` | `boolean` |
-| `attributes` | `Attribute[]` |
-| `alignasExprs` | `string[]` |
-| `identifier` | `IdentifierNode?` |
-| `templateDecl` | `Node?` |
-| `templateArgs` | `TemplateArgument[]` |
-| `baseClasses` | `[?, IdentifierNode][]` |
-| `derivedClasses` | `string[]` |
-| `memberVariables` | `[?, Node][]` |
-| `memberFunctions` | `[?, Node][]` |
-| `staticMemberVariables` | `[?, Node][]` |
-| `staticMemberFunctions` | `[?, Node][]` |
-| `constructors` | `[?, Node][]` |
-| `destructors` | `[?, Node][]` |
-| `operators` | `[?, Node][]` |
-| `friends` | `[?, Node][]` |
-| `nestedTypes` | `[?, Node][]` |
-| `statements` | `Node[]` |
-
----
-
-
-## `ModuleNode` _(extends `DeclarationNode`)_
-
-_kind discriminant: `"Module"`_
-
-| Field | Type |
-|---|---|
-| `moduleName` | `string` |
-| `partition` | `string` |
-| `isExported` | `boolean` |
-| `isGlobalFragment` | `boolean` |
-| `isPrivateFragment` | `boolean` |
-| `children` | `Node[]` |
-
----
-
-
-## `ModuleImportNode` _(extends `DeclarationNode`)_
-
-_kind discriminant: `"ModuleImport"`_
-
-| Field | Type |
-|---|---|
-| `moduleName` | `string` |
-| `partition` | `string` |
-| `header` | `string` |
-| `isSystem` | `boolean` |
-| `isExported` | `boolean` |
-
----
-
-
-## `ExternCNode` _(extends `DeclarationNode`)_
-
-_kind discriminant: `"ExternC"`_
-
-| Field | Type |
-|---|---|
-| `language` | `string` |
-| `isBlock` | `boolean` |
-| `children` | `Node[]` |
-
----
-
-
-## `ExportDeclarationNode` _(extends `DeclarationNode`)_
-
-_kind discriminant: `"ExportDeclaration"`_
-
-| Field | Type |
-|---|---|
-| `children` | `Node[]` |
+| `defaultValue` | `Node?` |
 
 ---
