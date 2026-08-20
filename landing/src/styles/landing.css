@@ -294,6 +294,8 @@ a { color: inherit; text-decoration: none; }
   place-items: center;
   block-size: 590px;
   margin-block-start: 8px;
+  --orbit-radius: 210px;
+  --orbit-duration: 48s;
 }
 .orbit-ring,
 .orbit-ring-inner {
@@ -309,8 +311,7 @@ a { color: inherit; text-decoration: none; }
   position: absolute; inset: 60px;
   border-style: dashed;
 }
-@keyframes orbit-spin { to { transform: rotate(360deg); } }
-@keyframes orbit-spin-reverse { to { transform: rotate(-360deg); } }
+@keyframes orbit-spin { to { transform: rotate(1turn); } }
 
 /* The core sits OUTSIDE the ring so it never inherits the rotation. */
 .orbit-core {
@@ -331,29 +332,51 @@ a { color: inherit; text-decoration: none; }
 }
 
 /*
-  Radial placement: rotate to the angle, push out by the radius, then undo the
-  rotation so the chip sits upright at rest. --tool-spin then cancels the
-  ring's animation so labels stay level while the ring turns.
+  Each chip carries its own orbit. The transform reads outward-in: rotate to the
+  current angle, push out along the radius, rotate back by the same amount so
+  the chip stays upright, then centre it on that point.
+
+  The chips are NOT children of .orbit-ring — if they were, the ring's rotation
+  would carry them, but the core would have to live outside it anyway and the
+  ring is aria-hidden, which must never wrap a focusable control. So the travel
+  and the counter-rotation are baked into one keyframe instead, and each chip's
+  starting position comes from a negative animation-delay proportional to
+  --turn. The static transform below is the same expression at t=0, so the chips
+  stay correctly placed when the animation is off (reduced motion).
 */
 .tool {
   position: absolute; left: 50%; top: 50%;
   inline-size: 150px;
-  margin-inline-start: -75px; margin-block-start: -75px;
-  transform: rotate(var(--angle)) translateY(-210px) rotate(calc(-1 * var(--angle)));
-  background: none; border: 0; padding: 0; margin-block-end: 0;
+  transform:
+    rotate(calc(var(--turn) * 1turn))
+    translateY(calc(-1 * var(--orbit-radius)))
+    rotate(calc(var(--turn) * -1turn))
+    translate(-50%, -50%);
+  animation: tool-orbit var(--orbit-duration) linear infinite;
+  animation-delay: calc(-1 * var(--orbit-duration) * var(--turn));
+  background: none; border: 0; padding: 0; margin: 0;
   font: inherit; color: inherit; cursor: pointer;
   display: grid; place-items: center;
 }
+@keyframes tool-orbit {
+  from {
+    transform: rotate(0turn) translateY(calc(-1 * var(--orbit-radius)))
+      rotate(0turn) translate(-50%, -50%);
+  }
+  to {
+    transform: rotate(1turn) translateY(calc(-1 * var(--orbit-radius)))
+      rotate(-1turn) translate(-50%, -50%);
+  }
+}
 .tool-inner {
   display: flex; flex-direction: column; align-items: center; gap: 11px;
-  animation: orbit-spin-reverse 48s linear infinite;
 }
-/* Pausing on hover makes a moving target clickable. Both must pause together
-   or the chips desync from the ring. */
+/* Pausing on hover makes a moving target clickable. The ring and the chips must
+   pause together or the dashed ring drifts against them. */
 .orbit:hover .orbit-ring,
-.orbit:hover .tool-inner,
+.orbit:hover .tool,
 .orbit:focus-within .orbit-ring,
-.orbit:focus-within .tool-inner { animation-play-state: paused; }
+.orbit:focus-within .tool { animation-play-state: paused; }
 
 .tool-tile {
   inline-size: 64px; block-size: 64px;
@@ -381,7 +404,7 @@ a { color: inherit; text-decoration: none; }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .orbit-ring, .tool-inner, .hero-bg { animation: none; }
+  .orbit-ring, .tool, .hero-bg { animation: none; }
 }
 
 /* ── Tool modal (native <dialog>) ────────────────────────────────── */

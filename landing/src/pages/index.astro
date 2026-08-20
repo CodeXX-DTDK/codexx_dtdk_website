@@ -50,7 +50,7 @@ const products = [
     ],
     href: DOCSGEN_URL,
     cta: "Open the docs",
-    angle: "0deg",
+    turn: "0",
   },
   {
     id: "codegen",
@@ -61,7 +61,7 @@ const products = [
     badges: [{ cls: "badge-shipped", label: "Shipping soon" }],
     href: CODEGEN_URL,
     cta: "Open the docs",
-    angle: "90deg",
+    turn: "0.25",
   },
   {
     id: "linter",
@@ -72,7 +72,7 @@ const products = [
     badges: [{ cls: "badge-dev", label: "In development" }],
     href: EARLY_ACCESS_MAILTO,
     cta: "Request early access",
-    angle: "180deg",
+    turn: "0.5",
   },
   {
     id: "mcp",
@@ -83,7 +83,7 @@ const products = [
     badges: [{ cls: "badge-shipped", label: "Shipping soon" }],
     href: MCP_URL,
     cta: "Open the docs",
-    angle: "270deg",
+    turn: "0.75",
   },
 ];
 
@@ -185,7 +185,7 @@ const proof = [
               products.map((p) => (
                 <button
                   class="tool"
-                  style={`--angle: ${p.angle}`}
+                  style={`--turn: ${p.turn}`}
                   data-modal={p.id}
                   aria-haspopup="dialog"
                 >
