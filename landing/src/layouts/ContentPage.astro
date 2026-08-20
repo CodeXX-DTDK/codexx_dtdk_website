@@ -50,11 +50,19 @@ const navLinks = [
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <title>{title}</title>
     <meta name="description" content={description} />
+    <!-- aos.css ships as a render-blocking stylesheet that holds every [data-aos]
+         element at opacity:0 until its JS runs. Without this, a visitor with no
+         JS — or a crawler that does not execute it — gets a blank page. -->
+    <noscript>
+      <style>
+        [data-aos] { opacity: 1 !important; transform: none !important; }
+      </style>
+    </noscript>
   </head>
   <body>
     <div class="wrap">
       <nav class="nav">
-        <div class="container nav-inner">
+        <div class="container container-wide nav-inner">
           <a class="nav-logo" href="/">CodeXX DTDK</a>
           <div class="nav-right">
             <div class="nav-links">
@@ -96,7 +104,7 @@ const navLinks = [
       </section>
 
       <footer class="footer">
-        <div class="container footer-inner">
+        <div class="container container-wide footer-inner">
           <span>© {new Date().getFullYear()} CodeXX DTDK</span>
           <span class="footer-legal">
             <a href="https://status.codexx-dtdk.com">Status</a>

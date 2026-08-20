@@ -1,7 +1,8 @@
 ---
 // Self-hosted Archivo (variable) + Geist Mono — bundled woff2, no third-party
 // round-trip, no layout shift. Archivo carries the whole display/body scale via
-// its wght axis; Geist Mono is used only for eyebrows, badges and tool summaries.
+// its wght axis; Geist Mono carries the technical register: eyebrows, the
+// annotated listing, stage names, table headers.
 import "@fontsource-variable/archivo";
 import "@fontsource/geist-mono/500.css";
 import "../styles/landing.css";
@@ -24,7 +25,6 @@ const icons = {
   code: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M9 8l-4 4 4 4"/><path d="M15 8l4 4-4 4"/></svg>`,
   shield: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 3v5c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6z"/><path d="M9.5 12l1.8 1.8L15 10"/></svg>`,
   cube: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l8 4.5v9L12 21l-8-4.5v-9z"/><path d="M4 7.5l8 4.5 8-4.5"/><path d="M12 12v9"/></svg>`,
-  open: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M14 5h5v5"/><path d="M19 5l-7 7"/><path d="M19 14v3a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h3"/></svg>`,
   close: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></svg>`,
   play: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M6 4l14 8-14 8z"/></svg>`,
 };
@@ -35,14 +35,123 @@ const navLinks = [
   { href: "/ai", label: "On AI" },
 ];
 
-// Status reflects real component versions (clis/*/version.json, libs/linter, codexx_mcp_server).
-// `summary` rides the orbit; `desc` is the long form shown in the modal.
+/*
+  The hero listing. Build-time syntax highlighting: the input is a constant in
+  this file, so there is no user data and no client-side highlighter to ship —
+  a ~20-line tokenizer beats pulling in a library for twelve lines of C++.
+
+  `fact` is what the engine records for that line. Everything shown here is a
+  real capability of the index: qualified names, kind classification, return
+  types, and reference resolution through a smart pointer to its pointee.
+*/
+const KEYWORD =
+  /^(namespace|class|struct|public|private|protected|auto|const|using|return|template|typename|inline|static)$/;
+
+const esc = (s: string) =>
+  s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+
+function highlight(line: string): string {
+  const TOKEN = /(\/\/[^\n]*)|([A-Za-z_][A-Za-z0-9_]*)|(::|->|[{}()<>;,&*:])|(\s+)/g;
+  let out = "";
+  let last = 0;
+  let m: RegExpExecArray | null;
+  while ((m = TOKEN.exec(line)) !== null) {
+    if (m.index > last) out += esc(line.slice(last, m.index));
+    last = m.index + m[0].length;
+    if (m[1]) out += `<span class="tok-c">${esc(m[1])}</span>`;
+    else if (m[2]) {
+      const w = m[2];
+      if (KEYWORD.test(w)) out += `<span class="tok-k">${esc(w)}</span>`;
+      else if (/^[A-Z]/.test(w) || w === "std") out += `<span class="tok-t">${esc(w)}</span>`;
+      else out += esc(w);
+    } else if (m[3]) out += `<span class="tok-p">${esc(m[3])}</span>`;
+    else out += m[4];
+  }
+  if (last < line.length) out += esc(line.slice(last));
+  return out;
+}
+
+const listing: { code: string; kind?: string; fact?: string }[] = [
+  { code: "namespace codex {", kind: "namespace", fact: "codex" },
+  { code: "" },
+  { code: "class Analyzer {", kind: "class", fact: "codex::Analyzer" },
+  { code: " public:" },
+  { code: "  auto analyze(const Source& src)", kind: "function", fact: "codex::Analyzer::analyze" },
+  {
+    code: "      -> std::expected<AnalysisResult, Error>;",
+    kind: "returns",
+    fact: "std::expected<AnalysisResult, Error>",
+  },
+  { code: "" },
+  { code: " private:" },
+  {
+    code: "  std::shared_ptr<SymbolsDatabase> db_;",
+    kind: "field",
+    fact: "db_ → codex::SymbolsDatabase",
+  },
+  { code: "};" },
+  { code: "" },
+  { code: "}  // namespace codex" },
+];
+
+// Rows are the approaches, not the criteria — that is what lets the table
+// transpose into one block per approach on a phone with CSS alone.
+const compare = [
+  {
+    approach: "Compiler front-end",
+    ours: false,
+    setup: "A working build configuration",
+    partial: "Rejected — it has to compile",
+    reanalysis: "The whole translation unit",
+    depth: "Complete: overload resolution, template instantiation, the lot",
+  },
+  {
+    approach: "Pattern matching",
+    ours: false,
+    setup: "None",
+    partial: "Tolerated",
+    reanalysis: "Cheap, and wrong about as often",
+    depth: "Effectively none — C++ is far too context-sensitive to match",
+  },
+  {
+    approach: "CodeXX engine",
+    ours: true,
+    setup: "Point it at the source tree",
+    partial: "Tolerated — it parses as you type",
+    reanalysis: "Incremental, scoped to what depends on the edit",
+    depth: "Syntactic, plus best-effort symbol and type resolution",
+  },
+];
+
+// The real pipeline, stage for stage (libs/codex, composed in codex_pipeline).
+const stages = [
+  { n: "01", name: "Collect", what: "Walks the tree for translation units and headers.", impl: "FilesCollector" },
+  { n: "02", name: "Preprocess", what: "Our own #include and #define pass, not the compiler's.", impl: "Preprocessor" },
+  { n: "03", name: "Parse", what: "A forked, extended tree-sitter-cpp grammar produces the CST.", impl: "Parser" },
+  { n: "04", name: "Extract", what: "The CST becomes typed AST nodes carrying source spans.", impl: "SourceExtractor" },
+  { n: "05", name: "Analyze", what: "Symbols are indexed and references linked to declarations.", impl: "Analyzer" },
+  { n: "06", name: "Index", what: "A multi-key symbol database the tools query.", impl: "SymbolsDatabase" },
+];
+
+const substrate = [
+  "Symbols and references",
+  "Include graph",
+  "Class hierarchy",
+  "Control-flow graph",
+  "Points-to analysis",
+  "Memory layout",
+];
+
+// `summary` rides the product row; `desc` is the long form shown in the modal.
+// Status reflects real component state (docsgen/codegen shipping, linter in
+// development, MCP server in preview).
 const products = [
   {
     id: "docsgen",
     icon: "document",
     name: "Docs generator",
-    summary: "Source → MDX",
+    summary:
+      "Generates MDX straight from source — cross-linked, navigable, and native to the Astro + Starlight stack.",
     desc: "A modern documentation-from-source solution, generating MDX files tailored to the Astro + Starlight stack, with cross-file linking, code navigation and AI-powered features.",
     badges: [
       { cls: "badge-free", label: "Free" },
@@ -56,7 +165,8 @@ const products = [
     id: "codegen",
     icon: "code",
     name: "Code generator",
-    summary: "AST transforms",
+    summary:
+      "AST transforms rather than a template DSL: RTTI, serialization, self-documenting types.",
     desc: "A one-stop solution for anything that needs large amounts of boilerplate. Built on a no-DSL, AST-transform model, it powers advanced RTTI infrastructure, automatic generation of serialization and deserialization methods, self-documenting components, and much more.",
     badges: [{ cls: "badge-shipped", label: "Shipping soon" }],
     href: CODEGEN_URL,
@@ -67,7 +177,8 @@ const products = [
     id: "linter",
     icon: "shield",
     name: "Linter",
-    summary: "Borrow-checking",
+    summary:
+      "Inter-procedural, thread-aware control-flow analysis. The goal is borrow-checking for C++ as it already exists.",
     desc: "Our most ambitious product yet. Possible only thanks to an inter-procedural, thread-aware CFG, the linter goes well past the usual safety and compliance checks — the final goal is full borrow-checking for existing C++. It also reuses our proven scripting-engine model, so you can write custom rules.",
     badges: [{ cls: "badge-dev", label: "In development" }],
     href: EARLY_ACCESS_MAILTO,
@@ -78,7 +189,8 @@ const products = [
     id: "mcp",
     icon: "cube",
     name: "MCP server",
-    summary: "LLM context",
+    summary:
+      "Seventeen tools that hand an LLM agent real structural knowledge of a C++ codebase.",
     desc: "For LLM-driven C++ workflows. Enables deep and efficient codebase knowledge thanks to tight integration with our engine, and the use of advanced techniques and modern solutions for LLM instrumentation.",
     badges: [{ cls: "badge-shipped", label: "Shipping soon" }],
     href: MCP_URL,
@@ -87,12 +199,11 @@ const products = [
   },
 ];
 
-// Grounded proof points — ~120k LoC, 53 ADRs (docs/ADRs), 4 products.
-const proof = [
-  { number: "120k+", label: "Lines of C++" },
-  { number: "53", label: "Architecture decision records" },
-  { number: "V1", label: "docsgen + codegen shipping" },
-  { number: "4", label: "Integrated products ecosystem" },
+// Measured against this repository, not estimated. Vendored code excluded.
+const metrics = [
+  { number: "166k", label: "Lines of first-party C++", note: "718 files, vendored code excluded" },
+  { number: "2,466", label: "Unit and integration tests", note: "engine, linter and toolchain" },
+  { number: "76", label: "Architecture decision records", note: "decisions written down, not folklore" },
 ];
 ---
 
@@ -108,13 +219,19 @@ const proof = [
       name="description"
       content="The Dev-Tool Development Kit for C++. One legacy-free engine covering the whole path from source to control-flow, powering documentation, code generation and memory-safety analysis."
     />
+    <!-- aos.css ships as a render-blocking stylesheet that holds every [data-aos]
+         element at opacity:0 until its JS runs. Without this, a visitor with no
+         JS — or a crawler that does not execute it — gets a blank page. -->
+    <noscript>
+      <style>
+        [data-aos] { opacity: 1 !important; transform: none !important; }
+      </style>
+    </noscript>
   </head>
   <body>
-    <h1 class="sr-only">CodeXX DTDK — a legacy-free C++ developer tooling platform</h1>
-
     <div class="wrap">
       <nav class="nav">
-        <div class="container nav-inner">
+        <div class="container container-wide nav-inner">
           <a class="nav-logo" href="/">CodeXX DTDK</a>
           <div class="nav-right">
             <div class="nav-links">
@@ -129,113 +246,275 @@ const proof = [
         <!-- Placeholder backdrop — this is the swap point for the animated hero. -->
         <div class="hero-bg" aria-hidden="true"></div>
         <div class="hero-scrim" aria-hidden="true"></div>
-        <div class="container hero-inner">
-          <span class="eyebrow" data-aos="fade-up">C++ Dev-Tool Development Kit</span>
-          <p class="display" data-aos="fade-up" data-aos-delay="60">
-            A legacy-free C++ developer tooling platform
-          </p>
-          <p class="lede" data-aos="fade-up" data-aos-delay="120">
-            The foundation for a new generation of developer tools for the C++ ecosystem.
-          </p>
-          <div class="hero-cta" data-aos="fade-up" data-aos-delay="180">
-            <a class="btn-primary" href={EARLY_ACCESS_MAILTO}>Request early access</a>
-            <a class="btn-secondary" href="#products">See the products</a>
+        <div class="container container-wide">
+          <div class="hero-inner">
+            <span class="eyebrow" data-aos="fade-up">C++ Dev-Tool Development Kit</span>
+            <h1 class="display" data-aos="fade-up" data-aos-delay="60">
+              A legacy-free C++ developer tooling platform
+            </h1>
+            <p class="lede" data-aos="fade-up" data-aos-delay="120">
+              One engine reads your C++ and holds the whole picture — syntax, symbols,
+              references, control flow. Documentation, code generation and memory-safety
+              analysis are what we build on top of it.
+            </p>
+            <div class="hero-cta" data-aos="fade-up" data-aos-delay="180">
+              <a class="btn-primary" href={EARLY_ACCESS_MAILTO}>Request early access</a>
+              <a class="btn-secondary" href="#engine">How it works</a>
+            </div>
+          </div>
+
+          <!--
+            Source on the left, what the engine records on the right, on the same
+            line. One grid, three cells per row, so the two halves cannot drift
+            apart no matter the viewport.
+          -->
+          <div class="listing" data-aos="fade-up" data-aos-delay="240">
+            <div class="listing-head">
+              <span class="eyebrow">Analyzer.hpp</span>
+              <span class="eyebrow">What the engine indexes</span>
+            </div>
+            <div class="listing-body">
+              {
+                listing.map((row, i) => (
+                  <div class="listing-row">
+                    <span class="listing-num">{i + 1}</span>
+                    <code class="listing-code" set:html={highlight(row.code) || "&nbsp;"} />
+                    <span class="listing-fact">
+                      {row.kind && (
+                        <>
+                          <span class="fact-kind">{row.kind}</span>
+                          {row.fact}
+                        </>
+                      )}
+                    </span>
+                  </div>
+                ))
+              }
+            </div>
           </div>
         </div>
       </header>
 
-      <section class="section" id="engine">
-        <div class="container engine-inner" data-aos="fade-up">
-          <div class="engine-head">
-            <div class="engine-q">
-              <span class="eyebrow">The real question</span>
-              <h2 class="h2">What bogs down the C++ tooling ecosystem?</h2>
+      <section class="section" id="problem">
+        <div class="container">
+          <div class="thesis-inner" data-aos="fade-up">
+            <span class="eyebrow">The problem</span>
+            <h2 class="h2">Everything that understands C++ was built to compile it</h2>
+            <div>
+              <p class="body-copy">
+                Serious C++ tooling has had two foundations to choose from, and both
+                charge for it. A <strong>compiler front-end</strong> understands the
+                language completely — and wants a working build configuration, refuses
+                code that does not compile, and was designed to emit object files rather
+                than answer questions about your program.
+              </p>
+              <p class="body-copy">
+                <strong>Pattern matching</strong> is the other extreme. It starts in an
+                afternoon and falls apart by the evening: C++ is far too context-sensitive
+                to match your way through, and every rule you add spawns three exceptions.
+              </p>
+              <p class="body-copy">
+                CodeXX takes the road between them — a forked and extended
+                <strong>tree-sitter</strong> grammar, with our own AST, symbol index and
+                analysis layer built on top of its concrete syntax tree. Fast, incremental,
+                tolerant of half-written code, and embeddable as a library.
+              </p>
             </div>
-            <span class="engine-answer">The answer</span>
-          </div>
-          <div class="engine-body-row">
-            <p class="engine-body">
-              C++ tooling has long been gated behind compiler front-ends — heavy, slow to
-              adapt, built for compilation rather than understanding.
-              <strong>CodeXX is a single, legacy-free engine</strong> that owns the whole
-              path from source to control-flow. Owning that foundation is what unlocks the
-              rest: documentation, code generation, and memory-safety analysis stop being
-              separate research efforts and become tools you can actually pick up and use.
+            <p class="pull-statement">
+              Owning that foundation is what turns documentation, code generation and
+              memory-safety analysis from three research projects into three products.
             </p>
           </div>
         </div>
       </section>
 
-      <section class="section" id="products">
-        <div class="container products-inner" data-aos="fade-up">
-          <span class="eyebrow">Products</span>
-          <h2 class="h2">Four tools, one engine</h2>
-
-          <!-- Wide viewports: the tools orbit the core. Rotation pauses on hover
-               and on keyboard focus so a moving target stays clickable. -->
-          <div class="orbit">
-            <div class="orbit-ring" aria-hidden="true">
-              <div class="orbit-ring-inner"></div>
-            </div>
-            <div class="orbit-core" aria-hidden="true">
-              <span class="eyebrow">The core</span>
-              <span class="orbit-core-title">Engine</span>
-            </div>
-            {
-              products.map((p) => (
-                <button
-                  class="tool"
-                  style={`--turn: ${p.turn}`}
-                  data-modal={p.id}
-                  aria-haspopup="dialog"
-                >
-                  <span class="tool-inner">
-                    <span class="tool-tile" set:html={icons[p.icon as keyof typeof icons]} />
-                    <span class="tool-name">{p.name}</span>
-                    <span class="tool-sub">{p.summary}</span>
-                  </span>
-                </button>
-              ))
-            }
+      <section class="section section-raised">
+        <div class="container container-wide" data-aos="fade-up">
+          <div class="section-head">
+            <span class="eyebrow">The trade-off, stated plainly</span>
+            <h2 class="h2">Three ways to read C++</h2>
           </div>
-
-          <!-- Narrow viewports: same tools, same dialogs, no orbit. -->
-          <div class="products-list">
-            {
-              products.map((p) => (
-                <button class="product-card" data-modal={p.id} aria-haspopup="dialog">
-                  <span class="product-card-top">
-                    <span class="icon-wrap" aria-hidden="true" set:html={icons[p.icon as keyof typeof icons]} />
-                    <span class="product-ext" aria-hidden="true" set:html={icons.open} />
-                  </span>
-                  <span class="product-card-body">
-                    <span class="product-badges">
-                      {p.badges.map((b) => (
-                        <span class={`badge ${b.cls}`}>{b.label}</span>
-                      ))}
-                    </span>
-                    <span class="product-name">{p.name}</span>
-                    <span class="product-desc">{p.desc}</span>
-                  </span>
-                </button>
-              ))
-            }
+          <div class="compare-scroll">
+            <table class="compare" aria-describedby="compare-note">
+              <thead>
+                <tr>
+                  <th scope="col">Approach</th>
+                  <th scope="col">Setup</th>
+                  <th scope="col">Half-written code</th>
+                  <th scope="col">Re-analysis</th>
+                  <th scope="col">Semantic depth</th>
+                </tr>
+              </thead>
+              <tbody>
+                {
+                  compare.map((r) => (
+                    <tr class={r.ours ? "is-ours" : undefined}>
+                      <th scope="row">{r.approach}</th>
+                      <td data-label="Setup">{r.setup}</td>
+                      <td data-label="Half-written code">{r.partial}</td>
+                      <td data-label="Re-analysis">{r.reanalysis}</td>
+                      <td data-label="Semantic depth">{r.depth}</td>
+                    </tr>
+                  ))
+                }
+              </tbody>
+            </table>
+            <!-- A <caption> would be the semantic home for this, but a caption
+                 cannot survive the table being re-laid-out as blocks on a phone:
+                 it collapses to a one-word column. aria-describedby keeps the
+                 association without the layout. -->
+            <p class="compare-note" id="compare-note">
+              That last cell is the trade, and we would rather state it than bury it:
+              no overload resolution, no template instantiation. What we get for it is
+              an index that keeps up with an editor, on code that has never once built.
+            </p>
           </div>
         </div>
       </section>
 
-      <section class="section" id="numbers">
-        <div class="container products-inner" data-aos="fade-up">
-          <span class="eyebrow">By the numbers</span>
-          <div class="proof-grid">
+      <section class="section" id="engine">
+        <div class="container container-wide" data-aos="fade-up">
+          <div class="section-head">
+            <span class="eyebrow">The engine</span>
+            <h2 class="h2">From a directory of source files to a queryable index</h2>
+            <p class="lede">
+              Six stages, composed as a pipeline — each a real stage object, chained with
+              the <code>|</code> operator, run per item or per batch.
+            </p>
+          </div>
+
+          <div class="pipeline">
             {
-              proof.map((m) => (
-                <div class="proof-card">
-                  <div class="proof-number">{m.number}</div>
-                  <div class="proof-label">{m.label}</div>
+              stages.map((s) => (
+                <div class="stage">
+                  <span class="stage-num">{s.n}</span>
+                  <span class="stage-name">{s.name}</span>
+                  <span class="stage-what">{s.what}</span>
+                  <span class="stage-impl">{s.impl}</span>
                 </div>
               ))
             }
+          </div>
+
+          <div class="properties">
+            <div class="property">
+              <h3 class="h3">Incremental by construction</h3>
+              <p>
+                An edit invalidates what depended on it and nothing else. The workspace
+                layer tracks include and module dependencies, debounces editor traffic,
+                and holds a live parser per open file — so a keystroke never pays for a
+                cold index.
+              </p>
+            </div>
+            <div class="property">
+              <h3 class="h3">Deterministic under parallelism</h3>
+              <p>
+                The whole-program analysis phases run across cores under one hard rule:
+                the output must be byte-identical to the serial order. Pre-sized buffers,
+                writes by index, nothing accumulated from a worker. Determinism here is a
+                test, not an aspiration.
+              </p>
+            </div>
+          </div>
+
+          <div class="substrate">
+            <span class="eyebrow">What the index gives every tool</span>
+            <ul class="substrate-list">
+              {substrate.map((s) => <li>{s}</li>)}
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <section class="section" id="products">
+        <div class="container container-wide products-inner" data-aos="fade-up">
+          <span class="eyebrow">Products</span>
+          <h2 class="h2">Four tools, one engine</h2>
+          <p class="lede" style="max-width: 62ch">
+            Each is a consumer of the same index. That is the architectural bet: build the
+            foundation once, and the tools stop being separate research efforts.
+          </p>
+
+          <div class="products-split">
+            <!--
+              Decorative. The orbit carries no focusable control and no information
+              the list beside it does not carry — hovering a row lights its chip.
+              Chips stay pointer-clickable as a redundant target for the button
+              that is visible right next to them.
+            -->
+            <div class="orbit" aria-hidden="true">
+              <div class="orbit-ring">
+                <div class="orbit-ring-inner"></div>
+                {
+                  products.map((p) => (
+                    <div class="tool" style={`--turn: ${p.turn}`} data-modal={p.id}>
+                      <span class="tool-inner">
+                        <span class="tool-tile" set:html={icons[p.icon as keyof typeof icons]} />
+                        <span class="tool-name">{p.name}</span>
+                      </span>
+                    </div>
+                  ))
+                }
+              </div>
+              <div class="orbit-core">
+                <span class="eyebrow">The core</span>
+                <span class="orbit-core-title">Engine</span>
+              </div>
+            </div>
+
+            <div class="tool-list">
+              {
+                products.map((p) => (
+                  <button class="tool-row" data-modal={p.id} aria-haspopup="dialog">
+                    <span class="icon-wrap" aria-hidden="true" set:html={icons[p.icon as keyof typeof icons]} />
+                    <span class="tool-row-head">
+                      <span class="tool-row-name">{p.name}</span>
+                      {p.badges.map((b) => (
+                        <span class={`badge ${b.cls}`}>{b.label}</span>
+                      ))}
+                    </span>
+                    <span class="tool-row-more" aria-hidden="true">Details</span>
+                    <span class="tool-row-sum">{p.summary}</span>
+                  </button>
+                ))
+              }
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="section" id="evidence">
+        <div class="container container-wide" data-aos="fade-up">
+          <div class="section-head">
+            <span class="eyebrow">Evidence</span>
+            <h2 class="h2">Reasons to believe any of this</h2>
+          </div>
+          <div class="evidence">
+            {
+              metrics.map((m) => (
+                <div class="metric">
+                  <span class="metric-number">{m.number}</span>
+                  <span class="metric-label">{m.label}</span>
+                  <span class="metric-note">{m.note}</span>
+                </div>
+              ))
+            }
+            <div class="dogfood">
+              <div class="dogfood-head">
+                <span class="eyebrow">The real test</span>
+                <h3 class="h3">The engine is pointed at itself</h3>
+              </div>
+              <div>
+                <p>
+                  <strong>Every product runs against this repository</strong> and the full
+                  closure of its dependencies — every header, every vendored library. The
+                  linter's whole-tree automatic refactors are applied to that same corpus
+                  and are required to build afterwards: a rename that breaks a single call
+                  site fails the run. If the tools are not reliable on 166,027 lines of our
+                  own C++, we find out before you do.
+                </p>
+              </div>
+            </div>
           </div>
         </div>
       </section>
@@ -256,7 +535,7 @@ const proof = [
       </section>
 
       <footer class="footer">
-        <div class="container footer-inner">
+        <div class="container container-wide footer-inner">
           <span>© {new Date().getFullYear()} CodeXX DTDK</span>
           <span class="footer-legal">
             <a href="https://status.codexx-dtdk.com">Status</a>
@@ -334,6 +613,27 @@ const proof = [
         dialog.addEventListener("click", (event) => {
           if (event.target === dialog) dialog.close();
         });
+      }
+
+      // Reading a product row steadies the orbit and lights that tool's chip, so
+      // the two halves of the section are visibly the same four things.
+      const orbit = document.querySelector<HTMLElement>(".orbit");
+      for (const row of document.querySelectorAll<HTMLElement>(".tool-row")) {
+        const chip = document.querySelector<HTMLElement>(
+          `.tool[data-modal="${row.dataset.modal}"]`,
+        );
+        const on = () => {
+          chip?.classList.add("is-active");
+          orbit?.classList.add("is-paused");
+        };
+        const off = () => {
+          chip?.classList.remove("is-active");
+          orbit?.classList.remove("is-paused");
+        };
+        row.addEventListener("mouseenter", on);
+        row.addEventListener("mouseleave", off);
+        row.addEventListener("focus", on);
+        row.addEventListener("blur", off);
       }
     </script>
 

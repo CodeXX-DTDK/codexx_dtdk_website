@@ -3,12 +3,15 @@
 
   The site is deliberately committed to a single dark palette — there is no
   light theme and no theme toggle here. The docs subdomains (codegen/docsgen/
-  mcp) keep their own Starlight toggle; the marketing surface does not follow
-  it. Token NAMES are unchanged from the previous Pelagornis-derived theme so
-  @codexx/web components (DisclaimerModal) restyle themselves for free.
+  mcp) and status keep their own Pelagornis toggle; the marketing surface does
+  not follow it. Token NAMES are unchanged from that theme so @codexx/web
+  components (DisclaimerModal) restyle themselves for free.
 
-  Layout model: sections are full-bleed (they own the hairline rules and any
-  background treatment) and each holds a centred .container at --measure wide.
+  Layout model: sections are full-bleed — they own their hairline rules and any
+  background treatment — and each holds a centred container. There are two
+  measures on purpose: --measure for prose-led sections, --measure-wide for the
+  technical spreads (listing, pipeline, comparison), so the page does not read
+  as one column of identical boxes.
 */
 :root {
   /* surfaces, darkest → lightest */
@@ -24,7 +27,9 @@
   /* text ramp */
   --page-text: #ffffff;
   --page-text-secondary: #a1a1a8;
-  --page-text-muted: #6e6e76;
+  /* 4.5:1 against every ground this token lands on, the #0e0e11 raised section
+     included. The old #6e6e76 measured 3.81 there — below AA for normal text. */
+  --page-text-muted: #7a7a83;
 
   /* one accent, used sparingly */
   --page-accent: #2f6bff;
@@ -35,6 +40,12 @@
   --page-warning: #f5a524;
   --page-info: #5b9bff;
   --page-error: #f94343;
+
+  /* syntax — three hues only, so the listing reads as type rather than confetti */
+  --code-keyword: #7aa2ff;
+  --code-type: #58cfa0;
+  --code-punc: #7c7c86;
+  --code-comment: #74747d;
 
   --page-radius-md: 0.5rem;
   --page-radius-lg: 0.75rem;
@@ -50,10 +61,11 @@
   --page-font-weight-bold: 700;
   --page-font-weight-extrabold: 800;
 
-  /* the single content measure every section shares */
+  /* two measures — prose-led vs technical spread */
   --measure: 1080px;
+  --measure-wide: 1240px;
   --gutter: 24px;
-  --section-pad: 94px;
+  --section-pad: 104px;
 
   /* aliases kept for markup ported from the old wireframe */
   --font-sans: var(--page-font-family);
@@ -93,6 +105,7 @@ body {
   margin-inline: auto;
   padding-inline: var(--gutter);
 }
+.container-wide { max-width: var(--measure-wide); }
 
 .sr-only {
   position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
@@ -134,11 +147,50 @@ a { color: inherit; text-decoration: none; }
   text-wrap: balance;
 }
 
+.h3 {
+  font-size: 1.0625rem;
+  font-weight: 600;
+  letter-spacing: -0.015em;
+  line-height: 1.3;
+}
+
 .lede {
   font-size: clamp(1.0625rem, 1.6vw, 1.1875rem);
   color: var(--color-text-secondary);
   line-height: 1.6;
   text-wrap: balance;
+}
+
+.body-copy {
+  font-size: 1.0625rem;
+  line-height: 1.72;
+  color: var(--color-text-secondary);
+}
+.body-copy + .body-copy { margin-top: 1.15rem; }
+.body-copy strong { color: var(--color-text-primary); font-weight: 600; }
+
+/* Inline code inside body copy — the technical register at sentence scale. */
+code {
+  font-family: var(--page-font-mono);
+  font-size: 0.88em;
+  padding: 0.12em 0.4em;
+  border-radius: 5px;
+  background: var(--page-bg-elevated);
+  border: 1px solid var(--color-border-tertiary);
+  color: var(--page-accent-bright);
+}
+.listing-code { padding: 0; border: 0; background: none; border-radius: 0; }
+
+/* Editorial pull statement — the one place a sentence is allowed to be loud. */
+.pull-statement {
+  font-size: clamp(1.25rem, 2.3vw, 1.6rem);
+  font-weight: 600;
+  letter-spacing: -0.022em;
+  line-height: 1.35;
+  color: var(--color-text-primary);
+  text-wrap: balance;
+  padding-left: 1.35rem;
+  border-left: 2px solid var(--page-accent);
 }
 
 /* ── Badges ──────────────────────────────────────────────────────── */
@@ -221,23 +273,27 @@ a { color: inherit; text-decoration: none; }
   padding-block: var(--section-pad);
   border-top: 1px solid var(--color-border-tertiary);
 }
-.section-head { display: flex; flex-direction: column; gap: 1.75rem; }
+/* Raised ground for the dense comparison — the page's one surface change.
+   Not --page-bg-secondary: at card scale that reads as a lift because a border
+   comes with it, but across a whole section against pure black it vanishes. */
+.section-raised { background: #0e0e11; }
+.section-head { display: flex; flex-direction: column; gap: 18px; max-width: 60ch; }
 
 /* ── Hero ────────────────────────────────────────────────────────── */
 /*
-  PLACEHOLDER BACKDROP. This is the swap point for the animated hero — replace
-  .hero-bg wholesale (canvas, WebGL, whatever) and nothing else in the hero
+  PLACEHOLDER BACKDROP. .hero-bg is the swap point for the animated hero —
+  replace it wholesale (canvas, WebGL, whatever) and nothing else in the hero
   needs to change. .hero-scrim guarantees text contrast over whatever lands
-  here, so keep it.
+  there, so keep it. The hero's composition does not depend on the backdrop.
 */
 .hero {
   position: relative;
   overflow: clip;
-  padding-block: 132px 116px;
+  padding-block: 118px 96px;
   isolation: isolate;
 }
 .hero-bg {
-  position: absolute; inset: 0; z-index: -2;
+  position: absolute; inset: 0 0 auto 0; block-size: 760px; z-index: -2;
   background:
     radial-gradient(58% 74% at 74% 26%, #16337e 0%, rgb(9 17 46 / 0.72) 42%, transparent 72%),
     radial-gradient(46% 62% at 92% 8%, #2f6bff33 0%, transparent 70%),
@@ -250,7 +306,8 @@ a { color: inherit; text-decoration: none; }
   to   { transform: scale(1.08) translate3d(-2%, 1.5%, 0); }
 }
 .hero-scrim {
-  position: absolute; inset: 0; z-index: -1; pointer-events: none;
+  position: absolute; inset: 0 0 auto 0; block-size: 760px; z-index: -1;
+  pointer-events: none;
   background: linear-gradient(
     180deg,
     rgb(0 0 0 / 0.15) 0%,
@@ -259,42 +316,204 @@ a { color: inherit; text-decoration: none; }
   );
 }
 .hero-inner { display: flex; flex-direction: column; align-items: flex-start; gap: 26px; }
-.hero .lede { max-width: 46ch; }
+.hero .lede { max-width: 52ch; }
 .hero-cta { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
 
-/* ── Engine (the real question / the answer) ─────────────────────── */
-.engine-inner { display: flex; flex-direction: column; gap: 40px; }
-.engine-head {
-  display: flex; justify-content: space-between; align-items: flex-end;
-  gap: 48px; flex-wrap: wrap;
+/* ── Annotated listing ───────────────────────────────────────────── */
+/*
+  The page's central image: source on the left, what the engine indexes on the
+  right, on the same baseline. One CSS grid, three cells per line (gutter /
+  code / fact), so the rows cannot drift out of alignment however the text
+  wraps — every cell is a single line of the same mono face. Deliberately flat:
+  no card, no shadow, no window chrome. It should read as a printed listing.
+*/
+.listing {
+  margin-top: 66px;
+  border-top: 1px solid var(--page-border-strong);
+  border-bottom: 1px solid var(--page-border);
+  /* Opaque enough that the line numbers have a known ground to contrast
+     against, sheer enough to keep a trace of the backdrop behind it. */
+  background: color-mix(in srgb, var(--page-bg) 80%, transparent);
+  backdrop-filter: blur(3px);
 }
-.engine-q { display: flex; flex-direction: column; gap: 16px; flex: 1 1 24rem; }
-.engine-answer {
-  font-size: clamp(1.75rem, 3.6vw, 2.625rem);
-  font-weight: var(--page-font-weight-bold);
-  letter-spacing: -0.03em; line-height: 1.1;
-  background: linear-gradient(115deg, var(--page-accent), var(--page-accent-bright));
-  -webkit-background-clip: text; background-clip: text; color: transparent;
+.listing-head,
+.listing-row {
+  display: grid;
+  grid-template-columns: 3ch minmax(0, 1fr) minmax(0, 1fr);
+  gap: 0 22px;
+  align-items: baseline;
+}
+.listing-head {
+  padding: 13px var(--gutter);
+  border-bottom: 1px solid var(--page-border);
+}
+.listing-head span:nth-child(1) { grid-column: 2; }
+.listing-body { padding: 18px var(--gutter) 22px; position: relative; }
+.listing-row { line-height: 1.85; }
+/*
+  Two hairlines, both drawn once for the whole body rather than per row: the
+  gutter rule an editor would draw beside its line numbers, and the rule that
+  divides source from what was derived from it — the panel's actual argument.
+
+  The divider lands mid-way through the second grid gap. With a 3ch gutter
+  column, two equal columns and a 22px gap, that midpoint reduces to
+  50% + 1.5ch + 11px, so it needs no knowledge of the container's width.
+*/
+.listing-body::before,
+.listing-body::after {
+  content: ""; position: absolute; inset-block: 10px;
+  inline-size: 1px; background: var(--page-border);
+}
+.listing-body::before { left: calc(var(--gutter) + 3ch + 11px); }
+.listing-body::after { left: calc(50% + 1.5ch + 11px); }
+.listing-num {
+  font-family: var(--page-font-mono); font-size: 12px;
+  color: var(--code-comment); text-align: right;
+  user-select: none;
+}
+.listing-code {
+  font-family: var(--page-font-mono); font-size: 13px;
+  color: var(--color-text-primary);
+  white-space: pre;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.listing-code::-webkit-scrollbar { display: none; }
+.listing-fact {
+  font-family: var(--page-font-mono); font-size: 12px;
+  color: var(--color-text-secondary);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.listing-fact .fact-kind {
+  color: var(--page-accent-bright);
+  margin-right: 0.85em;
+}
+.tok-k { color: var(--code-keyword); }
+.tok-t { color: var(--code-type); }
+.tok-p { color: var(--code-punc); }
+.tok-c { color: var(--code-comment); font-style: italic; }
+
+/* ── Problem / thesis ────────────────────────────────────────────── */
+.thesis-inner { max-width: 720px; display: flex; flex-direction: column; gap: 22px; }
+.thesis-inner .h2 { max-width: 18ch; }
+.thesis-inner .pull-statement { margin-top: 12px; }
+
+/* ── Comparison table ────────────────────────────────────────────── */
+.compare-scroll { margin-top: 42px; }
+.compare {
+  /* Pulled out by its own cell padding so the first column still lines up with
+     the section heading, while the tinted row has room to breathe inside. */
+  margin-inline: -20px;
+  inline-size: calc(100% + 40px);
+  border-collapse: collapse;
+  text-align: left;
+}
+.compare th:first-child,
+.compare td:first-child { padding-left: 20px; }
+.compare th:last-child,
+.compare td:last-child { padding-right: 20px; }
+.compare-note {
+  margin-top: 20px;
+  font-size: 14px; line-height: 1.6;
+  color: var(--color-text-tertiary);
+  max-width: 78ch;
+}
+.compare th,
+.compare td {
+  padding: 17px 20px 17px 0;
+  border-bottom: 1px solid var(--color-border-tertiary);
+  vertical-align: top;
+}
+.compare thead th {
+  font-family: var(--page-font-mono);
+  font-size: 11px; font-weight: 500;
+  letter-spacing: 0.12em; text-transform: uppercase;
+  color: var(--color-text-tertiary);
+  border-bottom-color: var(--page-border-strong);
+  padding-block: 0 13px;
+}
+.compare tbody th {
+  font-size: 15px; font-weight: 600; letter-spacing: -0.012em;
+  color: var(--color-text-primary);
   white-space: nowrap;
 }
-.engine-body-row { display: flex; justify-content: flex-end; }
-.engine-body {
-  font-size: clamp(1.0625rem, 1.6vw, 1.1875rem);
-  color: var(--color-text-secondary); line-height: 1.6;
-  max-width: 700px; text-align: right;
-}
-.engine-body strong { color: var(--color-text-primary); font-weight: 600; }
+.compare td { font-size: 14px; line-height: 1.55; color: var(--color-text-secondary); }
+.compare tbody tr:last-child th,
+.compare tbody tr:last-child td { border-bottom: 0; }
+/* The row that is ours. Tinted, not shouted. */
+.compare tr.is-ours th { color: var(--page-accent-bright); }
+.compare tr.is-ours td { color: var(--color-text-primary); }
+.compare tr.is-ours th,
+.compare tr.is-ours td { background: rgb(47 107 255 / 0.06); }
 
-/* ── Constellation ───────────────────────────────────────────────── */
-.products-inner { display: flex; flex-direction: column; gap: 30px; }
+
+/* ── Engine pipeline ─────────────────────────────────────────────── */
+.pipeline {
+  margin-top: 46px;
+  display: grid; grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 0 18px;
+}
+/* Each cell owns its own rule, so the flow line survives every wrap. The
+   descriptions run 2–3 lines, so the impl names are pushed to the bottom of an
+   equal-height cell and land on one baseline across all six. */
+.stage {
+  border-top: 1px solid var(--page-border-strong); padding-top: 15px;
+  display: flex; flex-direction: column;
+}
+.stage-num {
+  font-family: var(--page-font-mono); font-size: 11px;
+  letter-spacing: 0.1em; color: var(--page-accent-bright);
+}
+.stage-name {
+  display: block; margin-top: 9px;
+  font-size: 15px; font-weight: 600; letter-spacing: -0.015em;
+}
+.stage-what {
+  display: block; margin-top: 7px;
+  font-size: 13px; line-height: 1.5; color: var(--color-text-secondary);
+}
+.stage-impl {
+  display: block; margin-top: auto; padding-top: 14px;
+  font-family: var(--page-font-mono); font-size: 11px;
+  color: var(--color-text-tertiary); word-break: break-word;
+}
+
+.properties {
+  margin-top: 54px;
+  display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px;
+}
+.property {
+  border: 1px solid var(--color-border-tertiary);
+  border-radius: 14px; padding: 26px;
+  background: var(--page-bg-secondary);
+  display: flex; flex-direction: column; gap: 11px;
+}
+.property p { font-size: 14px; line-height: 1.62; color: var(--color-text-secondary); }
+
+.substrate { margin-top: 54px; display: flex; flex-direction: column; gap: 16px; }
+.substrate-list { display: flex; flex-wrap: wrap; gap: 9px; }
+.substrate-list li {
+  list-style: none;
+  font-family: var(--page-font-mono); font-size: 12px;
+  padding: 9px 14px; border-radius: var(--page-radius-full);
+  border: 1px solid var(--color-border-tertiary);
+  background: var(--page-bg-elevated);
+  color: var(--color-text-secondary);
+}
+
+/* ── Products: orbit + list ──────────────────────────────────────── */
+.products-inner { display: flex; flex-direction: column; gap: 22px; }
+.products-split {
+  margin-top: 30px;
+  display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 40px; align-items: center;
+}
 
 .orbit {
   position: relative;
-  display: grid;
-  place-items: center;
-  block-size: 590px;
-  margin-block-start: 8px;
-  --orbit-radius: 210px;
+  display: grid; place-items: center;
+  block-size: 470px;
+  --orbit-radius: 176px;
   --orbit-duration: 48s;
 }
 .orbit-ring,
@@ -304,108 +523,126 @@ a { color: inherit; text-decoration: none; }
 }
 .orbit-ring {
   position: relative;
-  inline-size: 420px; block-size: 420px;
-  animation: orbit-spin 48s linear infinite;
+  inline-size: 352px; block-size: 352px;
+  animation: orbit-spin var(--orbit-duration) linear infinite;
 }
-.orbit-ring-inner {
-  position: absolute; inset: 60px;
-  border-style: dashed;
-}
+.orbit-ring-inner { position: absolute; inset: 52px; border-style: dashed; }
 @keyframes orbit-spin { to { transform: rotate(1turn); } }
 
 /* The core sits OUTSIDE the ring so it never inherits the rotation. */
 .orbit-core {
   position: absolute; left: 50%; top: 50%;
   transform: translate(-50%, -50%);
-  inline-size: 160px; block-size: 160px;
+  inline-size: 148px; block-size: 148px;
   border-radius: 50%;
   display: flex; flex-direction: column; align-items: center; justify-content: center;
-  gap: 7px;
+  gap: 6px;
   background: radial-gradient(circle at 50% 32%, #1b3b8f 0%, #0a1330 58%, #06080f 100%);
   border: 1px solid var(--page-border-strong);
   box-shadow: 0 0 60px 0 rgb(47 107 255 / 0.28);
   text-align: center;
 }
 .orbit-core-title {
-  font-size: 22px; font-weight: var(--page-font-weight-bold);
+  font-size: 21px; font-weight: var(--page-font-weight-bold);
   letter-spacing: -0.02em; line-height: 1.1;
 }
 
 /*
-  Each chip carries its own orbit. The transform reads outward-in: rotate to the
-  current angle, push out along the radius, rotate back by the same amount so
-  the chip stays upright, then centre it on that point.
+  Chips ride the ring as children, so one animation moves everything and the
+  ring can never drift against them. Negative margins centre each chip on the
+  ring's centre BEFORE the transform, so the transform stays a pure
+  rotate-then-push and the chip pivots about its own middle. .tool-inner then
+  cancels the rotation — both the static angle and the ring's live turn — which
+  is why its keyframes carry --turn rather than starting from zero.
 
-  The chips are NOT children of .orbit-ring — if they were, the ring's rotation
-  would carry them, but the core would have to live outside it anyway and the
-  ring is aria-hidden, which must never wrap a focusable control. So the travel
-  and the counter-rotation are baked into one keyframe instead, and each chip's
-  starting position comes from a negative animation-delay proportional to
-  --turn. The static transform below is the same expression at t=0, so the chips
-  stay correctly placed when the animation is off (reduced motion).
+  The whole orbit is decorative: it is aria-hidden and holds no focusable
+  control. The list beside it carries the real buttons, so keyboard users get
+  one tab stop per product instead of two.
 */
 .tool {
   position: absolute; left: 50%; top: 50%;
-  inline-size: 150px;
-  transform:
-    rotate(calc(var(--turn) * 1turn))
-    translateY(calc(-1 * var(--orbit-radius)))
-    rotate(calc(var(--turn) * -1turn))
-    translate(-50%, -50%);
-  animation: tool-orbit var(--orbit-duration) linear infinite;
-  animation-delay: calc(-1 * var(--orbit-duration) * var(--turn));
-  background: none; border: 0; padding: 0; margin: 0;
-  font: inherit; color: inherit; cursor: pointer;
-  display: grid; place-items: center;
-}
-@keyframes tool-orbit {
-  from {
-    transform: rotate(0turn) translateY(calc(-1 * var(--orbit-radius)))
-      rotate(0turn) translate(-50%, -50%);
-  }
-  to {
-    transform: rotate(1turn) translateY(calc(-1 * var(--orbit-radius)))
-      rotate(-1turn) translate(-50%, -50%);
-  }
+  inline-size: 138px; block-size: 108px;
+  margin-inline-start: -69px; margin-block-start: -54px;
+  transform: rotate(calc(var(--turn) * 1turn))
+             translateY(calc(-1 * var(--orbit-radius)));
+  display: grid; place-items: center; cursor: pointer;
 }
 .tool-inner {
-  display: flex; flex-direction: column; align-items: center; gap: 11px;
+  display: flex; flex-direction: column; align-items: center; gap: 10px;
+  transform: rotate(calc(var(--turn) * -1turn));
+  animation: tool-upright var(--orbit-duration) linear infinite;
 }
-/* Pausing on hover makes a moving target clickable. The ring and the chips must
-   pause together or the dashed ring drifts against them. */
+@keyframes tool-upright {
+  from { transform: rotate(calc(var(--turn) * -1turn)); }
+  to   { transform: rotate(calc(var(--turn) * -1turn - 1turn)); }
+}
+/* Pausing makes a moving target clickable; one rule stops ring and chips together. */
 .orbit:hover .orbit-ring,
-.orbit:hover .tool,
-.orbit:focus-within .orbit-ring,
-.orbit:focus-within .tool { animation-play-state: paused; }
+.orbit:hover .tool-inner,
+.orbit.is-paused .orbit-ring,
+.orbit.is-paused .tool-inner { animation-play-state: paused; }
 
 .tool-tile {
-  inline-size: 64px; block-size: 64px;
-  border-radius: 19px;
+  inline-size: 60px; block-size: 60px;
+  border-radius: 18px;
   display: grid; place-items: center;
   background: var(--page-bg-elevated);
   border: 1px solid var(--page-border-strong);
   box-shadow: 0 8px 24px 0 rgb(0 0 0 / 0.55);
-  transition: border-color 0.2s, background-color 0.2s, transform 0.2s;
+  transition: border-color 0.2s, background-color 0.2s, transform 0.2s,
+              box-shadow 0.2s;
 }
-.tool-tile svg { inline-size: 23px; block-size: 23px; display: block; }
+.tool-tile svg { inline-size: 22px; block-size: 22px; display: block; }
 .tool:hover .tool-tile,
-.tool:focus-visible .tool-tile {
+.tool.is-active .tool-tile {
   background: #1c1c22; border-color: var(--page-accent);
   transform: translateY(-2px);
+  box-shadow: 0 8px 30px 0 rgb(47 107 255 / 0.3);
 }
 .tool-name {
-  font-size: 14px; font-weight: 600; letter-spacing: -0.01em;
+  font-size: 13px; font-weight: 600; letter-spacing: -0.01em;
   line-height: 1.25; color: var(--page-text);
 }
-.tool-sub {
-  font-family: var(--page-font-mono); font-size: 11px; font-weight: 500;
-  letter-spacing: 0.14em; text-transform: uppercase;
-  color: var(--color-text-tertiary);
-}
 
-@media (prefers-reduced-motion: reduce) {
-  .orbit-ring, .tool, .hero-bg { animation: none; }
+/* The list: the real controls, and where the copy actually lives. */
+.tool-list { display: flex; flex-direction: column; }
+.tool-row {
+  display: grid; grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 0 16px; align-items: start;
+  padding: 20px 4px;
+  /* A <button> carries a UA border on every side; naming only border-top left
+     the other three drawing a box around the list. */
+  border: 0; border-top: 1px solid var(--color-border-tertiary);
+  background: none; color: inherit; font: inherit; text-align: start;
+  cursor: pointer; inline-size: 100%;
+  transition: background-color 0.2s, padding-inline 0.2s;
 }
+.tool-list .tool-row:last-child { border-bottom: 1px solid var(--color-border-tertiary); }
+.tool-row:hover { background: var(--page-bg-secondary); padding-inline: 14px 10px; }
+.tool-row .icon-wrap { grid-row: span 2; }
+.tool-row-head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.tool-row-name { font-size: 16px; font-weight: 600; letter-spacing: -0.015em; }
+.tool-row-sum {
+  grid-column: 2;
+  margin-top: 6px;
+  font-size: 13.5px; line-height: 1.55; color: var(--color-text-secondary);
+}
+.tool-row-more {
+  grid-row: span 2;
+  font-family: var(--page-font-mono); font-size: 11px;
+  letter-spacing: 0.1em; text-transform: uppercase;
+  color: var(--color-text-tertiary);
+  white-space: nowrap; padding-top: 4px;
+  transition: color 0.2s;
+}
+.tool-row:hover .tool-row-more { color: var(--page-accent-bright); }
+
+.icon-wrap {
+  inline-size: 40px; block-size: 40px; border-radius: 11px;
+  display: grid; place-items: center;
+  background: var(--page-bg-elevated); border: 1px solid var(--color-border-tertiary);
+}
+.icon-wrap svg { inline-size: 18px; block-size: 18px; display: block; }
 
 /* ── Tool modal (native <dialog>) ────────────────────────────────── */
 .tool-modal {
@@ -432,9 +669,6 @@ a { color: inherit; text-decoration: none; }
   from { opacity: 0; transform: translateY(6px) scale(0.96); }
   to   { opacity: 1; transform: none; }
 }
-@media (prefers-reduced-motion: reduce) {
-  .tool-modal[open] { animation: none; }
-}
 .modal-body { display: flex; flex-direction: column; gap: 22px; }
 .modal-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; }
 .modal-heading { display: flex; flex-direction: column; gap: 12px; align-items: flex-start; }
@@ -454,6 +688,7 @@ a { color: inherit; text-decoration: none; }
 .modal-close svg { inline-size: 17px; block-size: 17px; display: block; }
 .modal-rule { block-size: 1px; background: var(--color-border-tertiary); }
 .modal-desc { font-size: 16px; line-height: 1.65; color: var(--color-text-secondary); }
+.product-badges { display: flex; gap: 6px; flex-wrap: wrap; }
 
 /* Swap this slot for the embed once the walkthroughs exist. */
 .modal-video {
@@ -472,47 +707,47 @@ a { color: inherit; text-decoration: none; }
 .modal-video-play svg { inline-size: 18px; block-size: 18px; display: block; }
 .modal-actions { display: flex; gap: 10px; flex-wrap: wrap; }
 
-/* ── Products fallback list (small screens) ──────────────────────── */
-.products-list { display: none; grid-template-columns: 1fr; gap: 14px; }
-.product-card {
-  position: relative; display: flex; flex-direction: column; gap: 22px;
-  background: var(--color-background-secondary);
+/* ── Evidence ────────────────────────────────────────────────────── */
+/*
+  Three measured numbers and one statement, deliberately unequal — a 2×2 of
+  identical cards is the shape this page is trying not to be.
+*/
+.evidence {
+  margin-top: 44px;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+.metric {
   border: 1px solid var(--color-border-tertiary);
-  border-radius: 14px; padding: 26px;
-  color: inherit; inline-size: 100%;
-  text-align: start; font: inherit; cursor: pointer;
-  transition: border-color 0.2s, background-color 0.2s;
-}
-.product-card:hover { background: var(--page-bg-elevated); border-color: var(--page-border-strong); }
-.product-card-top { display: flex; justify-content: space-between; align-items: flex-start; }
-.product-card-body { display: flex; flex-direction: column; gap: 11px; }
-.product-badges { display: flex; gap: 6px; flex-wrap: wrap; }
-.product-name { font-size: 19px; font-weight: 600; letter-spacing: -0.012em; }
-.product-desc { font-size: 14px; color: var(--color-text-secondary); line-height: 1.55; }
-.icon-wrap {
-  inline-size: 42px; block-size: 42px; border-radius: 11px;
-  display: grid; place-items: center;
-  background: var(--page-bg-elevated); border: 1px solid var(--color-border-tertiary);
-}
-.icon-wrap svg { inline-size: 19px; block-size: 19px; display: block; }
-.product-ext { color: var(--color-text-tertiary); line-height: 0; }
-.product-ext svg { inline-size: 16px; block-size: 16px; display: block; }
-
-/* ── By the numbers ──────────────────────────────────────────────── */
-.proof-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
-.proof-card {
+  border-radius: 14px; padding: 26px 24px 24px;
   background: var(--color-background-secondary);
-  border: 1px solid var(--color-border-tertiary);
-  border-radius: 14px; padding: 26px 22px;
-  display: flex; flex-direction: column; gap: 10px;
+  display: flex; flex-direction: column; gap: 9px;
 }
-.proof-number {
-  font-size: clamp(2.125rem, 3.5vw, 2.875rem);
+.metric-number {
+  font-size: clamp(2.25rem, 3.6vw, 3rem);
   font-weight: var(--page-font-weight-extrabold);
-  letter-spacing: -0.03em; line-height: 1;
+  letter-spacing: -0.035em; line-height: 1;
   font-variant-numeric: tabular-nums;
 }
-.proof-label { font-size: 14px; color: var(--color-text-tertiary); line-height: 1.55; }
+.metric-label { font-size: 14px; line-height: 1.55; color: var(--color-text-secondary); }
+.metric-note {
+  font-family: var(--page-font-mono); font-size: 11px;
+  color: var(--color-text-tertiary);
+}
+.dogfood {
+  grid-column: 1 / -1;
+  border: 1px solid var(--page-border-strong);
+  border-radius: 14px; padding: 30px;
+  background:
+    radial-gradient(120% 180% at 88% 0%, rgb(47 107 255 / 0.16) 0%, transparent 62%),
+    var(--color-background-secondary);
+  display: grid; grid-template-columns: minmax(0, 0.48fr) minmax(0, 1fr);
+  gap: 20px 40px; align-items: start;
+}
+.dogfood-head { display: flex; flex-direction: column; gap: 11px; }
+.dogfood p { font-size: 15px; line-height: 1.68; color: var(--color-text-secondary); }
+.dogfood p strong { color: var(--color-text-primary); font-weight: 600; }
 
 /* ── CTA ─────────────────────────────────────────────────────────── */
 .cta-section {
@@ -603,38 +838,117 @@ a { color: inherit; text-decoration: none; }
   margin: 2.25rem 0; max-width: 30ch;
 }
 
+/* ── Motion ──────────────────────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  .orbit-ring, .tool-inner, .hero-bg { animation: none; }
+  .tool-modal[open] { animation: none; }
+}
+
 /* ── Responsive ──────────────────────────────────────────────────── */
+@media (max-width: 1120px) {
+  .pipeline { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 26px 18px; }
+}
+
 @media (max-width: 1000px) {
-  .proof-grid { grid-template-columns: repeat(2, 1fr); }
-}
-
-@media (max-width: 860px) {
-  :root { --section-pad: 74px; }
-  .hero { padding-block: 108px 92px; }
-}
-
-/*
-  Below 810px the orbit gives up: a 420px ring cannot survive a phone viewport,
-  and a perpetual rotation is a battery cost with no payoff. The same tools
-  render as a stacked list that opens the same dialogs.
-*/
-@media (max-width: 810px) {
+  /*
+    The orbit needs ~470px of width to stay legible beside the list. Below that
+    the list goes full width — it was always the one carrying the information,
+    so nothing is lost but the ornament.
+  */
+  .products-split { grid-template-columns: minmax(0, 1fr); gap: 0; }
   .orbit { display: none; }
-  .products-list { display: grid; }
+  .dogfood { grid-template-columns: minmax(0, 1fr); gap: 14px; }
+}
+
+@media (max-width: 900px) {
+  :root { --section-pad: 80px; }
+  .hero { padding-block: 100px 84px; }
+  .listing { margin-top: 52px; }
+  /* Two columns of facts do not fit beside code on a narrow viewport; the
+     annotation drops under its line and the rule that separated them goes. */
+  .listing-head { display: none; }
+  .listing-row { grid-template-columns: 3ch minmax(0, 1fr); }
+  .listing-body::before,
+  .listing-body::after { content: none; }
+  /* Subordinate to the line it describes, or the two read as one blob of
+     mono: smaller, dimmer, and hung off a tick rule. */
+  .listing-fact {
+    grid-column: 2; white-space: normal;
+    margin: 1px 0 9px; padding-left: 11px;
+    border-left: 2px solid var(--page-border-strong);
+    font-size: 11px; line-height: 1.5;
+    color: var(--color-text-tertiary);
+  }
+  .properties { grid-template-columns: minmax(0, 1fr); }
+  .evidence { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (max-width: 760px) {
+  /*
+    The comparison stops being a table and becomes three blocks, one per
+    approach, each row labelled by the header it lost. Rows are the approaches
+    (not the criteria) precisely so this transposition is possible in CSS.
+  */
+  .compare, .compare tbody, .compare tr, .compare th, .compare td { display: block; }
+  .compare thead { display: none; }
+  .compare tbody tr {
+    border: 1px solid var(--color-border-tertiary);
+    border-radius: 14px; padding: 20px;
+    margin-bottom: 12px;
+  }
+  .compare tbody tr.is-ours {
+    border-color: rgb(47 107 255 / 0.4);
+    background: rgb(47 107 255 / 0.06);
+  }
+  /* The desktop cell insets and the row tint both have to come off: the tint
+     now lives on the <tr> block, and a leftover 20px on the first cell pushed
+     the approach name out of line with the rows beneath it. */
+  .compare th:first-child, .compare td:first-child,
+  .compare th:last-child, .compare td:last-child { padding-inline: 0; }
+  .compare { margin-inline: 0; inline-size: 100%; }
+  .compare tbody th,
+  .compare tbody td { border-bottom: 0; padding: 0; }
+  /* The tint moves to the <tr> block; leaving it on the cells too banded every
+     row. Needs to match the desktop rule's specificity to override it. */
+  .compare tr.is-ours th,
+  .compare tr.is-ours td { background: none; }
+  .compare tbody th { font-size: 17px; margin-bottom: 14px; }
+  .compare tr.is-ours th { padding-left: 0; }
+  .compare tbody td {
+    display: flex; gap: 14px; justify-content: space-between;
+    text-align: right;
+    padding-block: 9px;
+    border-top: 1px solid var(--color-border-tertiary);
+  }
+  .compare tbody td::before {
+    content: attr(data-label);
+    font-family: var(--page-font-mono); font-size: 11px;
+    letter-spacing: 0.1em; text-transform: uppercase;
+    color: var(--color-text-tertiary);
+    flex: none; padding-top: 3px; text-align: left;
+  }
+  .compare-note { margin-top: 16px; }
 }
 
 @media (max-width: 640px) {
-  :root { --section-pad: 62px; --gutter: 20px; }
-  .hero { padding-block: 92px 76px; }
-  .cta-section { padding-block: 70px 80px; }
-  .proof-grid { grid-template-columns: 1fr; }
-  .nav-links { display: none; }
-  /* Once the head stacks, `flex-basis` measures the block axis — leaving the
-     24rem basis on .engine-q opens a 384px hole above "The answer". */
-  .engine-head { flex-direction: column; align-items: flex-start; gap: 1rem; }
-  .engine-q { flex: 0 1 auto; }
-  .engine-body-row { justify-content: flex-start; }
-  .engine-body { text-align: left; }
+  :root { --section-pad: 66px; --gutter: 20px; }
+  .hero { padding-block: 84px 68px; }
+  .cta-section { padding-block: 74px 82px; }
+  .evidence { grid-template-columns: minmax(0, 1fr); }
+  .pipeline { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  /* Nav links stay reachable — hiding them stranded /origin, /about and /ai on
+     phones. The button goes instead; the page carries two more of that CTA. */
+  .nav-right { gap: 1rem; }
+  .nav-right .btn-primary { display: none; }
+  .nav-links { gap: 1.05rem; font-size: 13px; }
   .footer-inner { flex-direction: column; align-items: flex-start; gap: 1rem; }
   .tool-modal { padding: 24px; }
+  .tool-row { grid-template-columns: auto minmax(0, 1fr); }
+  .tool-row-more { display: none; }
+  .listing-code { font-size: 12px; }
+}
+
+@media (max-width: 420px) {
+  .nav-logo { font-size: 14px; }
+  .nav-links { gap: 0.85rem; }
 }
