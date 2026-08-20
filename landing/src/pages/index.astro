@@ -1,11 +1,9 @@
 ---
-// Self-hosted Inter (bundled woff2 — no third-party round-trip, no layout
-// shift). Weights used across the page.
-import "@fontsource/inter/400.css";
-import "@fontsource/inter/500.css";
-import "@fontsource/inter/600.css";
-import "@fontsource/inter/700.css";
-import "@fontsource/inter/800.css";
+// Self-hosted Archivo (variable) + Geist Mono — bundled woff2, no third-party
+// round-trip, no layout shift. Archivo carries the whole display/body scale via
+// its wght axis; Geist Mono is used only for eyebrows, badges and tool summaries.
+import "@fontsource-variable/archivo";
+import "@fontsource/geist-mono/500.css";
 import "../styles/landing.css";
 import Analytics from "@vercel/analytics/astro";
 // Site-wide "in active development" warning modal (once per visitor, cross-subdomain).
@@ -27,47 +25,69 @@ const icons = {
   shield: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 3v5c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6z"/><path d="M9.5 12l1.8 1.8L15 10"/></svg>`,
   cube: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l8 4.5v9L12 21l-8-4.5v-9z"/><path d="M4 7.5l8 4.5 8-4.5"/><path d="M12 12v9"/></svg>`,
   open: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M14 5h5v5"/><path d="M19 5l-7 7"/><path d="M19 14v3a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h3"/></svg>`,
+  close: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></svg>`,
+  play: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M6 4l14 8-14 8z"/></svg>`,
 };
 
+const navLinks = [
+  { href: "/origin", label: "Origin" },
+  { href: "/about", label: "About" },
+  { href: "/ai", label: "On AI" },
+];
+
 // Status reflects real component versions (clis/*/version.json, libs/linter, codexx_mcp_server).
+// `summary` rides the orbit; `desc` is the long form shown in the modal.
 const products = [
   {
+    id: "docsgen",
     icon: "document",
     name: "Docs generator",
-    desc: "A modern documentation from source solution, generating MDX files tailored to the Astro + Starlight tech stack, supporting cross-file linking, code navigation and AI powered features.",
+    summary: "Source → MDX",
+    desc: "A modern documentation-from-source solution, generating MDX files tailored to the Astro + Starlight stack, with cross-file linking, code navigation and AI-powered features.",
     badges: [
       { cls: "badge-free", label: "Free" },
       { cls: "badge-shipped", label: "Shipping soon" },
     ],
-    featured: false,
     href: DOCSGEN_URL,
+    cta: "Open the docs",
+    angle: "0deg",
   },
   {
+    id: "codegen",
     icon: "code",
-    name: "Code Generator",
-    desc: "A one-stop solution for all tasks requiring large amounts of boilerplate. Built on an innovative no DSL AST transform based model, the tool enables advanced RTTI infrastructure, automatic generation of serialization and deserialization methods, self-documenting components... and much more.",
+    name: "Code generator",
+    summary: "AST transforms",
+    desc: "A one-stop solution for anything that needs large amounts of boilerplate. Built on a no-DSL, AST-transform model, it powers advanced RTTI infrastructure, automatic generation of serialization and deserialization methods, self-documenting components, and much more.",
     badges: [{ cls: "badge-shipped", label: "Shipping soon" }],
-    featured: false,
     href: CODEGEN_URL,
+    cta: "Open the docs",
+    angle: "90deg",
   },
   {
+    id: "linter",
     icon: "shield",
     name: "Linter",
-    desc: "Our most ambitious product yet. Possible only thanks to our inter-procedural, thread-aware CFG, our linter won't just include the usual safety and compliance checks, our final goal is full borrow-checking for existing C++. Moreover the linter will reuse our proven scipting engine model to enable the creation of custom rules.",
+    summary: "Borrow-checking",
+    desc: "Our most ambitious product yet. Possible only thanks to an inter-procedural, thread-aware CFG, the linter goes well past the usual safety and compliance checks — the final goal is full borrow-checking for existing C++. It also reuses our proven scripting-engine model, so you can write custom rules.",
     badges: [{ cls: "badge-dev", label: "In development" }],
-    featured: false,
+    href: EARLY_ACCESS_MAILTO,
+    cta: "Request early access",
+    angle: "180deg",
   },
   {
+    id: "mcp",
     icon: "cube",
     name: "MCP server",
-    desc: "For LLM-driven C++ workflows. Enables deep and efficient codebase knowledge thanks to tight integration with our proprietary engine and the use of advanced techniques and modern solutions for LLM instrumentation.",
+    summary: "LLM context",
+    desc: "For LLM-driven C++ workflows. Enables deep and efficient codebase knowledge thanks to tight integration with our engine, and the use of advanced techniques and modern solutions for LLM instrumentation.",
     badges: [{ cls: "badge-shipped", label: "Shipping soon" }],
-    featured: false,
     href: MCP_URL,
+    cta: "Open the docs",
+    angle: "270deg",
   },
 ];
 
-// Grounded proof points — see plan: ~120k LoC, 49 ADRs (docs/ADRs), 4 products.
+// Grounded proof points — ~120k LoC, 53 ADRs (docs/ADRs), 4 products.
 const proof = [
   { number: "120k+", label: "Lines of C++" },
   { number: "53", label: "Architecture decision records" },
@@ -81,135 +101,203 @@ const proof = [
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="dark" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <title>CodeXX DTDK — a legacy-free C++ developer tooling platform</title>
     <meta
       name="description"
-      content="The Dev-Tools Dev-Kit for C++. The foundational SDK and surrounding ecosystem of tools. Trying to build a nicer DX with QOL features and advanced safety and compliance tools for C++."
+      content="The Dev-Tool Development Kit for C++. One legacy-free engine covering the whole path from source to control-flow, powering documentation, code generation and memory-safety analysis."
     />
   </head>
   <body>
-    <script is:inline>
-      // Shared with the codegen site via the `starlight-theme` key so the chosen
-      // theme carries across the www ↔ codegen subdomains.
-      const saved = localStorage.getItem("starlight-theme");
-      const dark = saved
-        ? saved === "dark"
-        : window.matchMedia("(prefers-color-scheme: dark)").matches;
-      document.documentElement.dataset.theme = dark ? "dark" : "light";
-    </script>
-
     <h1 class="sr-only">CodeXX DTDK — a legacy-free C++ developer tooling platform</h1>
 
     <div class="wrap">
       <nav class="nav">
-        <span class="nav-logo">CodeXX DTDK</span>
-        <div class="nav-links">
-          <a href="/origin">Origin</a>
-          <a href="/about">About</a>
-          <a href="/ai">On AI</a>
-          <a href={EARLY_ACCESS_MAILTO}>Early access</a>
+        <div class="container nav-inner">
+          <a class="nav-logo" href="/">CodeXX DTDK</a>
+          <div class="nav-right">
+            <div class="nav-links">
+              {navLinks.map((l) => <a href={l.href}>{l.label}</a>)}
+            </div>
+            <a class="btn-primary" href={EARLY_ACCESS_MAILTO}>Early access</a>
+          </div>
         </div>
       </nav>
 
       <header class="hero">
-        <h1>A legacy-free C++ developer tooling platform</h1>
-        <p>
-          The foundation for a new generation of developer tools for the C++ ecosystem.
-        </p>
-        <div class="hero-cta">
-          <a class="btn-primary" href={EARLY_ACCESS_MAILTO}>Request early access</a>
+        <!-- Placeholder backdrop — this is the swap point for the animated hero. -->
+        <div class="hero-bg" aria-hidden="true"></div>
+        <div class="hero-scrim" aria-hidden="true"></div>
+        <div class="container hero-inner">
+          <span class="eyebrow" data-aos="fade-up">C++ Dev-Tool Development Kit</span>
+          <p class="display" data-aos="fade-up" data-aos-delay="60">
+            A legacy-free C++ developer tooling platform
+          </p>
+          <p class="lede" data-aos="fade-up" data-aos-delay="120">
+            The foundation for a new generation of developer tools for the C++ ecosystem.
+          </p>
+          <div class="hero-cta" data-aos="fade-up" data-aos-delay="180">
+            <a class="btn-primary" href={EARLY_ACCESS_MAILTO}>Request early access</a>
+            <a class="btn-secondary" href="#products">See the products</a>
+          </div>
         </div>
       </header>
 
-      <section class="section engine" data-aos="fade-up">
-        <div class="engine-head">
-          <div class="engine-q">
-            <span class="engine-eyebrow">The real question</span>
-            <h2 class="engine-title">What bogs down the C++ tooling ecosystem?</h2>
+      <section class="section" id="engine">
+        <div class="container engine-inner" data-aos="fade-up">
+          <div class="engine-head">
+            <div class="engine-q">
+              <span class="eyebrow">The real question</span>
+              <h2 class="h2">What bogs down the C++ tooling ecosystem?</h2>
+            </div>
+            <span class="engine-answer">The answer</span>
           </div>
-          <span class="engine-solution">The&nbsp;answer</span>
+          <div class="engine-body-row">
+            <p class="engine-body">
+              C++ tooling has long been gated behind compiler front-ends — heavy, slow to
+              adapt, built for compilation rather than understanding.
+              <strong>CodeXX is a single, legacy-free engine</strong> that owns the whole
+              path from source to control-flow. Owning that foundation is what unlocks the
+              rest: documentation, code generation, and memory-safety analysis stop being
+              separate research efforts and become tools you can actually pick up and use.
+            </p>
+          </div>
         </div>
-        <p class="engine-body">
-          C++ tooling has long been gated behind compiler front-ends — heavy, slow to
-          adapt, built for compilation rather than understanding.
-          <strong>CodeXX is a single, legacy-free engine</strong> that owns the whole
-          path from source to control-flow. Owning that foundation is what unlocks the
-          rest: documentation, code generation, and memory-safety analysis stop being
-          separate research efforts and become tools you can actually pick up and use.
-        </p>
       </section>
 
-      <section class="section" data-aos="fade-up">
-        <div class="section-label">Products</div>
-        <div class="products">
-          {
-            products.map((p, i) => {
-              const Tag = p.href ? "a" : "div";
-              return (
-                <Tag
-                  class={["product-card", p.featured && "featured", p.href && "linked"]
-                    .filter(Boolean)
-                    .join(" ")}
-                  data-aos="fade-up"
-                  data-aos-delay={i * 60}
-                  {...(p.href ? { href: p.href, "aria-label": `${p.name} docs` } : {})}
+      <section class="section" id="products">
+        <div class="container products-inner" data-aos="fade-up">
+          <span class="eyebrow">Products</span>
+          <h2 class="h2">Four tools, one engine</h2>
+
+          <!-- Wide viewports: the tools orbit the core. Rotation pauses on hover
+               and on keyboard focus so a moving target stays clickable. -->
+          <div class="orbit">
+            <div class="orbit-ring" aria-hidden="true">
+              <div class="orbit-ring-inner"></div>
+            </div>
+            <div class="orbit-core" aria-hidden="true">
+              <span class="eyebrow">The core</span>
+              <span class="orbit-core-title">Engine</span>
+            </div>
+            {
+              products.map((p) => (
+                <button
+                  class="tool"
+                  style={`--angle: ${p.angle}`}
+                  data-modal={p.id}
+                  aria-haspopup="dialog"
                 >
-                  {p.href && (
+                  <span class="tool-inner">
+                    <span class="tool-tile" set:html={icons[p.icon as keyof typeof icons]} />
+                    <span class="tool-name">{p.name}</span>
+                    <span class="tool-sub">{p.summary}</span>
+                  </span>
+                </button>
+              ))
+            }
+          </div>
+
+          <!-- Narrow viewports: same tools, same dialogs, no orbit. -->
+          <div class="products-list">
+            {
+              products.map((p) => (
+                <button class="product-card" data-modal={p.id} aria-haspopup="dialog">
+                  <span class="product-card-top">
+                    <span class="icon-wrap" aria-hidden="true" set:html={icons[p.icon as keyof typeof icons]} />
                     <span class="product-ext" aria-hidden="true" set:html={icons.open} />
-                  )}
-                  <div class="icon-wrap" aria-hidden="true" set:html={icons[p.icon as keyof typeof icons]} />
-                  <div class="product-badges">
-                    {p.badges.map((b) => (
-                      <span class={`badge ${b.cls}`}>{b.label}</span>
-                    ))}
-                  </div>
-                  <div class="product-name">{p.name}</div>
-                  <div class="product-desc">{p.desc}</div>
-                </Tag>
-              );
-            })
-          }
+                  </span>
+                  <span class="product-card-body">
+                    <span class="product-badges">
+                      {p.badges.map((b) => (
+                        <span class={`badge ${b.cls}`}>{b.label}</span>
+                      ))}
+                    </span>
+                    <span class="product-name">{p.name}</span>
+                    <span class="product-desc">{p.desc}</span>
+                  </span>
+                </button>
+              ))
+            }
+          </div>
         </div>
       </section>
 
-      <section class="section" data-aos="fade-up">
-        <div class="section-label">By the numbers</div>
-        <div class="proof-grid">
-          {
-            proof.map((m, i) => (
-              <div class="proof-card" data-aos="fade-up" data-aos-delay={i * 60}>
-                <div class="proof-number">{m.number}</div>
-                <div class="proof-label">{m.label}</div>
-              </div>
-            ))
-          }
+      <section class="section" id="numbers">
+        <div class="container products-inner" data-aos="fade-up">
+          <span class="eyebrow">By the numbers</span>
+          <div class="proof-grid">
+            {
+              proof.map((m) => (
+                <div class="proof-card">
+                  <div class="proof-number">{m.number}</div>
+                  <div class="proof-label">{m.label}</div>
+                </div>
+              ))
+            }
+          </div>
         </div>
       </section>
 
-      <section class="cta-section" data-aos="fade-up">
-        <h2>Join the design partner program</h2>
-        <p>
-          Early access for C++ teams. Tight feedback loop, direct line to the author.
-          Further materials available under NDA.
-        </p>
-        <div class="hero-cta">
-          <a class="btn-primary" href={EARLY_ACCESS_MAILTO}>Request early access</a>
-          <a class="btn-secondary" href="mailto:support@codexx-dtdk.com">support@codexx-dtdk.com</a>
+      <section class="cta-section" id="early-access">
+        <div class="container cta-inner" data-aos="fade-up">
+          <span class="eyebrow">Design partner program</span>
+          <h2 class="h2">Early access for C++ teams that build the hard things</h2>
+          <p class="lede">
+            A tight feedback loop and a direct line to the author. Further materials
+            available under NDA.
+          </p>
+          <div class="hero-cta">
+            <a class="btn-primary" href={EARLY_ACCESS_MAILTO}>Request early access</a>
+            <a class="btn-secondary" href="mailto:support@codexx-dtdk.com">support@codexx-dtdk.com</a>
+          </div>
         </div>
       </section>
 
       <footer class="footer">
-        <span>© {new Date().getFullYear()} CodeXX DTDK</span>
-        <span class="footer-legal">
-          <a href="https://status.codexx-dtdk.com">Status</a>
-          <a href={`${LEGAL_URL}/privacy`}>Privacy</a>
-          <a href={`${LEGAL_URL}/terms`}>Terms</a>
-          <a href={`${LEGAL_URL}/eula`}>EULA</a>
-        </span>
-        <span>William Karol Di Cioccio</span>
+        <div class="container footer-inner">
+          <span>© {new Date().getFullYear()} CodeXX DTDK</span>
+          <span class="footer-legal">
+            <a href="https://status.codexx-dtdk.com">Status</a>
+            <a href={`${LEGAL_URL}/privacy`}>Privacy</a>
+            <a href={`${LEGAL_URL}/terms`}>Terms</a>
+            <a href={`${LEGAL_URL}/eula`}>EULA</a>
+          </span>
+          <span>William Karol Di Cioccio</span>
+        </div>
       </footer>
     </div>
+
+    {
+      products.map((p) => (
+        <dialog class="tool-modal" id={`modal-${p.id}`} aria-labelledby={`modal-${p.id}-title`}>
+          <div class="modal-body">
+            <div class="modal-head">
+              <div class="modal-heading">
+                <span class="product-badges">
+                  {p.badges.map((b) => (
+                    <span class={`badge ${b.cls}`}>{b.label}</span>
+                  ))}
+                </span>
+                <h2 class="modal-title" id={`modal-${p.id}-title`}>{p.name}</h2>
+              </div>
+              <button class="modal-close" data-close aria-label={`Close ${p.name}`} set:html={icons.close} />
+            </div>
+            <div class="modal-rule"></div>
+            <p class="modal-desc">{p.desc}</p>
+            {/* Swap this slot for the YouTube embed once the walkthroughs exist. */}
+            <div class="modal-video">
+              <span class="modal-video-play" aria-hidden="true" set:html={icons.play} />
+              <span class="eyebrow">Walkthrough video — coming soon</span>
+            </div>
+            <div class="modal-actions">
+              <a class="btn-primary" href={p.href}>{p.cta}</a>
+            </div>
+          </div>
+        </dialog>
+      ))
+    }
 
     <script>
       import AOS from "aos";
@@ -224,6 +312,29 @@ const proof = [
         disable: () =>
           window.matchMedia("(prefers-reduced-motion: reduce)").matches,
       });
+
+      // Tool dialogs. <dialog>.showModal() gives us the backdrop, Esc-to-close,
+      // focus trapping and inerting of the rest of the page for free — the only
+      // thing it does not do is close on a backdrop click, so we add that.
+      for (const trigger of document.querySelectorAll<HTMLElement>("[data-modal]")) {
+        trigger.addEventListener("click", () => {
+          const id = trigger.dataset.modal;
+          document.querySelector<HTMLDialogElement>(`#modal-${id}`)?.showModal();
+        });
+      }
+
+      for (const dialog of document.querySelectorAll<HTMLDialogElement>(".tool-modal")) {
+        dialog
+          .querySelector<HTMLButtonElement>("[data-close]")
+          ?.addEventListener("click", () => dialog.close());
+
+        // The dialog element itself fills the viewport as far as hit-testing is
+        // concerned, so a click landing on it (rather than on .modal-body) is a
+        // click on the backdrop.
+        dialog.addEventListener("click", (event) => {
+          if (event.target === dialog) dialog.close();
+        });
+      }
     </script>
 
     <Analytics />
