@@ -295,6 +295,15 @@ code {
 .hero-bg {
   position: absolute; inset: 0 0 auto 0; block-size: 760px; z-index: -2;
   background:
+    /* Terminator. hero-drift scales and shifts this box, so its bottom edge
+       travels ~42px below .hero-scrim, which is NOT animated and stops dead at
+       760px. Any non-black paint down there therefore slid out from under the
+       scrim once per cycle — a navy band drifting up and down behind the
+       listing. Ending the stack in opaque --page-bg well before the box edge
+       makes that edge black-on-black wherever the transform puts it. The
+       drift stays; only the seam goes. Keep this layer first (topmost) if you
+       swap the gradients, and keep the animation's travel under 92%. */
+    linear-gradient(180deg, transparent 0%, transparent 72%, var(--page-bg) 92%),
     radial-gradient(58% 74% at 74% 26%, #16337e 0%, rgb(9 17 46 / 0.72) 42%, transparent 72%),
     radial-gradient(46% 62% at 92% 8%, #2f6bff33 0%, transparent 70%),
     radial-gradient(70% 90% at 20% 100%, #060a18 0%, transparent 70%),
