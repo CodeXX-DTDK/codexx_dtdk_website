@@ -179,7 +179,6 @@ code {
   border: 1px solid var(--color-border-tertiary);
   color: var(--page-accent-bright);
 }
-.listing-code { padding: 0; border: 0; background: none; border-radius: 0; }
 
 /* Editorial pull statement — the one place a sentence is allowed to be loud. */
 .pull-statement {
@@ -328,79 +327,192 @@ code {
 .hero .lede { max-width: 52ch; }
 .hero-cta { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
 
-/* ── Annotated listing ───────────────────────────────────────────── */
+/* ── Probed listing (hero) ───────────────────────────────────────── */
 /*
-  The page's central image: source on the left, what the engine indexes on the
-  right, on the same baseline. One CSS grid, three cells per line (gutter /
-  code / fact), so the rows cannot drift out of alignment however the text
-  wraps — every cell is a single line of the same mono face. Deliberately flat:
-  no card, no shadow, no window chrome. It should read as a printed listing.
+  The page's central image, and the only place the product demonstrates
+  itself rather than describing itself: a header file with the engine's own
+  annotations attached to it.
+
+  Two layers. The BASE is static server-rendered HTML — one grid row per
+  source line, annotated spans rendered as real buttons inside it, nothing
+  re-rendered at any point. The MASK is three absolutely-positioned boxes
+  sharing .probe-body as their containing block: a scrim that drops the rest
+  of the file back, a halo that snaps to the active span, and one card. Only
+  transforms and sizes ever change, so hovering costs no layout of the text
+  and no repaint of the listing.
+
+  Stacking is contained by the backdrop-filter below, which makes .probe its
+  own stacking context — the halo cannot climb over the nav no matter what.
+  Order inside it: text (auto) → scrim (1) → halo (2) → active span (3) →
+  card (4). The active span outranks the scrim, which is what "everything
+  else dims and this one does not" reduces to.
 */
-.listing {
-  margin-top: 66px;
+.probe {
+  --probe-accent: var(--page-accent);
+  --probe-accent-bright: var(--page-accent-bright);
+  margin-top: 60px;
   border-top: 1px solid var(--page-border-strong);
   border-bottom: 1px solid var(--page-border);
-  /* Opaque enough that the line numbers have a known ground to contrast
-     against, sheer enough to keep a trace of the backdrop behind it. */
   background: color-mix(in srgb, var(--page-bg) 80%, transparent);
   backdrop-filter: blur(3px);
+  /* Hover IS the interaction here, and 28 lines of mono want a measure no
+     phone has. Below the gate this is absent rather than degraded — the
+     annotations stay in the DOM inside .sr-only either way. */
+  display: none;
 }
-.listing-head,
-.listing-row {
-  display: grid;
-  grid-template-columns: 3ch minmax(0, 1fr) minmax(0, 1fr);
-  gap: 0 22px;
-  align-items: baseline;
+@media (hover: hover) and (pointer: fine) and (min-width: 1000px) {
+  .probe { display: block; }
 }
-.listing-head {
-  padding: 13px var(--gutter);
+
+/* The one annotation that reports a gap rather than a fact gets the warning
+   hue, chip and halo together. It is the page's own argument about surfacing
+   what the index does not know, made in colour. */
+.probe[data-tone="warn"] {
+  --probe-accent: var(--page-warning);
+  --probe-accent-bright: var(--page-warning);
+}
+
+.probe-head {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 20px; padding: 12px var(--gutter);
   border-bottom: 1px solid var(--page-border);
 }
-.listing-head span:nth-child(1) { grid-column: 2; }
-.listing-body { padding: 18px var(--gutter) 22px; position: relative; }
-.listing-row { line-height: 1.85; }
-/*
-  Two hairlines, both drawn once for the whole body rather than per row: the
-  gutter rule an editor would draw beside its line numbers, and the rule that
-  divides source from what was derived from it — the panel's actual argument.
-
-  The divider lands mid-way through the second grid gap. With a 3ch gutter
-  column, two equal columns and a 22px gap, that midpoint reduces to
-  50% + 1.5ch + 11px, so it needs no knowledge of the container's width.
-*/
-.listing-body::before,
-.listing-body::after {
-  content: ""; position: absolute; inset-block: 10px;
-  inline-size: 1px; background: var(--page-border);
+.probe-hint {
+  display: inline-flex; align-items: center; gap: 9px;
+  font-family: var(--page-font-mono); font-size: 11px;
+  letter-spacing: 0.03em; color: var(--color-text-secondary);
 }
-.listing-body::before { left: calc(var(--gutter) + 3ch + 11px); }
-.listing-body::after { left: calc(50% + 1.5ch + 11px); }
-.listing-num {
+.probe-hint-icon {
+  display: block; inline-size: 13px; block-size: 13px;
+  color: var(--page-accent-bright);
+}
+.probe-hint-icon svg { display: block; inline-size: 100%; block-size: 100%; }
+
+.probe-body { position: relative; padding: 20px var(--gutter) 24px; }
+/* The rule an editor draws beside its line numbers — one element for the
+   whole body rather than a border per row. */
+.probe-body::before {
+  content: ""; position: absolute; inset-block: 12px;
+  inline-size: 1px; background: var(--page-border);
+  left: calc(var(--gutter) + 3ch + 11px);
+}
+
+.probe-row {
+  display: grid; grid-template-columns: 3ch minmax(0, 1fr);
+  gap: 0 22px; align-items: baseline; line-height: 1.8;
+}
+.probe-num {
   font-family: var(--page-font-mono); font-size: 12px;
   color: var(--code-comment); text-align: right;
   user-select: none;
 }
-.listing-code {
-  font-family: var(--page-font-mono); font-size: 13px;
+.probe-code {
+  font-family: var(--page-font-mono); font-size: 13.5px;
   color: var(--color-text-primary);
   white-space: pre;
-  overflow-x: auto;
-  scrollbar-width: none;
+  /* Undo the inline-code chrome from the typography scale — this is a
+     listing, not a term in a sentence. */
+  padding: 0; border: 0; background: none; border-radius: 0;
 }
-.listing-code::-webkit-scrollbar { display: none; }
-.listing-fact {
-  font-family: var(--page-font-mono); font-size: 12px;
+
+/*
+  Annotated spans. Buttons, not decorated spans: they are the only operable
+  thing in the component, and a button brings keyboard focus, Enter/Space and
+  a focus ring with it for free. Everything the UA puts on a button has to
+  come back off.
+
+  The dotted underline is the affordance. Nobody hovers what does not look
+  hoverable, and a listing where fifteen of the tokens are live and the rest
+  are not has to say which is which before the pointer arrives.
+*/
+.node {
+  font: inherit; color: inherit; white-space: pre; text-align: inherit;
+  background: none; border: 0; padding: 0; margin: 0;
+  position: relative; cursor: pointer;
+  text-decoration: underline;
+  text-decoration-style: dotted;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 4px;
+  text-decoration-color: color-mix(in srgb, var(--page-accent-bright) 40%, transparent);
+  transition: text-decoration-color 0.18s ease;
+}
+.node:hover { text-decoration-color: color-mix(in srgb, var(--page-accent-bright) 75%, transparent); }
+/* Raised over the scrim, and the halo behind it takes over the marking. */
+.node.is-active { z-index: 3; text-decoration-color: transparent; }
+
+.probe-scrim {
+  position: absolute; inset: 0; z-index: 1; pointer-events: none;
+  background: var(--page-bg);
+  opacity: 0; transition: opacity 0.22s ease;
+}
+.probe.is-probing .probe-scrim { opacity: 0.66; }
+
+.probe-halo {
+  position: absolute; z-index: 2; top: 0; left: 0;
+  /* Physical, not logical: the script writes .style.width/.height, and the
+     two spellings should not race each other through the cascade. */
+  width: 0; height: 0;
+  border-radius: 5px;
+  background: color-mix(in srgb, var(--probe-accent) 26%, transparent);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--probe-accent-bright) 45%, transparent);
+  opacity: 0; pointer-events: none;
+  /* Sizes are animated as well as position, so moving between two spans of
+     different length reads as one mark travelling rather than two marks. */
+  transition:
+    opacity 0.18s ease,
+    background-color 0.2s ease,
+    transform 0.26s cubic-bezier(0.22, 0.8, 0.28, 1),
+    width 0.26s cubic-bezier(0.22, 0.8, 0.28, 1),
+    height 0.26s cubic-bezier(0.22, 0.8, 0.28, 1);
+}
+.probe.is-probing .probe-halo { opacity: 1; }
+
+.probe-card {
+  position: absolute; z-index: 4; top: 0; left: 0;
+  /* Fixed measure on purpose: the card slides between spans, and a width
+     that tracked its contents would reflow the text mid-flight. */
+  inline-size: 400px;
+  padding: 13px 16px 15px;
+  display: flex; flex-direction: column; align-items: flex-start; gap: 5px;
+  background: var(--page-bg-elevated);
+  border: 1px solid var(--page-border-strong);
+  border-radius: var(--page-radius-md);
+  box-shadow: var(--page-shadow-lg);
+  opacity: 0; pointer-events: none;
+  transition:
+    opacity 0.16s ease,
+    transform 0.26s cubic-bezier(0.22, 0.8, 0.28, 1);
+}
+.probe.is-probing .probe-card { opacity: 1; }
+
+.probe-kind {
+  font-family: var(--page-font-mono); font-size: 10px;
+  font-weight: 500; letter-spacing: 0.14em; text-transform: uppercase;
+  color: var(--probe-accent-bright);
+}
+.probe-title {
+  font-family: var(--page-font-mono); font-size: 12.5px;
+  color: var(--color-text-primary); line-height: 1.4;
+}
+.probe-detail {
+  font-size: 12.5px; line-height: 1.55;
   color: var(--color-text-secondary);
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
-.listing-fact .fact-kind {
-  color: var(--page-accent-bright);
-  margin-right: 0.85em;
+
+/* The halo and the card carry no information the card's text does not, so
+   with motion suppressed they simply appear where they belong. */
+@media (prefers-reduced-motion: reduce) {
+  .probe-halo,
+  .probe-card { transition: opacity 0.12s ease; }
 }
+
 .tok-k { color: var(--code-keyword); }
 .tok-t { color: var(--code-type); }
 .tok-p { color: var(--code-punc); }
 .tok-c { color: var(--code-comment); font-style: italic; }
+/* Attributes are metadata about the declaration, not part of it — carried at
+   the comment's weight so they read as an aside. */
+.tok-a { color: var(--code-comment); }
 
 /* ── Problem / thesis ────────────────────────────────────────────── */
 .thesis-inner { max-width: 720px; display: flex; flex-direction: column; gap: 22px; }
@@ -872,22 +984,6 @@ code {
 @media (max-width: 900px) {
   :root { --section-pad: 80px; }
   .hero { padding-block: 100px 84px; }
-  .listing { margin-top: 52px; }
-  /* Two columns of facts do not fit beside code on a narrow viewport; the
-     annotation drops under its line and the rule that separated them goes. */
-  .listing-head { display: none; }
-  .listing-row { grid-template-columns: 3ch minmax(0, 1fr); }
-  .listing-body::before,
-  .listing-body::after { content: none; }
-  /* Subordinate to the line it describes, or the two read as one blob of
-     mono: smaller, dimmer, and hung off a tick rule. */
-  .listing-fact {
-    grid-column: 2; white-space: normal;
-    margin: 1px 0 9px; padding-left: 11px;
-    border-left: 2px solid var(--page-border-strong);
-    font-size: 11px; line-height: 1.5;
-    color: var(--color-text-tertiary);
-  }
   .properties { grid-template-columns: minmax(0, 1fr); }
   .evidence { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
@@ -954,7 +1050,6 @@ code {
   .tool-modal { padding: 24px; }
   .tool-row { grid-template-columns: auto minmax(0, 1fr); }
   .tool-row-more { display: none; }
-  .listing-code { font-size: 12px; }
 }
 
 @media (max-width: 420px) {

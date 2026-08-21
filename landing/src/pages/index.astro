@@ -26,6 +26,7 @@ const icons = {
   shield: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 3v5c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6z"/><path d="M9.5 12l1.8 1.8L15 10"/></svg>`,
   cube: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l8 4.5v9L12 21l-8-4.5v-9z"/><path d="M4 7.5l8 4.5 8-4.5"/><path d="M12 12v9"/></svg>`,
   close: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></svg>`,
+  cursor: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3l14 8.5-6.2 1.6L9.6 19z"/></svg>`,
   play: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M6 4l14 8-14 8z"/></svg>`,
 };
 
@@ -36,63 +37,283 @@ const navLinks = [
 ];
 
 /*
-  The hero listing. Build-time syntax highlighting: the input is a constant in
-  this file, so there is no user data and no client-side highlighter to ship —
-  a ~20-line tokenizer beats pulling in a library for twelve lines of C++.
+  The hero listing — one self-contained C++ header, annotated the way the
+  engine annotates it.
 
-  `fact` is what the engine records for that line. Everything shown here is a
-  real capability of the index: qualified names, kind classification, return
-  types, and reference resolution through a smart pointer to its pointee.
+  The snippet is deliberately textbook C++ rather than a slice of our own
+  source: a visitor should be able to read all 28 lines without knowing this
+  codebase, and the constructs on show (a concept, a constrained pack, a fold,
+  a member initialiser) are the ones that make a parser earn its keep.
+
+  Every annotation below states something the index really records — a kind, a
+  qualified name, a resolved reference, an include edge. Where the engine does
+  NOT know, the annotation says so; `tone: "warn"` is that case, and it is on
+  the page on purpose. Nothing here claims overload resolution or template
+  instantiation, because we do not do either.
+
+  Build-time only: the tokenizer, the span resolution and the markup all run
+  during `astro build`. The client ships no highlighter and no snippet data —
+  just the ~90 lines of pointer logic that move two boxes around.
 */
+const snippet = `#include <concepts>
+#include <numbers>
+
+namespace geometry {
+
+template <typename T>
+concept Shape = requires(const T& s) {
+  { s.area() } -> std::convertible_to<double>;
+};
+
+class Circle {
+ public:
+  explicit Circle(double r) noexcept : radius_{r} {}
+
+  [[nodiscard]] auto area() const noexcept -> double {
+    return std::numbers::pi * radius_ * radius_;
+  }
+
+ private:
+  double radius_;
+};
+
+template <typename... Ts> requires (Shape<Ts> && ...)
+auto total_area(const Ts&... shapes) -> double {
+  return (shapes.area() + ...);
+}
+
+}  // namespace geometry`;
+
+/*
+  Annotations are anchored by the TEXT they cover, not by a column number, and
+  resolved against the snippet at build time. Edit a line and the build either
+  still finds the anchor or fails loudly — it can never silently annotate the
+  wrong span. `demo` marks the node the component demonstrates itself with.
+*/
+type Annotation = {
+  line: number;
+  text: string;
+  kind: string;
+  title: string;
+  detail: string;
+  tone?: "warn";
+  demo?: true;
+};
+
+const annotations: Annotation[] = [
+  {
+    line: 1,
+    text: "#include <concepts>",
+    kind: "include directive",
+    title: "geometry.hpp → <concepts>",
+    detail:
+      "Our own preprocessor walks this, not the compiler's — which is why this file needs no build configuration to be read. The edge lands in the include graph, and that graph is what lets an edit invalidate the files that reach it and nothing else.",
+  },
+  {
+    line: 2,
+    text: "#include <numbers>",
+    kind: "include directive",
+    title: "geometry.hpp → <numbers>",
+    detail:
+      "Recorded as a second edge out of this file. Both directives survive as nodes in the tree rather than being consumed and discarded the way a compiler front-end consumes them.",
+  },
+  {
+    line: 4,
+    text: "namespace geometry",
+    kind: "namespace",
+    title: "geometry",
+    detail:
+      "Opens the scope every declaration below is qualified into, and holds them as its children. The index is keyed on qualified names, not on the spelling at the use site.",
+  },
+  {
+    line: 7,
+    text: "concept Shape",
+    kind: "concept",
+    title: "geometry::Shape",
+    detail:
+      "A declaration in its own right — span, kind, qualified name — carrying the requires-expression that defines it: one parameter of type const T&, and one compound requirement over it.",
+  },
+  {
+    line: 8,
+    text: "s.area()",
+    kind: "unresolved",
+    title: "call on a dependent type",
+    detail:
+      "The call is kept, with its shape and its span. What it resolves to is not: T is unknown here, so no callee is recorded. Surfaced as unresolved rather than guessed — an index that quietly invents this edge is worse than one that admits it cannot follow it.",
+    tone: "warn",
+  },
+  {
+    line: 11,
+    text: "class Circle",
+    kind: "class",
+    title: "geometry::Circle",
+    detail:
+      "One record, with its members already sorted: constructors, member functions, member variables, nested types — each carrying the access it was declared under.",
+  },
+  {
+    line: 13,
+    text: "explicit Circle(double r) noexcept",
+    kind: "constructor",
+    title: "geometry::Circle::Circle(double)",
+    detail:
+      "Classified as a constructor rather than a member function, and further as neither a copy nor a move. explicit and noexcept ride along on the record as specifiers, not as text.",
+  },
+  {
+    line: 13,
+    text: "radius_{r}",
+    kind: "member initialiser",
+    title: "initialises radius_ · declared line 20",
+    detail:
+      "Held as a structured initialiser — the member it names on one side, the argument r on the other — rather than as a span of source between a colon and a brace. This is the pair a rename has to move together or refuse.",
+    demo: true,
+  },
+  {
+    line: 15,
+    text: "[[nodiscard]] auto area() const noexcept -> double",
+    kind: "member function",
+    title: "geometry::Circle::area() const",
+    detail:
+      "Flagged as a trailing return, and read through to double. The const qualification and the nodiscard attribute are both recorded on the declaration rather than discarded as noise.",
+  },
+  {
+    line: 16,
+    text: "std::numbers::pi",
+    kind: "qualified name",
+    title: "std :: numbers :: pi",
+    detail:
+      "Kept as a chain, not a string: pi, qualified by numbers, qualified by std. Nothing outside this source tree is indexed and nothing about it is assumed — but the name it was written under survives intact.",
+  },
+  {
+    line: 16,
+    text: "radius_",
+    kind: "expression",
+    title: "operand of a binary expression",
+    detail:
+      "The return value stays a tree — two nested multiplications, each operand at its own span — instead of collapsing to the text between return and the semicolon. Structure is what later passes have to work with.",
+  },
+  {
+    line: 20,
+    text: "double radius_;",
+    kind: "field",
+    title: "geometry::Circle::radius_",
+    detail:
+      "Recorded private, of type double, at this exact span. The initialiser on line 13 names this member and the expression on line 16 uses it — three sites that any rename of this field has to reach.",
+  },
+  {
+    line: 23,
+    text: "typename... Ts",
+    kind: "template parameter pack",
+    title: "Ts · variadic",
+    detail:
+      "One parameter, marked variadic. We never expand it, because we never instantiate — the declaration is the thing indexed, and that is precisely why this file can be understood without being built.",
+  },
+  {
+    line: 23,
+    text: "requires (Shape<Ts> && ...)",
+    kind: "requires clause",
+    title: "fold over Ts, operator &&",
+    detail:
+      "The constraint is stored on the template as a fold in its own right, with its operator. What it would evaluate to needs instantiation; its shape does not, so its shape is what we keep.",
+  },
+  {
+    line: 24,
+    text: "total_area",
+    kind: "function template",
+    title: "geometry::total_area",
+    detail:
+      "A function template at namespace scope, sitting beside the class and the concept as a sibling in the same namespace record.",
+  },
+  {
+    line: 25,
+    text: "(shapes.area() + ...)",
+    kind: "fold expression",
+    title: "fold over Ts, operator +",
+    detail:
+      "A fold, its operator, and underneath it a method call on shapes — all of it still standing even though the pack it folds over is not known here. Structure survives where resolution cannot.",
+  },
+];
+
+/* ── Build-time tokenizer ──────────────────────────────────────────
+   Three hues, matching the palette's rule about the listing reading as type
+   rather than confetti: keyword, type, punctuation, plus a dimmed register
+   for comments and attributes. Twenty-eight lines of known input do not
+   justify shipping a highlighter to the client. */
 const KEYWORD =
-  /^(namespace|class|struct|public|private|protected|auto|const|using|return|template|typename|inline|static)$/;
+  /^(auto|class|concept|const|constexpr|explicit|inline|namespace|noexcept|private|protected|public|requires|return|static|struct|template|typename|using|virtual|bool|char|double|float|int|long|short|signed|unsigned|void)$/;
 
 const esc = (s: string) =>
   s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 
-function highlight(line: string): string {
-  const TOKEN = /(\/\/[^\n]*)|([A-Za-z_][A-Za-z0-9_]*)|(::|->|[{}()<>;,&*:])|(\s+)/g;
+function hl(src: string): string {
+  const TOKEN =
+    /(\/\/[^\n]*)|(\[\[[^\]]*\]\])|(\d[\w.]*)|([A-Za-z_]\w*)|(::|->|\.\.\.|[-{}()<>;,&*:=+\/.[\]])|(\s+)/g;
   let out = "";
   let last = 0;
   let m: RegExpExecArray | null;
-  while ((m = TOKEN.exec(line)) !== null) {
-    if (m.index > last) out += esc(line.slice(last, m.index));
+  while ((m = TOKEN.exec(src)) !== null) {
+    if (m.index > last) out += esc(src.slice(last, m.index));
     last = m.index + m[0].length;
     if (m[1]) out += `<span class="tok-c">${esc(m[1])}</span>`;
-    else if (m[2]) {
-      const w = m[2];
+    else if (m[2]) out += `<span class="tok-a">${esc(m[2])}</span>`;
+    else if (m[3]) out += `<span class="tok-t">${esc(m[3])}</span>`;
+    else if (m[4]) {
+      const w = m[4];
       if (KEYWORD.test(w)) out += `<span class="tok-k">${esc(w)}</span>`;
       else if (/^[A-Z]/.test(w) || w === "std") out += `<span class="tok-t">${esc(w)}</span>`;
       else out += esc(w);
-    } else if (m[3]) out += `<span class="tok-p">${esc(m[3])}</span>`;
-    else out += m[4];
+    } else if (m[5]) out += `<span class="tok-p">${esc(m[5])}</span>`;
+    else out += m[6];
   }
-  if (last < line.length) out += esc(line.slice(last));
+  if (last < src.length) out += esc(src.slice(last));
   return out;
 }
 
-const listing: { code: string; kind?: string; fact?: string }[] = [
-  { code: "namespace codex {", kind: "namespace", fact: "codex" },
-  { code: "" },
-  { code: "class Analyzer {", kind: "class", fact: "codex::Analyzer" },
-  { code: " public:" },
-  { code: "  auto analyze(const Source& src)", kind: "function", fact: "codex::Analyzer::analyze" },
-  {
-    code: "      -> std::expected<AnalysisResult, Error>;",
-    kind: "returns",
-    fact: "std::expected<AnalysisResult, Error>",
-  },
-  { code: "" },
-  { code: " private:" },
-  {
-    code: "  std::shared_ptr<SymbolsDatabase> db_;",
-    kind: "field",
-    fact: "db_ → codex::SymbolsDatabase",
-  },
-  { code: "};" },
-  { code: "" },
-  { code: "}  // namespace codex" },
-];
+// `#include <x>` needs the angle-bracketed header read as one unit; the
+// general tokenizer would take `<` and `>` for operators.
+function hlDirective(src: string): string {
+  const m = /^(\s*)(#\s*\w+)(\s+)(<[^>]+>)(.*)$/.exec(src);
+  if (!m) return hl(src);
+  return `${m[1]}<span class="tok-k">${esc(m[2])}</span>${m[3]}<span class="tok-t">${esc(m[4])}</span>${hl(m[5])}`;
+}
+
+/*
+  Resolve each annotation to a character range, then assert the ranges are
+  findable and disjoint. Both throws are build failures by design: a snippet
+  edit that orphans an anchor must not ship a listing that highlights the
+  wrong tokens or, worse, silently highlights nothing.
+*/
+const snippetLines = snippet.split("\n");
+
+const nodes = annotations.map((a, id) => {
+  const src = snippetLines[a.line - 1];
+  if (src === undefined) throw new Error(`hero snippet: no line ${a.line}`);
+  const from = src.indexOf(a.text);
+  if (from < 0)
+    throw new Error(`hero snippet: line ${a.line} does not contain ${JSON.stringify(a.text)}`);
+  return { ...a, id, from, to: from + a.text.length };
+});
+
+for (const a of nodes)
+  for (const b of nodes)
+    if (a.id < b.id && a.line === b.line && a.from < b.to && b.from < a.to)
+      throw new Error(`hero snippet: annotations ${a.id} and ${b.id} overlap on line ${a.line}`);
+
+const codeRows = snippetLines.map((src, i) => {
+  const own = nodes.filter((n) => n.line === i + 1).sort((a, b) => a.from - b.from);
+  const render = /^\s*#/.test(src) ? hlDirective : hl;
+  let html = "";
+  let cur = 0;
+  for (const n of own) {
+    if (n.from > cur) html += render(src.slice(cur, n.from));
+    html +=
+      `<button type="button" class="node" data-node="${n.id}"` +
+      `${n.demo ? " data-demo" : ""}` +
+      ` aria-describedby="probe-ann-${n.id}">${render(src.slice(n.from, n.to))}</button>`;
+    cur = n.to;
+  }
+  if (cur < src.length) html += render(src.slice(cur));
+  return html || "&nbsp;";
+});
 
 // Rows are the approaches, not the criteria — that is what lets the table
 // transpose into one block per approach on a phone with CSS alone.
@@ -264,29 +485,50 @@ const metrics = [
           </div>
 
           <!--
-            Source on the left, what the engine records on the right, on the same
-            line. One grid, three cells per row, so the two halves cannot drift
-            apart no matter the viewport.
+            The probed listing. Two layers: the listing itself is static,
+            server-rendered HTML, and every annotated span is a real <button>
+            in it. Above that sit exactly three movable boxes — a scrim that
+            dims the rest of the file, a halo that snaps to the active span,
+            and one card. Nothing is duplicated, nothing re-renders, and the
+            only thing that changes on hover is a transform.
+
+            Hidden from touch and from narrow viewports: hover IS the
+            interaction, and a 28-line listing wants width no phone has. The
+            annotations stay in the DOM for assistive tech and for crawlers.
           -->
-          <div class="listing" data-aos="fade-up" data-aos-delay="240">
-            <div class="listing-head">
-              <span class="eyebrow">Analyzer.hpp</span>
-              <span class="eyebrow">What the engine indexes</span>
+          <div class="probe" data-aos="fade-up" data-aos-delay="240">
+            <div class="probe-head">
+              <span class="eyebrow">geometry.hpp</span>
+              <span class="probe-hint">
+                <span class="probe-hint-icon" aria-hidden="true" set:html={icons.cursor} />
+                Hover a marked token — the engine reports what it recorded
+              </span>
             </div>
-            <div class="listing-body">
+
+            <div class="probe-body">
+              <div class="probe-scrim" aria-hidden="true"></div>
+              <div class="probe-halo" aria-hidden="true"></div>
               {
-                listing.map((row, i) => (
-                  <div class="listing-row">
-                    <span class="listing-num">{i + 1}</span>
-                    <code class="listing-code" set:html={highlight(row.code) || "&nbsp;"} />
-                    <span class="listing-fact">
-                      {row.kind && (
-                        <>
-                          <span class="fact-kind">{row.kind}</span>
-                          {row.fact}
-                        </>
-                      )}
-                    </span>
+                codeRows.map((row, i) => (
+                  <div class="probe-row">
+                    <span class="probe-num">{i + 1}</span>
+                    <code class="probe-code" set:html={row} />
+                  </div>
+                ))
+              }
+              <div class="probe-card" aria-hidden="true"></div>
+            </div>
+
+            {/* Source of truth for the card contents — cloned into it on
+                hover, and the description each node points at for a screen
+                reader. Written once, so the two can never disagree. */}
+            <div class="sr-only">
+              {
+                nodes.map((n) => (
+                  <div id={`probe-ann-${n.id}`} data-tone={n.tone}>
+                    <span class="probe-kind">{n.kind}</span>
+                    <span class="probe-title">{n.title}</span>
+                    <p class="probe-detail">{n.detail}</p>
                   </div>
                 ))
               }
@@ -634,6 +876,150 @@ const metrics = [
         row.addEventListener("mouseleave", off);
         row.addEventListener("focus", on);
         row.addEventListener("blur", off);
+      }
+    </script>
+
+    <script>
+      /*
+        Hero probe. The listing is static; this moves two boxes over it.
+
+        Positions come from offsetLeft/offsetTop against .probe-body, which is
+        the offsetParent — no getBoundingClientRect, so no scroll arithmetic
+        and nothing to recompute while the page scrolls. Every span is on one
+        line by construction (the build asserts the annotations are disjoint),
+        so one rectangle per highlight is always enough.
+      */
+      const probe = document.querySelector<HTMLElement>(".probe");
+
+      if (probe) {
+        const body = probe.querySelector<HTMLElement>(".probe-body")!;
+        const halo = probe.querySelector<HTMLElement>(".probe-halo")!;
+        const card = probe.querySelector<HTMLElement>(".probe-card")!;
+        const nodes = [...probe.querySelectorAll<HTMLButtonElement>(".node")];
+        const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+        let active: HTMLElement | null = null;
+        let engaged = false;
+        let timers: number[] = [];
+
+        const stopDemo = () => {
+          for (const t of timers) clearTimeout(t);
+          timers = [];
+        };
+
+        // Geometry only — safe to re-run on resize or after the mono font
+        // lands, both of which move every span.
+        function place(node: HTMLElement) {
+          // Inset from the full line box, so the pill clears the rows above
+          // and below instead of stacking flush against them.
+          halo.style.transform = `translate(${node.offsetLeft - 5}px, ${node.offsetTop + 2}px)`;
+          halo.style.width = `${node.offsetWidth + 10}px`;
+          halo.style.height = `${node.offsetHeight - 4}px`;
+
+          const gap = 12;
+          const x = Math.max(
+            0,
+            Math.min(
+              node.offsetLeft + node.offsetWidth / 2 - card.offsetWidth / 2,
+              body.clientWidth - card.offsetWidth,
+            ),
+          );
+          // Above the line, unless that would leave the panel — then below it.
+          const above = node.offsetTop - card.offsetHeight - gap;
+          const y = above < 0 ? node.offsetTop + node.offsetHeight + gap : above;
+          card.style.transform = `translate(${x}px, ${y}px)`;
+        }
+
+        function activate(node: HTMLElement) {
+          if (node === active) return;
+          active?.classList.remove("is-active");
+          active = node;
+          node.classList.add("is-active");
+
+          const src = document.getElementById(`probe-ann-${node.dataset.node}`);
+          if (src) {
+            card.replaceChildren(...(src.cloneNode(true) as HTMLElement).childNodes);
+            // Drives the halo and chip colour: the one "unresolved" annotation
+            // is the only place the page admits a gap, and it should look it.
+            probe.dataset.tone = src.dataset.tone ?? "";
+          }
+          place(node);
+          probe.classList.add("is-probing");
+        }
+
+        function deactivate() {
+          if (!active) return;
+          active.classList.remove("is-active");
+          active = null;
+          probe.classList.remove("is-probing");
+          // Transforms are left where they are, so re-entering the listing
+          // slides in from the last span rather than jumping from nowhere.
+        }
+
+        body.addEventListener("mouseover", (event) => {
+          const node = (event.target as HTMLElement).closest<HTMLElement>(".node");
+          engaged = true;
+          stopDemo();
+          if (node) activate(node);
+          else deactivate();
+        });
+
+        // Keep the highlight while a node holds keyboard focus — the pointer
+        // wandering off should not blank the thing the caret is sitting on.
+        probe.addEventListener("mouseleave", () => {
+          if (!probe.contains(document.activeElement)) deactivate();
+        });
+
+        for (const node of nodes) {
+          node.addEventListener("focus", () => {
+            engaged = true;
+            stopDemo();
+            activate(node);
+          });
+          node.addEventListener("blur", () => {
+            if (active === node) deactivate();
+          });
+        }
+
+        probe.addEventListener("keydown", (event) => {
+          if (event.key !== "Escape") return;
+          (document.activeElement as HTMLElement | null)?.blur();
+          deactivate();
+        });
+
+        window.addEventListener(
+          "resize",
+          () => {
+            if (active) place(active);
+          },
+          { passive: true },
+        );
+
+        // Spans are measured in Geist Mono; before it loads they are measured
+        // in the fallback, and every offset is wrong by a little.
+        document.fonts?.ready.then(() => {
+          if (active) place(active);
+        });
+
+        /*
+          Nobody discovers a hover affordance they did not know was there. The
+          listing demonstrates itself once, on the node that makes the best
+          case (a member initialiser resolved to its field), and yields the
+          moment the visitor touches it. Motion-sensitive visitors get the
+          dotted underlines and the header hint, which is the same information
+          without the performance.
+        */
+        const demo = nodes.find((node) => node.hasAttribute("data-demo"));
+        if (demo && !reduce) {
+          timers.push(
+            window.setTimeout(() => {
+              if (!engaged) activate(demo);
+            }, 1200),
+            window.setTimeout(() => {
+              if (!engaged) deactivate();
+            }, 4400),
+          );
+        }
       }
     </script>
 
