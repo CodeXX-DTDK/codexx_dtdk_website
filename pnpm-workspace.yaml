@@ -6,3 +6,13 @@ packages:
   - "codegen"
   - "docsgen"
   - "mcp"
+
+allowBuilds:
+  esbuild: set this to true or false
+  sharp: set this to true or false
+
+# esbuild and sharp need their postinstall scripts: esbuild links its platform
+# binary, sharp its native bindings. Without these, `astro build` fails.
+onlyBuiltDependencies:
+  - esbuild
+  - sharp

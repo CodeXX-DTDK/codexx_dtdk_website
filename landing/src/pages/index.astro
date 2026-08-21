@@ -1,11 +1,10 @@
 ---
-// Self-hosted Inter (bundled woff2 — no third-party round-trip, no layout
-// shift). Weights used across the page.
-import "@fontsource/inter/400.css";
-import "@fontsource/inter/500.css";
-import "@fontsource/inter/600.css";
-import "@fontsource/inter/700.css";
-import "@fontsource/inter/800.css";
+// Self-hosted Archivo (variable) + Geist Mono — bundled woff2, no third-party
+// round-trip, no layout shift. Archivo carries the whole display/body scale via
+// its wght axis; Geist Mono carries the technical register: eyebrows, the
+// annotated listing, stage names, table headers.
+import "@fontsource-variable/archivo";
+import "@fontsource/geist-mono/500.css";
 import "../styles/landing.css";
 import Analytics from "@vercel/analytics/astro";
 // Site-wide "in active development" warning modal (once per visitor, cross-subdomain).
@@ -26,53 +25,406 @@ const icons = {
   code: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M9 8l-4 4 4 4"/><path d="M15 8l4 4-4 4"/></svg>`,
   shield: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 3v5c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6z"/><path d="M9.5 12l1.8 1.8L15 10"/></svg>`,
   cube: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l8 4.5v9L12 21l-8-4.5v-9z"/><path d="M4 7.5l8 4.5 8-4.5"/><path d="M12 12v9"/></svg>`,
-  open: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M14 5h5v5"/><path d="M19 5l-7 7"/><path d="M19 14v3a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h3"/></svg>`,
+  close: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></svg>`,
+  cursor: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3l14 8.5-6.2 1.6L9.6 19z"/></svg>`,
+  play: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M6 4l14 8-14 8z"/></svg>`,
 };
 
-// Status reflects real component versions (clis/*/version.json, libs/linter, codexx_mcp_server).
+const navLinks = [
+  { href: "/origin", label: "Origin" },
+  { href: "/about", label: "About" },
+  { href: "/ai", label: "On AI" },
+];
+
+/*
+  The hero listing — one self-contained C++ header, annotated the way the
+  engine annotates it.
+
+  The snippet is deliberately textbook C++ rather than a slice of our own
+  source: a visitor should be able to read all 28 lines without knowing this
+  codebase, and the constructs on show (a concept, a constrained pack, a fold,
+  a member initialiser) are the ones that make a parser earn its keep.
+
+  Every annotation below states something the index really records — a kind, a
+  qualified name, a resolved reference, an include edge. Where the engine does
+  NOT know, the annotation says so; `tone: "warn"` is that case, and it is on
+  the page on purpose. Nothing here claims overload resolution or template
+  instantiation, because we do not do either.
+
+  Build-time only: the tokenizer, the span resolution and the markup all run
+  during `astro build`. The client ships no highlighter and no snippet data —
+  just the ~90 lines of pointer logic that move two boxes around.
+*/
+const snippet = `#include <concepts>
+#include <numbers>
+
+namespace geometry {
+
+template <typename T>
+concept Shape = requires(const T& s) {
+  { s.area() } -> std::convertible_to<double>;
+};
+
+class Circle {
+ public:
+  explicit Circle(double r) noexcept : radius_{r} {}
+
+  [[nodiscard]] auto area() const noexcept -> double {
+    return std::numbers::pi * radius_ * radius_;
+  }
+
+ private:
+  double radius_;
+};
+
+template <typename... Ts> requires (Shape<Ts> && ...)
+auto total_area(const Ts&... shapes) -> double {
+  return (shapes.area() + ...);
+}
+
+}  // namespace geometry`;
+
+/*
+  Annotations are anchored by the TEXT they cover, not by a column number, and
+  resolved against the snippet at build time. Edit a line and the build either
+  still finds the anchor or fails loudly — it can never silently annotate the
+  wrong span. `demo` marks the node the component demonstrates itself with.
+*/
+type Annotation = {
+  line: number;
+  text: string;
+  kind: string;
+  title: string;
+  detail: string;
+  tone?: "warn";
+  demo?: true;
+};
+
+const annotations: Annotation[] = [
+  {
+    line: 1,
+    text: "#include <concepts>",
+    kind: "include directive",
+    title: "geometry.hpp → <concepts>",
+    detail:
+      "Our own preprocessor walks this, not the compiler's — which is why this file needs no build configuration to be read. The edge lands in the include graph, and that graph is what lets an edit invalidate the files that reach it and nothing else.",
+  },
+  {
+    line: 2,
+    text: "#include <numbers>",
+    kind: "include directive",
+    title: "geometry.hpp → <numbers>",
+    detail:
+      "Recorded as a second edge out of this file. Both directives survive as nodes in the tree rather than being consumed and discarded the way a compiler front-end consumes them.",
+  },
+  {
+    line: 4,
+    text: "namespace geometry",
+    kind: "namespace",
+    title: "geometry",
+    detail:
+      "Opens the scope every declaration below is qualified into, and holds them as its children. The index is keyed on qualified names, not on the spelling at the use site.",
+  },
+  {
+    line: 7,
+    text: "concept Shape",
+    kind: "concept",
+    title: "geometry::Shape",
+    detail:
+      "A declaration in its own right — span, kind, qualified name — carrying the requires-expression that defines it: one parameter of type const T&, and one compound requirement over it.",
+  },
+  {
+    line: 8,
+    text: "s.area()",
+    kind: "unresolved",
+    title: "call on a dependent type",
+    detail:
+      "The call is kept, with its shape and its span. What it resolves to is not: T is unknown here, so no callee is recorded. Surfaced as unresolved rather than guessed — an index that quietly invents this edge is worse than one that admits it cannot follow it.",
+    tone: "warn",
+  },
+  {
+    line: 11,
+    text: "class Circle",
+    kind: "class",
+    title: "geometry::Circle",
+    detail:
+      "One record, with its members already sorted: constructors, member functions, member variables, nested types — each carrying the access it was declared under.",
+  },
+  {
+    line: 13,
+    text: "explicit Circle(double r) noexcept",
+    kind: "constructor",
+    title: "geometry::Circle::Circle(double)",
+    detail:
+      "Classified as a constructor rather than a member function, and further as neither a copy nor a move. explicit and noexcept ride along on the record as specifiers, not as text.",
+  },
+  {
+    line: 13,
+    text: "radius_{r}",
+    kind: "member initialiser",
+    title: "initialises radius_ · declared line 20",
+    detail:
+      "Held as a structured initialiser — the member it names on one side, the argument r on the other — rather than as a span of source between a colon and a brace. This is the pair a rename has to move together or refuse.",
+    demo: true,
+  },
+  {
+    line: 15,
+    text: "[[nodiscard]] auto area() const noexcept -> double",
+    kind: "member function",
+    title: "geometry::Circle::area() const",
+    detail:
+      "Flagged as a trailing return, and read through to double. The const qualification and the nodiscard attribute are both recorded on the declaration rather than discarded as noise.",
+  },
+  {
+    line: 16,
+    text: "std::numbers::pi",
+    kind: "qualified name",
+    title: "std :: numbers :: pi",
+    detail:
+      "Kept as a chain, not a string: pi, qualified by numbers, qualified by std. Nothing outside this source tree is indexed and nothing about it is assumed — but the name it was written under survives intact.",
+  },
+  {
+    line: 16,
+    text: "radius_",
+    kind: "expression",
+    title: "operand of a binary expression",
+    detail:
+      "The return value stays a tree — two nested multiplications, each operand at its own span — instead of collapsing to the text between return and the semicolon. Structure is what later passes have to work with.",
+  },
+  {
+    line: 20,
+    text: "double radius_;",
+    kind: "field",
+    title: "geometry::Circle::radius_",
+    detail:
+      "Recorded private, of type double, at this exact span. The initialiser on line 13 names this member and the expression on line 16 uses it — three sites that any rename of this field has to reach.",
+  },
+  {
+    line: 23,
+    text: "typename... Ts",
+    kind: "template parameter pack",
+    title: "Ts · variadic",
+    detail:
+      "One parameter, marked variadic. We never expand it, because we never instantiate — the declaration is the thing indexed, and that is precisely why this file can be understood without being built.",
+  },
+  {
+    line: 23,
+    text: "requires (Shape<Ts> && ...)",
+    kind: "requires clause",
+    title: "fold over Ts, operator &&",
+    detail:
+      "The constraint is stored on the template as a fold in its own right, with its operator. What it would evaluate to needs instantiation; its shape does not, so its shape is what we keep.",
+  },
+  {
+    line: 24,
+    text: "total_area",
+    kind: "function template",
+    title: "geometry::total_area",
+    detail:
+      "A function template at namespace scope, sitting beside the class and the concept as a sibling in the same namespace record.",
+  },
+  {
+    line: 25,
+    text: "(shapes.area() + ...)",
+    kind: "fold expression",
+    title: "fold over Ts, operator +",
+    detail:
+      "A fold, its operator, and underneath it a method call on shapes — all of it still standing even though the pack it folds over is not known here. Structure survives where resolution cannot.",
+  },
+];
+
+/* ── Build-time tokenizer ──────────────────────────────────────────
+   Three hues, matching the palette's rule about the listing reading as type
+   rather than confetti: keyword, type, punctuation, plus a dimmed register
+   for comments and attributes. Twenty-eight lines of known input do not
+   justify shipping a highlighter to the client. */
+const KEYWORD =
+  /^(auto|class|concept|const|constexpr|explicit|inline|namespace|noexcept|private|protected|public|requires|return|static|struct|template|typename|using|virtual|bool|char|double|float|int|long|short|signed|unsigned|void)$/;
+
+const esc = (s: string) =>
+  s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+
+function hl(src: string): string {
+  const TOKEN =
+    /(\/\/[^\n]*)|(\[\[[^\]]*\]\])|(\d[\w.]*)|([A-Za-z_]\w*)|(::|->|\.\.\.|[-{}()<>;,&*:=+\/.[\]])|(\s+)/g;
+  let out = "";
+  let last = 0;
+  let m: RegExpExecArray | null;
+  while ((m = TOKEN.exec(src)) !== null) {
+    if (m.index > last) out += esc(src.slice(last, m.index));
+    last = m.index + m[0].length;
+    if (m[1]) out += `<span class="tok-c">${esc(m[1])}</span>`;
+    else if (m[2]) out += `<span class="tok-a">${esc(m[2])}</span>`;
+    else if (m[3]) out += `<span class="tok-t">${esc(m[3])}</span>`;
+    else if (m[4]) {
+      const w = m[4];
+      if (KEYWORD.test(w)) out += `<span class="tok-k">${esc(w)}</span>`;
+      else if (/^[A-Z]/.test(w) || w === "std") out += `<span class="tok-t">${esc(w)}</span>`;
+      else out += esc(w);
+    } else if (m[5]) out += `<span class="tok-p">${esc(m[5])}</span>`;
+    else out += m[6];
+  }
+  if (last < src.length) out += esc(src.slice(last));
+  return out;
+}
+
+// `#include <x>` needs the angle-bracketed header read as one unit; the
+// general tokenizer would take `<` and `>` for operators.
+function hlDirective(src: string): string {
+  const m = /^(\s*)(#\s*\w+)(\s+)(<[^>]+>)(.*)$/.exec(src);
+  if (!m) return hl(src);
+  return `${m[1]}<span class="tok-k">${esc(m[2])}</span>${m[3]}<span class="tok-t">${esc(m[4])}</span>${hl(m[5])}`;
+}
+
+/*
+  Resolve each annotation to a character range, then assert the ranges are
+  findable and disjoint. Both throws are build failures by design: a snippet
+  edit that orphans an anchor must not ship a listing that highlights the
+  wrong tokens or, worse, silently highlights nothing.
+*/
+const snippetLines = snippet.split("\n");
+
+const nodes = annotations.map((a, id) => {
+  const src = snippetLines[a.line - 1];
+  if (src === undefined) throw new Error(`hero snippet: no line ${a.line}`);
+  const from = src.indexOf(a.text);
+  if (from < 0)
+    throw new Error(`hero snippet: line ${a.line} does not contain ${JSON.stringify(a.text)}`);
+  return { ...a, id, from, to: from + a.text.length };
+});
+
+for (const a of nodes)
+  for (const b of nodes)
+    if (a.id < b.id && a.line === b.line && a.from < b.to && b.from < a.to)
+      throw new Error(`hero snippet: annotations ${a.id} and ${b.id} overlap on line ${a.line}`);
+
+const codeRows = snippetLines.map((src, i) => {
+  const own = nodes.filter((n) => n.line === i + 1).sort((a, b) => a.from - b.from);
+  const render = /^\s*#/.test(src) ? hlDirective : hl;
+  let html = "";
+  let cur = 0;
+  for (const n of own) {
+    if (n.from > cur) html += render(src.slice(cur, n.from));
+    html +=
+      `<button type="button" class="node" data-node="${n.id}"` +
+      `${n.demo ? " data-demo" : ""}` +
+      ` aria-describedby="probe-ann-${n.id}">${render(src.slice(n.from, n.to))}</button>`;
+    cur = n.to;
+  }
+  if (cur < src.length) html += render(src.slice(cur));
+  return html || "&nbsp;";
+});
+
+// Rows are the approaches, not the criteria — that is what lets the table
+// transpose into one block per approach on a phone with CSS alone.
+const compare = [
+  {
+    approach: "Compiler front-end",
+    ours: false,
+    setup: "A working build configuration",
+    partial: "Rejected — it has to compile",
+    reanalysis: "The whole translation unit",
+    depth: "Complete: overload resolution, template instantiation, the lot",
+  },
+  {
+    approach: "Pattern matching",
+    ours: false,
+    setup: "None",
+    partial: "Tolerated",
+    reanalysis: "Cheap, and wrong about as often",
+    depth: "Effectively none — C++ is far too context-sensitive to match",
+  },
+  {
+    approach: "CodeXX engine",
+    ours: true,
+    setup: "Point it at the source tree",
+    partial: "Tolerated — it parses as you type",
+    reanalysis: "Incremental, scoped to what depends on the edit",
+    depth: "Syntactic, plus best-effort symbol and type resolution",
+  },
+];
+
+// The real pipeline, stage for stage (libs/codex, composed in codex_pipeline).
+const stages = [
+  { n: "01", name: "Collect", what: "Walks the tree for translation units and headers.", impl: "FilesCollector" },
+  { n: "02", name: "Preprocess", what: "Our own #include and #define pass, not the compiler's.", impl: "Preprocessor" },
+  { n: "03", name: "Parse", what: "A forked, extended tree-sitter-cpp grammar produces the CST.", impl: "Parser" },
+  { n: "04", name: "Extract", what: "The CST becomes typed AST nodes carrying source spans.", impl: "SourceExtractor" },
+  { n: "05", name: "Analyze", what: "Symbols are indexed and references linked to declarations.", impl: "Analyzer" },
+  { n: "06", name: "Index", what: "A multi-key symbol database the tools query.", impl: "SymbolsDatabase" },
+];
+
+const substrate = [
+  "Symbols and references",
+  "Include graph",
+  "Class hierarchy",
+  "Control-flow graph",
+  "Points-to analysis",
+  "Memory layout",
+];
+
+// `summary` rides the product row; `desc` is the long form shown in the modal.
+// Status reflects real component state (docsgen/codegen shipping, linter in
+// development, MCP server in preview).
 const products = [
   {
+    id: "docsgen",
     icon: "document",
     name: "Docs generator",
-    desc: "A modern documentation from source solution, generating MDX files tailored to the Astro + Starlight tech stack, supporting cross-file linking, code navigation and AI powered features.",
+    summary:
+      "Generates MDX straight from source — cross-linked, navigable, and native to the Astro + Starlight stack.",
+    desc: "A modern documentation-from-source solution, generating MDX files tailored to the Astro + Starlight stack, with cross-file linking, code navigation and AI-powered features.",
     badges: [
       { cls: "badge-free", label: "Free" },
       { cls: "badge-shipped", label: "Shipping soon" },
     ],
-    featured: false,
     href: DOCSGEN_URL,
+    cta: "Open the docs",
+    turn: "0",
   },
   {
+    id: "codegen",
     icon: "code",
-    name: "Code Generator",
-    desc: "A one-stop solution for all tasks requiring large amounts of boilerplate. Built on an innovative no DSL AST transform based model, the tool enables advanced RTTI infrastructure, automatic generation of serialization and deserialization methods, self-documenting components... and much more.",
+    name: "Code generator",
+    summary:
+      "AST transforms rather than a template DSL: RTTI, serialization, self-documenting types.",
+    desc: "A one-stop solution for anything that needs large amounts of boilerplate. Built on a no-DSL, AST-transform model, it powers advanced RTTI infrastructure, automatic generation of serialization and deserialization methods, self-documenting components, and much more.",
     badges: [{ cls: "badge-shipped", label: "Shipping soon" }],
-    featured: false,
     href: CODEGEN_URL,
+    cta: "Open the docs",
+    turn: "0.25",
   },
   {
+    id: "linter",
     icon: "shield",
     name: "Linter",
-    desc: "Our most ambitious product yet. Possible only thanks to our inter-procedural, thread-aware CFG, our linter won't just include the usual safety and compliance checks, our final goal is full borrow-checking for existing C++. Moreover the linter will reuse our proven scipting engine model to enable the creation of custom rules.",
+    summary:
+      "Inter-procedural, thread-aware control-flow analysis. The goal is borrow-checking for C++ as it already exists.",
+    desc: "Our most ambitious product yet. Possible only thanks to an inter-procedural, thread-aware CFG, the linter goes well past the usual safety and compliance checks — the final goal is full borrow-checking for existing C++. It also reuses our proven scripting-engine model, so you can write custom rules.",
     badges: [{ cls: "badge-dev", label: "In development" }],
-    featured: false,
+    href: EARLY_ACCESS_MAILTO,
+    cta: "Request early access",
+    turn: "0.5",
   },
   {
+    id: "mcp",
     icon: "cube",
     name: "MCP server",
-    desc: "For LLM-driven C++ workflows. Enables deep and efficient codebase knowledge thanks to tight integration with our proprietary engine and the use of advanced techniques and modern solutions for LLM instrumentation.",
+    summary:
+      "Seventeen tools that hand an LLM agent real structural knowledge of a C++ codebase.",
+    desc: "For LLM-driven C++ workflows. Enables deep and efficient codebase knowledge thanks to tight integration with our engine, and the use of advanced techniques and modern solutions for LLM instrumentation.",
     badges: [{ cls: "badge-shipped", label: "Shipping soon" }],
-    featured: false,
     href: MCP_URL,
+    cta: "Open the docs",
+    turn: "0.75",
   },
 ];
 
-// Grounded proof points — see plan: ~120k LoC, 49 ADRs (docs/ADRs), 4 products.
-const proof = [
-  { number: "120k+", label: "Lines of C++" },
-  { number: "53", label: "Architecture decision records" },
-  { number: "V1", label: "docsgen + codegen shipping" },
-  { number: "4", label: "Integrated products ecosystem" },
+// Measured against this repository, not estimated. Vendored code excluded.
+const metrics = [
+  { number: "166k", label: "Lines of first-party C++", note: "718 files, vendored code excluded" },
+  { number: "2,466", label: "Unit and integration tests", note: "engine, linter and toolchain" },
+  { number: "76", label: "Architecture decision records", note: "decisions written down, not folklore" },
 ];
 ---
 
@@ -81,135 +433,392 @@ const proof = [
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="dark" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <title>CodeXX DTDK — a legacy-free C++ developer tooling platform</title>
     <meta
       name="description"
-      content="The Dev-Tools Dev-Kit for C++. The foundational SDK and surrounding ecosystem of tools. Trying to build a nicer DX with QOL features and advanced safety and compliance tools for C++."
+      content="The Dev-Tool Development Kit for C++. One legacy-free engine covering the whole path from source to control-flow, powering documentation, code generation and memory-safety analysis."
     />
+    <!-- aos.css ships as a render-blocking stylesheet that holds every [data-aos]
+         element at opacity:0 until its JS runs. Without this, a visitor with no
+         JS — or a crawler that does not execute it — gets a blank page. -->
+    <noscript>
+      <style>
+        [data-aos] { opacity: 1 !important; transform: none !important; }
+      </style>
+    </noscript>
   </head>
   <body>
-    <script is:inline>
-      // Shared with the codegen site via the `starlight-theme` key so the chosen
-      // theme carries across the www ↔ codegen subdomains.
-      const saved = localStorage.getItem("starlight-theme");
-      const dark = saved
-        ? saved === "dark"
-        : window.matchMedia("(prefers-color-scheme: dark)").matches;
-      document.documentElement.dataset.theme = dark ? "dark" : "light";
-    </script>
-
-    <h1 class="sr-only">CodeXX DTDK — a legacy-free C++ developer tooling platform</h1>
-
     <div class="wrap">
       <nav class="nav">
-        <span class="nav-logo">CodeXX DTDK</span>
-        <div class="nav-links">
-          <a href="/origin">Origin</a>
-          <a href="/about">About</a>
-          <a href="/ai">On AI</a>
-          <a href={EARLY_ACCESS_MAILTO}>Early access</a>
+        <div class="container container-wide nav-inner">
+          <a class="nav-logo" href="/">CodeXX DTDK</a>
+          <div class="nav-right">
+            <div class="nav-links">
+              {navLinks.map((l) => <a href={l.href}>{l.label}</a>)}
+            </div>
+            <a class="btn-primary" href={EARLY_ACCESS_MAILTO}>Early access</a>
+          </div>
         </div>
       </nav>
 
       <header class="hero">
-        <h1>A legacy-free C++ developer tooling platform</h1>
-        <p>
-          The foundation for a new generation of developer tools for the C++ ecosystem.
-        </p>
-        <div class="hero-cta">
-          <a class="btn-primary" href={EARLY_ACCESS_MAILTO}>Request early access</a>
+        <!-- Placeholder backdrop — this is the swap point for the animated hero. -->
+        <div class="hero-bg" aria-hidden="true"></div>
+        <div class="hero-scrim" aria-hidden="true"></div>
+        <div class="container container-wide">
+          <div class="hero-inner">
+            <span class="eyebrow" data-aos="fade-up">C++ Dev-Tool Development Kit</span>
+            <h1 class="display" data-aos="fade-up" data-aos-delay="60">
+              A legacy-free C++ developer tooling platform
+            </h1>
+            <p class="lede" data-aos="fade-up" data-aos-delay="120">
+              One engine reads your C++ and holds the whole picture — syntax, symbols,
+              references, control flow. Documentation, code generation and memory-safety
+              analysis are what we build on top of it.
+            </p>
+            <div class="hero-cta" data-aos="fade-up" data-aos-delay="180">
+              <a class="btn-primary" href={EARLY_ACCESS_MAILTO}>Request early access</a>
+              <a class="btn-secondary" href="#engine">How it works</a>
+            </div>
+          </div>
+
+          <!--
+            The probed listing. Two layers: the listing itself is static,
+            server-rendered HTML, and every annotated span is a real <button>
+            in it. Above that sit exactly three movable boxes — a scrim that
+            dims the rest of the file, a halo that snaps to the active span,
+            and one card. Nothing is duplicated, nothing re-renders, and the
+            only thing that changes on hover is a transform.
+
+            Hidden from touch and from narrow viewports: hover IS the
+            interaction, and a 28-line listing wants width no phone has. The
+            annotations stay in the DOM for assistive tech and for crawlers.
+          -->
+          <div class="probe" data-aos="fade-up" data-aos-delay="240">
+            <div class="probe-head">
+              <span class="eyebrow">geometry.hpp</span>
+              <span class="probe-hint">
+                <span class="probe-hint-icon" aria-hidden="true" set:html={icons.cursor} />
+                Hover a marked token — the engine reports what it recorded
+              </span>
+            </div>
+
+            <div class="probe-body">
+              <div class="probe-scrim" aria-hidden="true"></div>
+              <div class="probe-halo" aria-hidden="true"></div>
+              {
+                codeRows.map((row, i) => (
+                  <div class="probe-row">
+                    <span class="probe-num">{i + 1}</span>
+                    <code class="probe-code" set:html={row} />
+                  </div>
+                ))
+              }
+              <div class="probe-card" aria-hidden="true"></div>
+            </div>
+
+            {/* Source of truth for the card contents — cloned into it on
+                hover, and the description each node points at for a screen
+                reader. Written once, so the two can never disagree. */}
+            <div class="sr-only">
+              {
+                nodes.map((n) => (
+                  <div id={`probe-ann-${n.id}`} data-tone={n.tone}>
+                    <span class="probe-kind">{n.kind}</span>
+                    <span class="probe-title">{n.title}</span>
+                    <p class="probe-detail">{n.detail}</p>
+                  </div>
+                ))
+              }
+            </div>
+          </div>
         </div>
       </header>
 
-      <section class="section engine" data-aos="fade-up">
-        <div class="engine-head">
-          <div class="engine-q">
-            <span class="engine-eyebrow">The real question</span>
-            <h2 class="engine-title">What bogs down the C++ tooling ecosystem?</h2>
+      <section class="section" id="problem">
+        <div class="container">
+          <div class="thesis-inner" data-aos="fade-up">
+            <span class="eyebrow">The problem</span>
+            <h2 class="h2">Everything that understands C++ was built to compile it</h2>
+            <div>
+              <p class="body-copy">
+                Serious C++ tooling has had two foundations to choose from, and both
+                charge for it. A <strong>compiler front-end</strong> understands the
+                language completely — and wants a working build configuration, refuses
+                code that does not compile, and was designed to emit object files rather
+                than answer questions about your program.
+              </p>
+              <p class="body-copy">
+                <strong>Pattern matching</strong> is the other extreme. It starts in an
+                afternoon and falls apart by the evening: C++ is far too context-sensitive
+                to match your way through, and every rule you add spawns three exceptions.
+              </p>
+              <p class="body-copy">
+                CodeXX takes the road between them — a forked and extended
+                <strong>tree-sitter</strong> grammar, with our own AST, symbol index and
+                analysis layer built on top of its concrete syntax tree. Fast, incremental,
+                tolerant of half-written code, and embeddable as a library.
+              </p>
+            </div>
+            <p class="pull-statement">
+              Owning that foundation is what turns documentation, code generation and
+              memory-safety analysis from three research projects into three products.
+            </p>
           </div>
-          <span class="engine-solution">The&nbsp;answer</span>
-        </div>
-        <p class="engine-body">
-          C++ tooling has long been gated behind compiler front-ends — heavy, slow to
-          adapt, built for compilation rather than understanding.
-          <strong>CodeXX is a single, legacy-free engine</strong> that owns the whole
-          path from source to control-flow. Owning that foundation is what unlocks the
-          rest: documentation, code generation, and memory-safety analysis stop being
-          separate research efforts and become tools you can actually pick up and use.
-        </p>
-      </section>
-
-      <section class="section" data-aos="fade-up">
-        <div class="section-label">Products</div>
-        <div class="products">
-          {
-            products.map((p, i) => {
-              const Tag = p.href ? "a" : "div";
-              return (
-                <Tag
-                  class={["product-card", p.featured && "featured", p.href && "linked"]
-                    .filter(Boolean)
-                    .join(" ")}
-                  data-aos="fade-up"
-                  data-aos-delay={i * 60}
-                  {...(p.href ? { href: p.href, "aria-label": `${p.name} docs` } : {})}
-                >
-                  {p.href && (
-                    <span class="product-ext" aria-hidden="true" set:html={icons.open} />
-                  )}
-                  <div class="icon-wrap" aria-hidden="true" set:html={icons[p.icon as keyof typeof icons]} />
-                  <div class="product-badges">
-                    {p.badges.map((b) => (
-                      <span class={`badge ${b.cls}`}>{b.label}</span>
-                    ))}
-                  </div>
-                  <div class="product-name">{p.name}</div>
-                  <div class="product-desc">{p.desc}</div>
-                </Tag>
-              );
-            })
-          }
         </div>
       </section>
 
-      <section class="section" data-aos="fade-up">
-        <div class="section-label">By the numbers</div>
-        <div class="proof-grid">
-          {
-            proof.map((m, i) => (
-              <div class="proof-card" data-aos="fade-up" data-aos-delay={i * 60}>
-                <div class="proof-number">{m.number}</div>
-                <div class="proof-label">{m.label}</div>
+      <section class="section section-raised">
+        <div class="container container-wide" data-aos="fade-up">
+          <div class="section-head">
+            <span class="eyebrow">The trade-off, stated plainly</span>
+            <h2 class="h2">Three ways to read C++</h2>
+          </div>
+          <div class="compare-scroll">
+            <table class="compare" aria-describedby="compare-note">
+              <thead>
+                <tr>
+                  <th scope="col">Approach</th>
+                  <th scope="col">Setup</th>
+                  <th scope="col">Half-written code</th>
+                  <th scope="col">Re-analysis</th>
+                  <th scope="col">Semantic depth</th>
+                </tr>
+              </thead>
+              <tbody>
+                {
+                  compare.map((r) => (
+                    <tr class={r.ours ? "is-ours" : undefined}>
+                      <th scope="row">{r.approach}</th>
+                      <td data-label="Setup">{r.setup}</td>
+                      <td data-label="Half-written code">{r.partial}</td>
+                      <td data-label="Re-analysis">{r.reanalysis}</td>
+                      <td data-label="Semantic depth">{r.depth}</td>
+                    </tr>
+                  ))
+                }
+              </tbody>
+            </table>
+            <!-- A <caption> would be the semantic home for this, but a caption
+                 cannot survive the table being re-laid-out as blocks on a phone:
+                 it collapses to a one-word column. aria-describedby keeps the
+                 association without the layout. -->
+            <p class="compare-note" id="compare-note">
+              That last cell is the trade, and we would rather state it than bury it:
+              no overload resolution, no template instantiation. What we get for it is
+              an index that keeps up with an editor, on code that has never once built.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <section class="section" id="engine">
+        <div class="container container-wide" data-aos="fade-up">
+          <div class="section-head">
+            <span class="eyebrow">The engine</span>
+            <h2 class="h2">From a directory of source files to a queryable index</h2>
+            <p class="lede">
+              Six stages, composed as a pipeline — each a real stage object, chained with
+              the <code>|</code> operator, run per item or per batch.
+            </p>
+          </div>
+
+          <div class="pipeline">
+            {
+              stages.map((s) => (
+                <div class="stage">
+                  <span class="stage-num">{s.n}</span>
+                  <span class="stage-name">{s.name}</span>
+                  <span class="stage-what">{s.what}</span>
+                  <span class="stage-impl">{s.impl}</span>
+                </div>
+              ))
+            }
+          </div>
+
+          <div class="properties">
+            <div class="property">
+              <h3 class="h3">Incremental by construction</h3>
+              <p>
+                An edit invalidates what depended on it and nothing else. The workspace
+                layer tracks include and module dependencies, debounces editor traffic,
+                and holds a live parser per open file — so a keystroke never pays for a
+                cold index.
+              </p>
+            </div>
+            <div class="property">
+              <h3 class="h3">Deterministic under parallelism</h3>
+              <p>
+                The whole-program analysis phases run across cores under one hard rule:
+                the output must be byte-identical to the serial order. Pre-sized buffers,
+                writes by index, nothing accumulated from a worker. Determinism here is a
+                test, not an aspiration.
+              </p>
+            </div>
+          </div>
+
+          <div class="substrate">
+            <span class="eyebrow">What the index gives every tool</span>
+            <ul class="substrate-list">
+              {substrate.map((s) => <li>{s}</li>)}
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <section class="section" id="products">
+        <div class="container container-wide products-inner" data-aos="fade-up">
+          <span class="eyebrow">Products</span>
+          <h2 class="h2">Four tools, one engine</h2>
+          <p class="lede" style="max-width: 62ch">
+            Each is a consumer of the same index. That is the architectural bet: build the
+            foundation once, and the tools stop being separate research efforts.
+          </p>
+
+          <div class="products-split">
+            <!--
+              Decorative. The orbit carries no focusable control and no information
+              the list beside it does not carry — hovering a row lights its chip.
+              Chips stay pointer-clickable as a redundant target for the button
+              that is visible right next to them.
+            -->
+            <div class="orbit" aria-hidden="true">
+              <div class="orbit-ring">
+                <div class="orbit-ring-inner"></div>
+                {
+                  products.map((p) => (
+                    <div class="tool" style={`--turn: ${p.turn}`} data-modal={p.id}>
+                      <span class="tool-inner">
+                        <span class="tool-tile" set:html={icons[p.icon as keyof typeof icons]} />
+                        <span class="tool-name">{p.name}</span>
+                      </span>
+                    </div>
+                  ))
+                }
               </div>
-            ))
-          }
+              <div class="orbit-core">
+                <span class="eyebrow">The core</span>
+                <span class="orbit-core-title">Engine</span>
+              </div>
+            </div>
+
+            <div class="tool-list">
+              {
+                products.map((p) => (
+                  <button class="tool-row" data-modal={p.id} aria-haspopup="dialog">
+                    <span class="icon-wrap" aria-hidden="true" set:html={icons[p.icon as keyof typeof icons]} />
+                    <span class="tool-row-head">
+                      <span class="tool-row-name">{p.name}</span>
+                      {p.badges.map((b) => (
+                        <span class={`badge ${b.cls}`}>{b.label}</span>
+                      ))}
+                    </span>
+                    <span class="tool-row-more" aria-hidden="true">Details</span>
+                    <span class="tool-row-sum">{p.summary}</span>
+                  </button>
+                ))
+              }
+            </div>
+          </div>
         </div>
       </section>
 
-      <section class="cta-section" data-aos="fade-up">
-        <h2>Join the design partner program</h2>
-        <p>
-          Early access for C++ teams. Tight feedback loop, direct line to the author.
-          Further materials available under NDA.
-        </p>
-        <div class="hero-cta">
-          <a class="btn-primary" href={EARLY_ACCESS_MAILTO}>Request early access</a>
-          <a class="btn-secondary" href="mailto:support@codexx-dtdk.com">support@codexx-dtdk.com</a>
+      <section class="section" id="evidence">
+        <div class="container container-wide" data-aos="fade-up">
+          <div class="section-head">
+            <span class="eyebrow">Evidence</span>
+            <h2 class="h2">Reasons to believe any of this</h2>
+          </div>
+          <div class="evidence">
+            {
+              metrics.map((m) => (
+                <div class="metric">
+                  <span class="metric-number">{m.number}</span>
+                  <span class="metric-label">{m.label}</span>
+                  <span class="metric-note">{m.note}</span>
+                </div>
+              ))
+            }
+            <div class="dogfood">
+              <div class="dogfood-head">
+                <span class="eyebrow">The real test</span>
+                <h3 class="h3">The engine is pointed at itself</h3>
+              </div>
+              <div>
+                <p>
+                  <strong>Every product runs against this repository</strong> and the full
+                  closure of its dependencies — every header, every vendored library. The
+                  linter's whole-tree automatic refactors are applied to that same corpus
+                  and are required to build afterwards: a rename that breaks a single call
+                  site fails the run. If the tools are not reliable on 166,027 lines of our
+                  own C++, we find out before you do.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="cta-section" id="early-access">
+        <div class="container cta-inner" data-aos="fade-up">
+          <span class="eyebrow">Design partner program</span>
+          <h2 class="h2">Early access for C++ teams that build the hard things</h2>
+          <p class="lede">
+            A tight feedback loop and a direct line to the author. Further materials
+            available under NDA.
+          </p>
+          <div class="hero-cta">
+            <a class="btn-primary" href={EARLY_ACCESS_MAILTO}>Request early access</a>
+            <a class="btn-secondary" href="mailto:support@codexx-dtdk.com">support@codexx-dtdk.com</a>
+          </div>
         </div>
       </section>
 
       <footer class="footer">
-        <span>© {new Date().getFullYear()} CodeXX DTDK</span>
-        <span class="footer-legal">
-          <a href="https://status.codexx-dtdk.com">Status</a>
-          <a href={`${LEGAL_URL}/privacy`}>Privacy</a>
-          <a href={`${LEGAL_URL}/terms`}>Terms</a>
-          <a href={`${LEGAL_URL}/eula`}>EULA</a>
-        </span>
-        <span>William Karol Di Cioccio</span>
+        <div class="container container-wide footer-inner">
+          <span>© {new Date().getFullYear()} CodeXX DTDK</span>
+          <span class="footer-legal">
+            <a href="https://status.codexx-dtdk.com">Status</a>
+            <a href={`${LEGAL_URL}/privacy`}>Privacy</a>
+            <a href={`${LEGAL_URL}/terms`}>Terms</a>
+            <a href={`${LEGAL_URL}/eula`}>EULA</a>
+          </span>
+          <span>William Karol Di Cioccio</span>
+        </div>
       </footer>
     </div>
+
+    {
+      products.map((p) => (
+        <dialog class="tool-modal" id={`modal-${p.id}`} aria-labelledby={`modal-${p.id}-title`}>
+          <div class="modal-body">
+            <div class="modal-head">
+              <div class="modal-heading">
+                <span class="product-badges">
+                  {p.badges.map((b) => (
+                    <span class={`badge ${b.cls}`}>{b.label}</span>
+                  ))}
+                </span>
+                <h2 class="modal-title" id={`modal-${p.id}-title`}>{p.name}</h2>
+              </div>
+              <button class="modal-close" data-close aria-label={`Close ${p.name}`} set:html={icons.close} />
+            </div>
+            <div class="modal-rule"></div>
+            <p class="modal-desc">{p.desc}</p>
+            {/* Swap this slot for the YouTube embed once the walkthroughs exist. */}
+            <div class="modal-video">
+              <span class="modal-video-play" aria-hidden="true" set:html={icons.play} />
+              <span class="eyebrow">Walkthrough video — coming soon</span>
+            </div>
+            <div class="modal-actions">
+              <a class="btn-primary" href={p.href}>{p.cta}</a>
+            </div>
+          </div>
+        </dialog>
+      ))
+    }
 
     <script>
       import AOS from "aos";
@@ -224,6 +833,194 @@ const proof = [
         disable: () =>
           window.matchMedia("(prefers-reduced-motion: reduce)").matches,
       });
+
+      // Tool dialogs. <dialog>.showModal() gives us the backdrop, Esc-to-close,
+      // focus trapping and inerting of the rest of the page for free — the only
+      // thing it does not do is close on a backdrop click, so we add that.
+      for (const trigger of document.querySelectorAll<HTMLElement>("[data-modal]")) {
+        trigger.addEventListener("click", () => {
+          const id = trigger.dataset.modal;
+          document.querySelector<HTMLDialogElement>(`#modal-${id}`)?.showModal();
+        });
+      }
+
+      for (const dialog of document.querySelectorAll<HTMLDialogElement>(".tool-modal")) {
+        dialog
+          .querySelector<HTMLButtonElement>("[data-close]")
+          ?.addEventListener("click", () => dialog.close());
+
+        // The dialog element itself fills the viewport as far as hit-testing is
+        // concerned, so a click landing on it (rather than on .modal-body) is a
+        // click on the backdrop.
+        dialog.addEventListener("click", (event) => {
+          if (event.target === dialog) dialog.close();
+        });
+      }
+
+      // Reading a product row steadies the orbit and lights that tool's chip, so
+      // the two halves of the section are visibly the same four things.
+      const orbit = document.querySelector<HTMLElement>(".orbit");
+      for (const row of document.querySelectorAll<HTMLElement>(".tool-row")) {
+        const chip = document.querySelector<HTMLElement>(
+          `.tool[data-modal="${row.dataset.modal}"]`,
+        );
+        const on = () => {
+          chip?.classList.add("is-active");
+          orbit?.classList.add("is-paused");
+        };
+        const off = () => {
+          chip?.classList.remove("is-active");
+          orbit?.classList.remove("is-paused");
+        };
+        row.addEventListener("mouseenter", on);
+        row.addEventListener("mouseleave", off);
+        row.addEventListener("focus", on);
+        row.addEventListener("blur", off);
+      }
+    </script>
+
+    <script>
+      /*
+        Hero probe. The listing is static; this moves two boxes over it.
+
+        Positions come from offsetLeft/offsetTop against .probe-body, which is
+        the offsetParent — no getBoundingClientRect, so no scroll arithmetic
+        and nothing to recompute while the page scrolls. Every span is on one
+        line by construction (the build asserts the annotations are disjoint),
+        so one rectangle per highlight is always enough.
+      */
+      const probe = document.querySelector<HTMLElement>(".probe");
+
+      if (probe) {
+        const body = probe.querySelector<HTMLElement>(".probe-body")!;
+        const halo = probe.querySelector<HTMLElement>(".probe-halo")!;
+        const card = probe.querySelector<HTMLElement>(".probe-card")!;
+        const nodes = [...probe.querySelectorAll<HTMLButtonElement>(".node")];
+        const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+        let active: HTMLElement | null = null;
+        let engaged = false;
+        let timers: number[] = [];
+
+        const stopDemo = () => {
+          for (const t of timers) clearTimeout(t);
+          timers = [];
+        };
+
+        // Geometry only — safe to re-run on resize or after the mono font
+        // lands, both of which move every span.
+        function place(node: HTMLElement) {
+          // Inset from the full line box, so the pill clears the rows above
+          // and below instead of stacking flush against them.
+          halo.style.transform = `translate(${node.offsetLeft - 5}px, ${node.offsetTop + 2}px)`;
+          halo.style.width = `${node.offsetWidth + 10}px`;
+          halo.style.height = `${node.offsetHeight - 4}px`;
+
+          const gap = 12;
+          const x = Math.max(
+            0,
+            Math.min(
+              node.offsetLeft + node.offsetWidth / 2 - card.offsetWidth / 2,
+              body.clientWidth - card.offsetWidth,
+            ),
+          );
+          // Above the line, unless that would leave the panel — then below it.
+          const above = node.offsetTop - card.offsetHeight - gap;
+          const y = above < 0 ? node.offsetTop + node.offsetHeight + gap : above;
+          card.style.transform = `translate(${x}px, ${y}px)`;
+        }
+
+        function activate(node: HTMLElement) {
+          if (node === active) return;
+          active?.classList.remove("is-active");
+          active = node;
+          node.classList.add("is-active");
+
+          const src = document.getElementById(`probe-ann-${node.dataset.node}`);
+          if (src) {
+            card.replaceChildren(...(src.cloneNode(true) as HTMLElement).childNodes);
+            // Drives the halo and chip colour: the one "unresolved" annotation
+            // is the only place the page admits a gap, and it should look it.
+            probe.dataset.tone = src.dataset.tone ?? "";
+          }
+          place(node);
+          probe.classList.add("is-probing");
+        }
+
+        function deactivate() {
+          if (!active) return;
+          active.classList.remove("is-active");
+          active = null;
+          probe.classList.remove("is-probing");
+          // Transforms are left where they are, so re-entering the listing
+          // slides in from the last span rather than jumping from nowhere.
+        }
+
+        body.addEventListener("mouseover", (event) => {
+          const node = (event.target as HTMLElement).closest<HTMLElement>(".node");
+          engaged = true;
+          stopDemo();
+          if (node) activate(node);
+          else deactivate();
+        });
+
+        // Keep the highlight while a node holds keyboard focus — the pointer
+        // wandering off should not blank the thing the caret is sitting on.
+        probe.addEventListener("mouseleave", () => {
+          if (!probe.contains(document.activeElement)) deactivate();
+        });
+
+        for (const node of nodes) {
+          node.addEventListener("focus", () => {
+            engaged = true;
+            stopDemo();
+            activate(node);
+          });
+          node.addEventListener("blur", () => {
+            if (active === node) deactivate();
+          });
+        }
+
+        probe.addEventListener("keydown", (event) => {
+          if (event.key !== "Escape") return;
+          (document.activeElement as HTMLElement | null)?.blur();
+          deactivate();
+        });
+
+        window.addEventListener(
+          "resize",
+          () => {
+            if (active) place(active);
+          },
+          { passive: true },
+        );
+
+        // Spans are measured in Geist Mono; before it loads they are measured
+        // in the fallback, and every offset is wrong by a little.
+        document.fonts?.ready.then(() => {
+          if (active) place(active);
+        });
+
+        /*
+          Nobody discovers a hover affordance they did not know was there. The
+          listing demonstrates itself once, on the node that makes the best
+          case (a member initialiser resolved to its field), and yields the
+          moment the visitor touches it. Motion-sensitive visitors get the
+          dotted underlines and the header hint, which is the same information
+          without the performance.
+        */
+        const demo = nodes.find((node) => node.hasAttribute("data-demo"));
+        if (demo && !reduce) {
+          timers.push(
+            window.setTimeout(() => {
+              if (!engaged) activate(demo);
+            }, 1200),
+            window.setTimeout(() => {
+              if (!engaged) deactivate();
+            }, 4400),
+          );
+        }
+      }
     </script>
 
     <Analytics />
