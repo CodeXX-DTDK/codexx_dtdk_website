@@ -1,6 +1,6 @@
 ---
 title: Installation
-description: Install the CodeXX DTDK Manager — the single entry point that installs, updates, licenses, and verifies codegen and every other DTDK component.
+description: Install the CodeXX DTDK Manager — the single entry point that installs, updates, and verifies codegen and every other DTDK component.
 ---
 
 import Alert from '@pelagornis/page/components/Alert.astro';
@@ -9,7 +9,7 @@ import { LinkButton } from '@astrojs/starlight/components';
 
 ## How CodeXX DTDK is installed
 
-codegen ships as one component of the **CodeXX Dev-Tool Development Kit (DTDK)**. You don't download `codegen` directly. You install the **DTDK Manager** once — a small terminal app — and use it to install, update, license-activate, and verify codegen and every other component.
+codegen ships as one component of the **CodeXX Dev-Tool Development Kit (DTDK)**. You don't download `codegen` directly. You install the **DTDK Manager** once — a small terminal app — and use it to install, update, and verify codegen and every other component. codegen is free and needs no license activation; the manager still handles that step for the DTDK components that require one.
 
 The manager keeps each component in a versioned, side-by-side layout under `~/.codexx` and exposes one binary per tool on your `PATH`. No `sudo`, no system package manager, no admin rights.
 
@@ -120,13 +120,11 @@ Open a new shell so the `PATH` change takes effect, then launch:
 codexx_dtdk_manager
 ```
 
-The manager is a terminal UI. Move with the arrow keys; press `Enter` on the **codegen** row to install and activate it. `q` quits. The manager handles the download, checksum verification, and side-by-side version management for you.
+The manager is a terminal UI. Move with the arrow keys; press `Enter` on the **codegen** row to install it. `q` quits. The manager handles the download, checksum verification, and side-by-side version management for you.
 
-## Activate your license
+## Licensing
 
-The Community tier requires no activation. For Professional or Team, activation happens **inside the manager** — not through a `codegen` CLI command. Select the codegen row, and the manager shows an activation prompt in place of the version list. Paste your license key there; the manager validates it, stores a signed offline token, and unlocks the component.
-
-See [License Activation](/licensing/activation/) for the cached-token model and the air-gapped path.
+codegen is free — there is no license tier, no activation step, and no `codegen license` command. Installing it through the manager is the whole story. (Other DTDK components still require activation inside the manager; that's unchanged.)
 
 ## Verify the installation
 
@@ -213,6 +211,6 @@ Open a new shell afterwards so the `PATH` change takes effect.
 <Alert type="info" title="Key Takeaways">
 - codegen is installed through the DTDK Manager, not downloaded directly.
 - One PAT-free command installs the manager — download, checksum, extract, and `PATH` are all automatic.
-- The manager installs, updates, verifies, and license-activates every component into `~/.codexx`.
-- License activation is done in the manager TUI; Community needs none. Professional and Team paste a key into the activation prompt.
+- The manager installs, updates, and verifies every component into `~/.codexx`, and handles license activation for the components that need one.
+- codegen is free — no license, no activation step.
 </Alert>

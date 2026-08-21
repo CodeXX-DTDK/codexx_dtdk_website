@@ -12,7 +12,7 @@ All diagnostics are written to `stderr` in the format:
        <detail message>
 ```
 
-The fields after the code are: rule name, entity name, source path, detail. Any of the trailing fields can be empty.
+The fields after the code are: rule name, entity name, source path, detail. Any of the trailing fields can be empty. Diagnostics with no location print as `[E001] codegen: detail` instead.
 
 ## Error codes
 
@@ -30,36 +30,46 @@ The fields after the code are: rule name, entity name, source path, detail. Any 
 | `E010` | `http.get(url)` called with a URL whose host is not on `permissions.http.allowlist` | Add the host (`example.com`) or a wildcard (`*.example.com`) to the allowlist, or stop calling `http.get` for that URL. |
 | `E011` | The `--input` path doesn't exist | Check the path passed to `-i`. |
 | `E012` | Output directory could not be created or output file is not writable | Check filesystem permissions and free space. |
-| `E013` | `--use-workspace` path doesn't exist | Check `--workspace-dir` (or the CWD when omitted). |
-| `E014` | `--use-workspace` could not load the build-system config | See the detail line; usually a malformed `codexx.workspace.yaml` or unparseable CMake file-api reply. |
 | `E015` | Rule config schema/shape error: unknown `output.language`, malformed `permissions.http.allowlist` / `permissions.env.os_allowlist`, `extends:` target missing, or `extends:` chain too deep | Fix the offending field in `config.yaml` (see detail line for which one). |
 | `E016` | Rule config YAML parse failure | The detail line carries the YAML parser error. Fix the syntax in `config.yaml`. |
 | `E017` | Engine init failure (LuaU environment could not be created) | Fatal (exit 2). Indicates an internal bug — file an issue with the detail line. |
-| `E018` | Source analysis pipeline failed before any rule fired | Check the input headers parse cleanly with `ast_dump`. |
-| `E019` | Two or more rules' default output paths collide | Set `outputNameTemplate` or a `grouping.luau` to disambiguate. |
-| `E020` | A type name does not resolve, or is ambiguous, in the scope it was written in | Fatal: guessing produces silently wrong output (e.g. a base class whose `serialize()` call is simply omitted). The detail line lists every candidate with file + line. Qualify the name or remove the duplicate type. |
+| `E018` | Source analysis pipeline failed — in practice, this means the workspace daemon could not be reached | Confirm a daemon is serving `<root>/.codexx/daemon.sock`. Workspace analysis runs on every invocation; there is no auto-spawn and no flag to disable it. |
+| `E019` | Two or more rules' default output paths collide. **Non-C++ outputs only** — C++ outputs deliberately co-mingle in one file | Set `outputNameTemplate` or a `grouping.luau` to disambiguate. |
 | `E021` | A daemon RPC failed mid-run (transport / JSON-RPC error) | The daemon died, is a stale build, or the socket broke. This is **never** "symbol not found" — an empty result is normal, not an error. Restart the daemon and confirm it is a current build. |
-| `E101` | License invalid key (no signed token, malformed activation key) | Activate the component in `codexx_dtdk_manager`. |
-| `E102` | Feature requires a higher tier (e.g. `--dry-run` TUI viewer is Professional+) | See [Tiers & Pricing](/licensing/tiers/). A missing `.codegen/shared/` is Team-tier and now **fails the load**, rather than writing a partial set of files and exiting 0. |
-| `E103` | Cached license token failed signature, machine-mismatch, expired, suspended, or corrupt | Re-activate the component in `codexx_dtdk_manager`. |
+| `E022` | Registry browser could not start, or a fetch failed outright: **no interactive terminal** on stdout, a malformed payload, or a bad HTTP status | `-B` requires a TTY and has no non-interactive fallback — it exits 1 rather than degrading. For a plain unreachable network you get `W007` instead, and the browser still opens. |
+| `E023` | Rule install refused from the registry browser | The target directory exists with no `rule.json`, or names a different vendor, or an I/O error occurred. Resolve the conflict and retry. |
+| `E024` | Rules-registry rate limit hit (anonymous GitHub quota, 60/hour) | Wait for the reset window given in the detail line, or retry later. |
+| `E025` | Bare `-a <Name>` is ambiguous — two namespaces both provide it | Qualify it: `-a acme/ToString`. The detail lists every candidate. |
+| `E026` | Two component sources claim the same `require` name | Compared case-insensitively, so a pair that would collide on Windows is caught on Linux too. Remove or rename one. |
+| `E027` | `require` of an unknown component, or a `uses:` entry with no component installed | Install it from the registry, or fix the name. Checked at load, before anything runs. |
+| `E028` | A component failed — compile error, raised, or returned nothing | The message names the *component*, not the rule that required it. A component must `return` its module value. |
+| `E029` | Component `require` cycle | The detail is the chain. |
+| `E030` | Malformed rule, namespace, or component identifier | Namespaces are `[a-z0-9-]+`, rule names are C++ identifiers, component names are `[a-z][a-z0-9_-]*`. |
+| `E031` | Install refused: this codegen is outside the bundle's declared range | Update codegen. The detail gives the range the bundle asked for. |
+| `E032` | The registry catalog is newer than this codegen understands | Update codegen. Refusing beats reading the half of the catalog we recognise. |
+| `E033` | Component install refused — the destination is occupied by another vendor or an unmanaged file | Remove the existing file first. |
+| `E034` | A rule or component source could not be read | Previously silent: an unreadable script became an empty one, and the failure surfaced later as a confusing `E006`. |
 
 ## Warning codes
 
 | Code | Trigger | Notes |
 |---|---|---|
-| `W001` | `--use-workspace` is set but the input has no entry in the loaded build-system config | Includes/defines won't be auto-resolved for this input. |
-| `W002` | A `-D NAME=VALUE` on the CLI overrides a workspace define of the same name | The CLI value wins; the warning is informational. |
 | `W003` | An entity's anchor is not present in its source header (or the anchor references an unknown entity) | The `.g.cpp` is still written; only the inline forward-declaration injection is skipped. |
 | `W004` | Inline-edit file I/O issue (cannot open source for read, cannot write the temp file, or rename failed) | The inline edit for the affected file is skipped; the `.g.cpp` itself is unaffected. |
-| `W005` | Unknown `node_kind` entry in `config.yaml` | The unknown entry is dropped; remaining `node_kinds` are honoured. |
 | `W006` | Unsupported config feature referenced (e.g. `permissions.registry`) | The entry is ignored; the rule otherwise loads normally. |
+| `W007` | Rules-registry unreachable (`-B`) | The browser still opens, showing installed rules only. |
+| `W008` | A bare `-a <Name>` resolved by searching namespaces | Write the qualified form; it is what the rule is actually called. |
+| `W009` | A flat rule shadows a namespaced one of the same name | The flat rule wins, because that is what the bare name already meant. Qualify to reach the other. |
+| `W010` | The rule declares `uses:`, so the flat `shared/` prelude was not prepended | Intended: a rule that names what it needs does not also absorb the rest of your tree. |
+| `W011` | A pre-namespace anchor was migrated in place | Emitted once, when a rule moves under a namespace. Re-run to confirm the tree has settled. |
+| `W012` | An entry under `rules/` or `shared/` beyond two levels was ignored | The layout is one optional namespace level; anything deeper is not read. |
 
 ## Exit codes
 
 | Code | Meaning |
 |---|---|
 | `0` | Success — no error code was emitted; all entities processed and all files written (or the dry-run preview completed). |
-| `1` | Recoverable failure — license error, bad CLI, missing input, rule load failure, preamble failure, an unresolved type (`E020`), etc. Some output may still have been written and is **not** trustworthy. |
+| `1` | Recoverable failure — bad CLI, missing input (`E011`), rule load failure, preamble failure, a daemon connection failure (`E018`), etc. Some output may still have been written and is **not** trustworthy. |
 | `2` | Fatal — handler internal error or LuaU environment creation failure. |
 
 Per ADR-024 §3, an emitted error is converted to an exit code at `main()`, so a diagnostic can never be logged and then silently ignored — a non-zero exit is the guarantee behind the preamble above.

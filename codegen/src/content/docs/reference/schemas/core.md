@@ -2,30 +2,24 @@
 title: Core Nodes
 ---
 
-## `TemplateArgument`
+## `Attribute`
 
 | Field | Type |
 |---|---|
-| `keyword` | `string` |
-| `typeSignature` | `TypeSignature?` |
-| `expr` | `Node?` |
-| `value` | `string` |
+| `ns` | `string` |
+| `name` | `string` |
+| `args` | `string[]` |
 
 ---
 
 
-## `TemplateParameter`
+## `CommentNode` _(extends `Node`)_
+
+_kind discriminant: `"Comment"`_
 
 | Field | Type |
 |---|---|
-| `paramKind` | `TemplateParameterKind` |
-| `name` | `string` |
-| `isVariadic` | `boolean` |
-| `defaultValue` | `Node?` |
-| `keyword` | `string` |
-| `constraint` | `IdentifierNode?` |
-| `typeSignature` | `TypeSignature` |
-| `innerParameters` | `TemplateParameter[]` |
+| `text` | `string` |
 
 ---
 
@@ -51,41 +45,6 @@ title: Core Nodes
 ---
 
 
-## `IdentifierNode` _(extends `Node`)_
-
-_kind discriminant: `"Identifier"`_
-
-| Field | Type |
-|---|---|
-| `qualification` | `IdentifierNode?` |
-| `name` | `string` |
-| `templateArgs` | `TemplateArgument[]` |
-
----
-
-
-## `TypeDeclarator`
-
-| Field | Type |
-|---|---|
-| `kind` | `DeclaratorKind` |
-| `isConst` | `boolean` |
-| `isVolatile` | `boolean` |
-| `arraySizeExpr` | `Node?` |
-
----
-
-
-## `PlaceholderTypeSpecifier`
-
-| Field | Type |
-|---|---|
-| `kind` | `Auto` |
-| `constraint` | `TypeSignature?` |
-
----
-
-
 ## `FunctionPointerSignature`
 
 | Field | Type |
@@ -94,55 +53,6 @@ _kind discriminant: `"Identifier"`_
 | `parameterTypes` | `TypeSignature[]` |
 | `returnFunctionPointer` | `FunctionPointerSignature?` |
 | `isConst` | `boolean` |
-
----
-
-
-## `TypeSignature`
-
-| Field | Type |
-|---|---|
-| `identifier` | `IdentifierNode?` |
-| `isConst` | `boolean` |
-| `isVolatile` | `boolean` |
-| `isMutable` | `boolean` |
-| `declarators` | `TypeDeclarator[]` |
-| `functionPointer` | `FunctionPointerSignature?` |
-| `decltypeSpecifier` | `DecltypeExpressionNode?` |
-| `placeholderSpecifier` | `PlaceholderTypeSpecifier?` |
-
----
-
-
-## `SourceNode` _(extends `Node`)_
-
-_kind discriminant: `"Source"`_
-
-| Field | Type |
-|---|---|
-| `source` | `Source?` |
-| `children` | `Node[]` |
-
----
-
-
-## `LambdaCaptureItem`
-
-| Field | Type |
-|---|---|
-| `kind` | `LambdaCaptureKind` |
-| `identifier` | `IdentifierNode?` |
-| `init` | `Node?` |
-
----
-
-
-## `MacroParameter`
-
-| Field | Type |
-|---|---|
-| `name` | `string` |
-| `isVariadic` | `boolean` |
 
 ---
 
@@ -167,19 +77,52 @@ _kind discriminant: `"Source"`_
 | `isStatic` | `boolean` |
 | `isDefaulted` | `boolean` |
 | `isDeleted` | `boolean` |
-| `refQualifier` | `None` |
+| `refQualifier` | `string` |
 | `requiresClause` | `Node?` |
 
 ---
 
 
-## `CommentNode` _(extends `Node`)_
+## `IdentifierNode` _(extends `Node`)_
 
-_kind discriminant: `"Comment"`_
+_kind discriminant: `"Identifier"`_
 
 | Field | Type |
 |---|---|
-| `text` | `string` |
+| `qualification` | `IdentifierNode?` |
+| `name` | `string` |
+| `templateArgs` | `TemplateArgument[]` |
+
+---
+
+
+## `LambdaCaptureItem`
+
+| Field | Type |
+|---|---|
+| `kind` | `string` |
+| `identifier` | `IdentifierNode?` |
+| `init` | `Node?` |
+
+---
+
+
+## `MacroParameter`
+
+| Field | Type |
+|---|---|
+| `name` | `string` |
+| `isVariadic` | `boolean` |
+
+---
+
+
+## `MemberInitializer`
+
+| Field | Type |
+|---|---|
+| `member` | `IdentifierNode?` |
+| `args` | `Node[]` |
 
 ---
 
@@ -194,6 +137,30 @@ _kind discriminant: `"Comment"`_
 ---
 
 
+## `Node`
+
+| Field | Type |
+|---|---|
+| `kind` | `string` |
+| `startLine` | `number` |
+| `startColumn` | `number` |
+| `endLine` | `number` |
+| `endColumn` | `number` |
+| `comment` | `Node?` |
+
+---
+
+
+## `PlaceholderTypeSpecifier`
+
+| Field | Type |
+|---|---|
+| `kind` | `string` |
+| `constraint` | `TypeSignature?` |
+
+---
+
+
 ## `Source`
 
 | Field | Type |
@@ -204,34 +171,76 @@ _kind discriminant: `"Comment"`_
 | `encoding` | `string` |
 | `lastModifiedTime` | `number` |
 | `rawContent` | `string?` |
-| `sourceMap` | `SourceMap?` |
-| `macroTable` | `MacroTable?` |
-| `pendingIncludeEdges` | `string[]` |
+| `sourceMap` | `null` |
+| `macroTable` | `null` |
 | `unsavedBuffer` | `string?` |
 
 ---
 
 
-## `Attribute`
+## `SourceNode` _(extends `Node`)_
+
+_kind discriminant: `"Source"`_
 
 | Field | Type |
 |---|---|
-| `ns` | `string` |
-| `name` | `string` |
-| `args` | `string[]` |
+| `source` | `Source?` |
+| `children` | `Node[]` |
 
 ---
 
 
-## `Node`
+## `TemplateArgument`
 
 | Field | Type |
 |---|---|
-| `kind` | `NodeKind` |
-| `startLine` | `number` |
-| `startColumn` | `number` |
-| `endLine` | `number` |
-| `endColumn` | `number` |
-| `comment` | `Node?` |
+| `keyword` | `string` |
+| `typeSignature` | `TypeSignature?` |
+| `expr` | `Node?` |
+| `value` | `string` |
+
+---
+
+
+## `TemplateParameter`
+
+| Field | Type |
+|---|---|
+| `paramKind` | `string` |
+| `name` | `string` |
+| `isVariadic` | `boolean` |
+| `defaultValue` | `Node?` |
+| `keyword` | `string` |
+| `constraint` | `IdentifierNode?` |
+| `typeSignature` | `TypeSignature` |
+| `innerParameters` | `TemplateParameter[]` |
+
+---
+
+
+## `TypeDeclarator`
+
+| Field | Type |
+|---|---|
+| `kind` | `string` |
+| `isConst` | `boolean` |
+| `isVolatile` | `boolean` |
+| `arraySizeExpr` | `Node?` |
+
+---
+
+
+## `TypeSignature`
+
+| Field | Type |
+|---|---|
+| `identifier` | `IdentifierNode?` |
+| `isConst` | `boolean` |
+| `isVolatile` | `boolean` |
+| `isMutable` | `boolean` |
+| `declarators` | `TypeDeclarator[]` |
+| `functionPointer` | `FunctionPointerSignature?` |
+| `decltypeSpecifier` | `DecltypeExpressionNode?` |
+| `placeholderSpecifier` | `PlaceholderTypeSpecifier?` |
 
 ---

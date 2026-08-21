@@ -1,0 +1,69 @@
+---
+title: Support Policy
+description: How to get technical support for codegen, what to expect, what is in and out of scope, and how your privacy is preserved when you send a report.
+---
+
+import Alert from '@pelagornis/page/components/Alert.astro';
+
+## How to get help
+
+There is a single support channel:
+
+- **Email:** [support@codexx-dtdk.com](mailto:support@codexx-dtdk.com)
+
+codegen is free for everyone, and so is support for it — there is no priority queue and no tier that buys a faster answer.
+
+<Alert type="info">
+Before emailing, check the [documentation](/) and the [Diagnostic Codes](/reference/diagnostics/) reference — most errors are explained there with a fix. A self-served answer is the fastest answer.
+</Alert>
+
+## What to include in a report
+
+CodeXX DTDK runs entirely on your machine. We cannot see your code, your environment, or what went wrong unless you tell us. A report that includes the following gets resolved in one round-trip instead of five:
+
+- **Version** — output of `codegen --version` (or the affected tool's `--version`).
+- **Operating system** and architecture.
+- **What you ran** — the exact command line.
+- **What happened** — the full error output, including any `[E0xx]` / `[W0xx]` code.
+- **What you expected** instead.
+- **A minimal repro** if you can — the smallest input that triggers it.
+
+<Alert type="info">
+Only send what you are comfortable sharing. Redact anything proprietary — a repro that reproduces the bug is worth more than a real-but-secret one. See [Privacy](#privacy) below.
+</Alert>
+
+## Response targets
+
+codegen is free, so support for it is **best effort** — answered as time allows, with no guaranteed response time. That is an honest statement of what a free tool can promise, not a deprioritisation: reports are read, and reproducible bugs get fixed.
+
+<Alert type="info">
+Need a contractual SLA, a named contact, or air-gapped / on-prem support assurances? Those come with the paid CodeXX DTDK products — email [support@codexx-dtdk.com](mailto:support@codexx-dtdk.com) with your requirements.
+</Alert>
+
+## Scope
+
+**In scope** — we will help with:
+
+- Installation issues.
+- Bugs, crashes, and incorrect output in CodeXX DTDK tools.
+- Diagnostic codes and how to resolve them.
+- Documented features behaving differently than documented.
+- Reasonable "how do I do X" guidance for documented functionality.
+
+**Out of scope** — we cannot take on:
+
+- Writing your rules, transforms, or build configuration for you (though we will point you at the right docs and examples).
+- Debugging your application's own C++ code.
+- Third-party tools, compilers, or build systems, except where they integrate directly with CodeXX DTDK.
+
+## Privacy
+
+CodeXX DTDK makes [no outbound network requests during execution](/trust/no-call-home/). Support does not change that:
+
+- We never have access to your code, AST, or environment unless **you** attach it to an email.
+- We only use what you send to reproduce and fix the specific issue you reported.
+- We never ask for your source tree wholesale — a minimal repro is always sufficient and always preferred.
+
+## Reporting a security issue
+
+Do **not** open a public report for security vulnerabilities. Email [support@codexx-dtdk.com](mailto:support@codexx-dtdk.com) with `SECURITY` in the subject line and we will coordinate a private fix and disclosure. This applies to everyone.

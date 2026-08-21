@@ -46,9 +46,27 @@ A build that fails any gate is never published.
 - **Pre-extraction verification** — the detached `.sigstore` and `.sha256` siblings let you verify an archive before unpacking it.
 - **Auditable** — every release signature is recorded in the public Rekor transparency log.
 
+## Third-party rules are a different question
+
+Everything above concerns the tool components CodeXX ships. Rules and Luau components published to the [rules registry](/rules/registry/) are where third-party code enters your build, and they are governed differently — deliberately so.
+
+A rule is a directory of Luau text that ends up in your own repository, versioned alongside your code and visible in every diff. You can clone or copy it by hand, or let `codegen --browse-rules-registry` download it — either way the result is text you own, not a package a resolver picked.
+
+**There is still no resolution step.** A rule names the components it needs by exact identity and version, and that list must be complete: the registry rejects a rule whose declarations do not cover everything it will load. Nothing is discovered at install time, nothing is solved, and no name is looked up in more than one place — so the dependency-confusion class of attack has nothing to attach to.
+
+**There is still no install-time execution.** Installing places files. Component code runs when a rule requires it, during generation, inside the [sandbox](/trust/sandbox/) — not while it is being written to disk.
+
+Two controls sit either side of that:
+
+- **At publication** — rules land only through pull requests reviewed by a maintainer. A rule requesting network or environment access is labelled and blocked until that request is justified. Publishing is intentionally not self-service.
+- **At execution** — a rule runs inside the [Luau sandbox](/rules/luau-sandbox/), where network and environment access are opt-in per rule and declared in `config.yaml` — filesystem access is not available at all, granted or otherwise. See the [Permissions Model](/rules/permissions/).
+
+Neither control substitutes for reading the rule. Review is what raises the floor; the code still runs on your machine, during your build, and it is a few dozen lines you can read in a minute.
+
 <Alert type="info" title="Key Takeaways">
 - Components are distributed as independently versioned, attested archives and installed through the DTDK Manager — no system package manager, no privileged install scripts.
 - Build-time dependencies are fully pinned (vcpkg ports plus vendored submodule SHAs) and enumerated in a shipped SPDX SBOM.
 - Release gates enforce a header allowlist, symbol stripping, macOS notarization, and Windows Authenticode signing.
 - Every archive carries a SHA-256 sidecar and a Sigstore bundle; the manager verifies checksums automatically.
+- Registry rules are vendored, not resolved — reviewed at publication, sandboxed at execution, and yours to read before you run them.
 </Alert>

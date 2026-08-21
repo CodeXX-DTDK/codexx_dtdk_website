@@ -7,6 +7,14 @@ import Alert from '@pelagornis/page/components/Alert.astro';
 
 codegen embeds the LuaU VM (Roblox's typed Lua variant with a JIT compiler) as the rule execution environment. Each rule invocation gets a fresh execution context with no shared state between calls.
 
+<Alert type="warning">
+**One shared surface: dotenv.** Every rule's `.env`, the shared `.env`, and any `--env`
+entries are merged into a **single process-wide map** before execution. A rule that
+declares `permissions.env` therefore sees keys contributed by *every other rule* in the
+same run, not just its own. Do not put a secret in a rule's `.env` on the assumption
+that a co-running third-party rule cannot read it.
+</Alert>
+
 ## What rules always have access to
 
 | API | Description |
@@ -19,13 +27,13 @@ codegen embeds the LuaU VM (Roblox's typed Lua variant with a JIT compiler) as t
 
 | Capability | Status |
 |---|---|
-| File system (`io.open`, `os.execute`) | Blocked — no `io` or `os` library |
+| File system (`io.open`) | Blocked — no `io` library |
 | Network | Blocked — opt in via `permissions.http.allowlist` |
 | OS environment variables | Blocked — opt in via `permissions.env.os_allowlist` |
 | `require` / module loading | Blocked — no module system in the sandbox |
 | `loadstring` / `loadfile` / FFI | Blocked |
 | Global state across rule invocations | Impossible — each call gets fresh state |
-| Inter-rule communication | Impossible — rules cannot reach each other |
+| Inter-rule communication | No shared Lua state — but see the dotenv caveat below |
 | Process spawning | Blocked |
 
 ## Why LuaU specifically
@@ -63,7 +71,7 @@ Add an allowlist to the rule's config:
 permissions:
   http:
     allowlist:
-      - "https://schema-registry.internal.example.com/"
+      - "schema-registry.internal.example.com"
 ```
 
 When the allowlist is non-empty, the engine injects `http.get(url)` into the sandbox. Each entry is matched against the URL's **host** — exact (`example.com`), wildcard (`*.example.com`, subdomains only), or `*` for any host. A URL whose host is not on the allowlist raises an error and emits `E010`.

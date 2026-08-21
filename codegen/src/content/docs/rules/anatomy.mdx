@@ -10,7 +10,7 @@ A rule lives in `<rulesDir>/<RuleName>/` (the default `<rulesDir>` is `.codegen/
 
 <FileTree>
 - .codegen/rules/RuleName/
-  - config.yaml      **(required)** Engine configuration
+  - config.yaml      *(optional)* Engine configuration; defaults apply if absent
   - transform.luau   **(required)** Handler (transformation) script
   - preamble.luau    **(required)** File header emitter
   - grouping.luau    *(optional)* Output path router
@@ -19,7 +19,66 @@ A rule lives in `<rulesDir>/<RuleName>/` (the default `<rulesDir>` is `.codegen/
 
 The directory name *is* the rule name — it's how the rule is referenced on the CLI (`-a RuleName`) and as the C++ attribute (`[[codegen::RuleName]]`). Companion files are named by their *role*, not the rule, so a directory always looks the same.
 
-A workspace-shared directory at `<rulesDir>/../shared/` (e.g. `.codegen/shared/`) is loaded automatically: every `.luau` file there is concatenated in alphabetical filename order and prepended to each rule's transform at execution time, and a `shared/.env` file becomes the baseline dotenv. By default every shared script is included; rules can narrow the set with `shared.include` / `shared.exclude` globs in their config (see [Config Schema Reference](/reference/config-schema/#shared)). This is the [Team-tier](/licensing/tiers/) shared-libraries feature; today the directory is loaded unconditionally and the licence gate ships in a future release.
+## Namespaced rules
+
+A rule can also live one level deeper, under a **vendor** directory:
+
+<FileTree>
+- .codegen/rules/
+  - MyLocalRule/ flat — `-a MyLocalRule`, matches `[[codegen::MyLocalRule]]`
+  - acme/
+    - ToString/ namespaced — `-a acme/ToString`, matches `[[acme::ToString]]`
+  - globex/
+    - ToString/ coexists: a different attribute entirely
+</FileTree>
+
+The rule is simple: **a directory holding a `transform.luau` is a rule; one that does not is a namespace, and its children are rules.** Flat is still the default and nothing about an existing tree changes — namespacing exists so two vendors can both publish a `ToString` and you can use both at once.
+
+`-a acme::ToString` is accepted too, so you can paste the attribute spelling straight onto the command line. A bare `-a ToString` that two namespaces both provide is an error listing the candidates, never a silent pick.
+
+<Alert type="caution" title="A vendor attribute needs a compiler suppression">
+`[[acme::ToString]]` is an unknown attribute namespace, exactly as `[[codegen::…]]` is, and compilers warn about it by default:
+
+```cpp
+// clang: -Wno-unknown-attributes
+// gcc:   #pragma GCC diagnostic ignored_attributes "acme::"
+struct [[acme::ToString]] Color { int r, g, b; };
+```
+</Alert>
+
+## Components
+
+A **component** is a reusable Luau module a rule reaches with `require`:
+
+<FileTree>
+- .codegen/shared/
+  - helpers.luau flat — legacy prelude, and `require("helpers")`
+  - acme/
+    - typemap.luau `require("acme/typemap")`
+    - codecs/
+      - init.luau `require("acme/codecs")`
+</FileTree>
+
+```lua title="transform.luau"
+local typemap = require("acme/typemap")
+
+return function(input)
+    local node = json.decode(input)
+    return json.encode({ source = typemap.render(node) })
+end
+```
+
+A component `return`s its value — conventionally a table of functions. It is evaluated the first time something requires it, and it can use every global the environment provides. `require` works in `transform.luau`, `preamble.luau` and `grouping.luau` alike.
+
+Components install from the [rules registry](/rules/registry/) into `.codegen/shared/<vendor>/`. See [`require`](/reference/luau-globals/#require) for the exact contract.
+
+## The flat `shared/` prelude
+
+Files directly under `<rulesDir>/../shared/` (e.g. `.codegen/shared/`) keep their original behaviour: every `.luau` file there is concatenated in alphabetical filename order and prepended to each rule's transform at execution time, and a `shared/.env` file becomes the baseline dotenv. By default every shared script is included; rules can narrow the set with `shared.include` / `shared.exclude` globs in their config (see [Config Schema Reference](/reference/config-schema/#shared)).
+
+**Namespaced components are never concatenated** — they are reached only through `require`. That is what makes installing one safe: it cannot perturb what any existing rule already sees.
+
+A rule that declares [`uses`](/reference/config-schema/#uses) opts out of the flat prelude entirely. A rule that names what it needs should not also absorb whatever else happens to be sitting in your tree, which is exactly the isolation a published rule wants.
 
 ## `config.yaml`
 
@@ -93,8 +152,12 @@ enum class MyEnum { A, B, C };
 
 The third segment of the anchor is the *qualified name* of the target entity (namespace path included). Anchors are scanned per-file and matched against the AST to find the corresponding entity. See [Inline Injection](/rules/inline-injection/) for the on-disk anchor lifecycle.
 
+## Published rules
+
+A rule shared through the [rules registry](/rules/registry/) adds three files to the directory above — `rule.json`, `README.md`, and `LICENSE`. The engine ignores all three, so a published rule and a hand-written one are the same thing to `codegen`; the extra files carry identity, version, and attribution for humans.
+
 <Alert type="info" title="Key Takeaways">
-- Up to five files in a rule directory: `config.yaml`, `transform.luau`, and `preamble.luau` are required; `grouping.luau` and `.env` are optional.
+- Up to five files in a rule directory: only `transform.luau` and `preamble.luau` are required (missing either is `E003` and fails the run); `config.yaml`, `grouping.luau` and `.env` are optional.
 - Handler is a pure function: JSON in, JSON out (`source`, optional `inline`, optional `includes`). Receives `_outputPath` (post-grouping route).
 - Preamble runs once per (rule, outputFile) pair; its return is a raw string, deduplicated by content per output file. Receives the entities bound to that file.
 - Grouping runs once per rule, before handlers, and rewrites output paths via a stringified-`registryId` map.

@@ -1,0 +1,207 @@
+---
+title: Rules Registry
+description: Publishing, versioning, and consuming codegen rules through the public CodeXX rules registry, and what editing a published rule means for licensing.
+---
+
+import { FileTree } from '@astrojs/starlight/components';
+import Alert from '@pelagornis/page/components/Alert.astro';
+
+The [CodeXX rules registry](https://github.com/CodeXX-DTDK/codexx_rules_registry) is the public catalogue of published `codegen` rules. Rules there are versioned, attributed to their authors, and MIT-licensed — copy one into your project and adapt it.
+
+The registry is deliberately not a package manager. There is no `codegen install`, no lockfile, and no resolution step: you clone or copy a directory, and it is yours from that moment on.
+
+## Consuming a rule
+
+Rules are namespaced by **vendor**, so two authors can both publish a `ToString` without colliding:
+
+<FileTree>
+- rules/
+  - codegen/
+    - codexx/
+      - ToString/
+    - acme/
+      - ToString/
+</FileTree>
+
+Copy the rule directory into your own project — this is the normal way to use the registry:
+
+```sh
+git clone https://github.com/CodeXX-DTDK/codexx_rules_registry
+cp -r codexx_rules_registry/rules/codegen/codexx/ToString .codegen/rules/
+codegen -a ToString -i include/app/color.hpp
+```
+
+A rule is a handful of text files; vendoring it into your repository means it shows up in your diffs and your build depends on nothing remote.
+
+A **vendor directory** is itself a rules root, so you can also point `-r` at one without copying:
+
+```sh
+codegen -r ../codexx_rules_registry/rules/codegen/codexx -a ToString -i include/app/color.hpp
+```
+
+<Alert type="caution" title="Run codegen from your project">
+`codegen` resolves include paths, defines, and the C++ standard from the **workspace it is invoked in** — your CMake configuration or your `codexx.workspace.yaml`. Running it from a clone of the registry analyses the registry, not your code.
+
+The registry ships its own `codexx.workspace.yaml` purely so a rule's bundled `input.hpp` sample can be run in place; it covers the samples and nothing else.
+</Alert>
+
+<Alert type="info" title="index.json">
+The registry's root `index.json` is a machine-readable catalogue of every published rule at its current version — identity, description, output language, and tag. Fetch it raw; you do not need to clone to see what exists.
+</Alert>
+
+## Installing from the browser
+
+`codegen` ships an interactive browser for the registry, free on every install:
+
+```sh
+codegen --browse-rules-registry
+```
+
+It lists the catalogue, shows each rule's published versions, previews its README, and installs the one you pick into `.codegen/rules/` **relative to the directory you ran it from** — so run it from your project root, or pass `-r` to point somewhere else.
+
+| Key | Action |
+|---|---|
+| `/` | start typing a search; `Esc` stops |
+| `↑` `↓` | move within a panel |
+| `Tab` | switch between the registry and installed panels |
+| `Enter` | open the version list, then install the selected version |
+| `o` | open the rule's page on GitHub |
+| `f` | open the containing folder |
+| `d` | remove an installed rule (press twice to confirm) |
+| `q` | quit |
+
+The lower panel lists what you already have. Rules installed from the registry show their vendor and version, and are flagged when a newer version exists; hand-written rules are listed as `(local)`.
+
+<Alert type="caution" title="Where a rule lands, and when a name collides">
+A **namespaced** rule installs to `.codegen/rules/<vendor>/<RuleName>/` and matches `[[<vendor>::<RuleName>]]`, so two vendors' `ToString` coexist happily and you can use both in one project.
+
+A rule published before namespacing installs flat, to `.codegen/rules/<RuleName>/`, and matches `[[codegen::<RuleName>]]` — its README and sample header say so, and moving it would stop it matching them. There, the name is the attribute, so installing over an existing rule from a different vendor — or over a hand-written rule of the same name — is refused rather than overwritten. Rename or remove the existing one first.
+
+Reinstalling the *same* vendor's rule at a different version is an upgrade, and is allowed.
+</Alert>
+
+The browser needs no token and no account. It reads the public catalogue anonymously, and it does not start the workspace daemon or parse any of your code — see the [no-call-home guarantee](/trust/no-call-home/).
+
+If the registry is unreachable, the browser still opens and shows what you have installed, so you can review or remove rules offline.
+
+## What a published rule contains
+
+A published rule is an ordinary rule directory (see [Rule Anatomy](/rules/anatomy/)) plus three files the registry requires:
+
+| File | Purpose |
+|---|---|
+| `rule.json` | Manifest — identity, version, authors, `codegen` compatibility range |
+| `README.md` | What it generates, how to trigger it, what comes out |
+| `LICENSE` | Verbatim copy of the registry's MIT licence, so the grant travels with the rule |
+
+`codegen` reads only `config.yaml`, `transform.luau`, `preamble.luau`, `grouping.luau`, and `.env`, and ignores everything else — which is exactly why a published rule must never carry a `.env` (see [Publishing](#publishing)). A published rule therefore works exactly like a hand-written one — the extra files are metadata for humans and for the registry, not inputs to the engine.
+
+### `rule.json`
+
+```json
+{
+  "schemaVersion": 1,
+  "id": "acme.to-string",
+  "vendor": "acme",
+  "rule": "ToString",
+  "version": "1.0.0",
+  "description": "Generates std::string_view toString(Enum) switches.",
+  "authors": [{ "name": "Jane Doe", "github": "jdoe" }],
+  "license": "MIT",
+  "keywords": ["enum", "reflection"],
+  "outputLanguage": "cpp",
+  "namespaced": true,
+  "uses": [{ "component": "acme.typemap", "range": ">=1.2.0" }],
+  "requires": [{ "component": "codegen", "range": ">=0.1.0 <1.0.0" }]
+}
+```
+
+`id` is the rule's identity: the vendor tag and rule name, each kebab-cased, joined by a single `.`. Case boundaries become dashes, so `JSONSerializable` becomes `json-serializable`. `requires[].range` accepts `>=X.Y.Z` or `>=X.Y.Z <A.B.C` — no caret, no tilde, and `codegen` **enforces** it: a build outside the range is told to update rather than installing a rule it cannot run.
+
+`namespaced: true` installs the rule under its vendor and switches its attribute to `[[<vendor>::<RuleName>]]`. `uses` names the components it needs — see [Components](#components).
+
+## Components
+
+A **component** is a reusable Luau module. Publish one when two rules — yours or anyone's — would otherwise carry the same helper twice.
+
+```
+components/codegen-component/<vendor>/<name>/
+    component.json   manifest — identity, version, authors
+    README.md        what it provides
+    LICENSE          the registry's MIT, verbatim
+    component.luau   the module; it must `return` its value
+```
+
+A rule declares what it uses, and the browser installs them together:
+
+```json title="rule.json"
+"uses": [{ "component": "acme.typemap", "range": ">=1.2.0" }]
+```
+
+```lua title="transform.luau"
+local typemap = require("acme/typemap")
+```
+
+Components install to `.codegen/shared/<vendor>/`, so two vendors' same-named components never collide.
+
+<Alert type="info" title="Declared, not resolved">
+A rule's `uses` must be **closed**: if you use `acme.typemap` and that uses `acme.base`, your rule lists both. The validator enforces it.
+
+The result is that installation is a flat download — nothing is discovered at install time and no version is solved, which is what keeps the [no-dependency-confusion](/trust/supply-chain/) property intact. The cost is that a component adding a dependency is a breaking change for its consumers; it surfaces when the component is published, not on a user's machine.
+</Alert>
+
+Component names are lowercase. Two names differing only in case are one file on Windows and macOS and two on Linux, so a mixed-case name would resolve differently depending on who installed it.
+
+## Versioning
+
+Each rule carries its own `version` — plain semver, with no channels. The directory in `main` always holds the current version, and every released version is an immutable git tag:
+
+```
+codegen/<vendor>.<RuleName>@MAJOR.MINOR.PATCH
+```
+
+To pin an older version, check out its tag. **Tags are never deleted**, so a pin never breaks. A withdrawn rule is marked `"yanked": true` and flagged in `index.json` rather than removed — anything already pinned keeps working.
+
+## Publishing
+
+Publishing happens **only through pull requests**. There is no publish command, and that is the point: review is what keeps the catalogue worth reading, and it is how authors get credited.
+
+The workflow is: fork, add one directory under `rules/codegen/<your-vendor>/`, run the validator, open a PR.
+
+```sh
+python3 scripts/validate_registry.py --write-index
+```
+
+CI runs that same script, so a green local run means a green PR. It checks manifest schema and identity, that your `LICENSE` is unmodified, that `README.md` says something, that the version increased, and two rules specific to publication:
+
+- **No `.env` file.** The loader reads per-rule dotenvs, so a published one is a published secret.
+- **Every `require` must be declared.** A rule may use [components](#components) — it just has to name them, in `rule.json`'s `uses`, or ship them itself. The validator reads your scripts and checks it. `require(someVariable)` is refused outright: a rule whose dependencies cannot be enumerated cannot be validated.
+
+Between them those two close the same gap: a published rule cannot lean on whatever helpers happen to exist in the tree it was written in. Declaring `uses` also opts the rule out of the consumer's flat `shared/` prelude, so everything it calls has to come from the rule itself or from a component it names.
+
+Full details: [CONTRIBUTING.md](https://github.com/CodeXX-DTDK/codexx_rules_registry/blob/main/CONTRIBUTING.md).
+
+## Trust
+
+Rules are Luau scripts, and they run inside the [sandbox](/rules/luau-sandbox/). Network and environment access are opt-in per rule and declared in `config.yaml`; filesystem access is not available at all — see the [Permissions Model](/rules/permissions/).
+
+A rule that declares `permissions.http.allowlist` or `permissions.env.os_allowlist` is labelled and reviewed by a maintainer before it can merge, and its README must justify the request. Those permissions are allowed; they are never automatic.
+
+<Alert type="warning" title="Review what you run">
+Human review at publication raises the floor — it does not replace your own judgement. A registry rule is third-party code that runs during your build. Read it before you run it, exactly as you would any dependency.
+</Alert>
+
+## Editing a rule
+
+**Rules are meant to be edited.** A rule encodes one project's conventions; adapting one to yours is the expected use, not an edge case.
+
+Everything in the registry is MIT-licensed, so you may modify a rule and redistribute the result — **including under different licensing terms** — provided you retain the MIT notice and the original authors' copyright, as the MIT licence requires. Authors are listed in each rule's `rule.json` and `README.md`.
+
+Once you have edited a rule, it is yours. It will not receive updates when the registry's copy changes, and nothing tracks the divergence. That is the intended trade: a rule you own outright, with no upgrade treadmill.
+
+## Related
+
+- [Rule Anatomy](/rules/anatomy/) — the files and their contracts
+- [Config Schema Reference](/reference/config-schema/) — every `config.yaml` key
+- [Permissions Model](/rules/permissions/) — what a rule may reach, and how it asks
+- [Runnable examples](https://github.com/CodeXX-DTDK/codegen_examples) — learn the shape before publishing

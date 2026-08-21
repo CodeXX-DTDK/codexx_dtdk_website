@@ -9,15 +9,26 @@ import Alert from '@pelagornis/page/components/Alert.astro';
 
 **codegen makes zero outbound network requests during rule execution by default.**
 
-This is not a policy. It is enforced by the LuaU sandbox. The sandbox has no `http`, `socket`, or `io` library unless the rule's config explicitly grants it. A rule that attempts a network call without permission raises a runtime error and aborts the generation step for that entity.
+This is not a policy. It is enforced by the LuaU sandbox. There is no `io` library, no socket library, and no filesystem access of any kind — and none of those can be granted. The single escape hatch is `http.get`, which appears only when a rule's config declares a host allowlist. A rule that attempts a network call without permission raises a runtime error and aborts the generation step for that entity.
 
 Your source code, your AST, and your type information never leave your machine unless you write a rule that explicitly sends them somewhere, and approve that in config.
 
 ---
 
-## codegen versus the DTDK Manager
+## What the guarantee covers
 
-The no-call-home guarantee covers **codegen** — the code generation engine that runs your rules. It is a distinct tool from the **DTDK Manager**, which installs, updates, and license-activates components and is, by design, a network client. Nothing the manager does affects codegen's runtime: once codegen is installed, running it executes rules with no network access. The guarantee on this page is about the engine, not the installer.
+The guarantee is about **rule execution** — what happens when codegen parses your headers and runs your rules. That path makes no outbound request, and the sandbox is what enforces it.
+
+Two things sit outside that path and are network clients by design:
+
+- The **DTDK Manager**, which installs, updates, and license-activates components. Nothing it does affects codegen's runtime: once codegen is installed, running it executes rules with no network access.
+- **`codegen --browse-rules-registry`**, which fetches the public [rules registry](/rules/registry/) so you can install a rule. It runs only when you type that flag, it exits before any generation begins, and it never runs as part of a build.
+
+Neither weakens the sentence above. Generation itself — the part that sees your AST — still makes zero outbound requests. If you never invoke the browser, codegen never opens a socket at all.
+
+<Alert type="info" title="Auditing this yourself">
+`--browse-rules-registry` talks to `raw.githubusercontent.com` and `api.github.com`, anonymously and without a token. Nothing about your code, your AST, or your machine is sent — the requests are plain reads of a public catalogue. A generation run (`codegen -i … -a …`) opens no sockets at all, which is straightforward to confirm with `strace`, `dtruss`, or Process Monitor.
+</Alert>
 
 ---
 
@@ -37,8 +48,9 @@ The LuaU VM embedded in codegen starts with an empty global environment. The eng
 |---|---|---|
 | `json.encode` | function | Serialize a Lua value to a JSON string |
 | `json.decode` | function | Parse a JSON string to a Lua value |
+| AST-query natives (`get_node`, `references`, `find_symbols`, `type_of`, and others) | function | Read-only queries against the workspace daemon over a local Unix socket — how a rule receives your AST. Not a network call: the daemon is a process on your machine, not a remote endpoint. |
 
-That is the complete standard environment. No `os`, no `io`, no `require`, no `http`.
+Alongside those, the VM opens a restricted subset of the Luau standard library — `base`, `string`, `table`, `math`, `os`, `coroutine`, `utf8`, `bit32` — and then freezes the globals. Luau's `os` is time-only (`os.time`, `os.clock`, `os.date`); it has no `os.execute` and no `os.remove`. There is no `io`, no `require`, no `http`, and no filesystem module of any kind.
 
 The `json` globals are pure functions with no side effects and no I/O.
 
@@ -48,7 +60,7 @@ The `json` globals are pure functions with no side effects and no I/O.
 
 Rules that legitimately need network access, fetching an OpenAPI spec, querying an internal schema registry, can request it explicitly in `config.yaml`:
 
-```yaml title=".codegen/rules/MyRule/MyRule.config.yaml"
+```yaml title=".codegen/rules/MyRule/config.yaml"
 version: 1
 
 output:
@@ -71,26 +83,17 @@ Rules with HTTP permissions must be reviewed with the same scrutiny as any code 
 
 ---
 
-## License verification
+## No license check
 
-codegen validates your license on startup against a locally-stored token. **This check is fully offline.** The token is cryptographically signed; codegen verifies the signature against a built-in public key without contacting a server.
-
-License *activation* — the one step that does contact the licence service — is performed once in the DTDK Manager, not by codegen itself. After activation, codegen runs without any internet access for as long as the cached token holds, which makes it suitable for air-gapped environments.
-
-See [License Activation](/licensing/activation/) for the activation protocol.
+codegen does not validate a license at startup. There is no local token, no signature check, and no entitlement gate of any kind — that whole code path, including the offline check it used to perform, has been removed from codegen entirely. There is nothing left in codegen that could contact a license service, even in principle.
 
 ---
 
-## Audit trail
+## Local logging
 
-Every rule invocation is logged locally with:
+Each run writes a local structured log: the input path and rules directory, how many rules loaded, how many files were in scope, and how many files were written. Errors and warnings carry the rule, entity, and source path.
 
-- The rule name and config path
-- The entity identifier and source file
-- Whether any HTTP permission was exercised
-- The output file written
-
-Logs are written to a local file only. They are never transmitted.
+Logs are written to a local file only, under codegen's own tool directory. They are never transmitted.
 
 ---
 
@@ -100,9 +103,10 @@ See [Supply Chain](/trust/supply-chain/) for provenance attestation, artifact si
 
 <Alert type="info" title="Key Takeaways">
 - The no-call-home guarantee is enforced by the LuaU sandbox, not by policy. Rules cannot make network calls unless explicitly granted permission in config.
-- The sandbox injects only `json.encode` and `json.decode` by default, no `os`, `io`, `http`, or `require`.
+- The sandbox injects `json.encode`/`json.decode` plus read-only AST-query natives (local daemon IPC, not network), over a frozen subset of the Luau stdlib. No `io`, no `require`, no `http`, no filesystem — and Luau's `os` is time-only.
 - HTTP permissions require an explicit domain allowlist. There is no allow-all flag.
-- License verification is fully offline: cryptographic signature check against a local token.
+- codegen has no license check at all — the old startup validation (and the network call it could make) has been removed entirely.
 - Logs are written locally only, never transmitted.
+- `--browse-rules-registry` is the one network path in the tool. It is user-invoked, never part of a build, and reads a public catalogue anonymously.
 - For full provenance documentation, see the [Supply Chain page](/trust/supply-chain/).
 </Alert>

@@ -8,7 +8,7 @@ import DisclaimerModal from '@codexx/web/DisclaimerModal.astro'
 interface Props {
   title: string
   description?: string
-  activeNav?: 'docs' | 'pricing' | 'activate'
+  activeNav?: 'docs' | 'support'
 }
 
 const { title, description, activeNav } = Astro.props
@@ -151,10 +151,8 @@ const currentYear = new Date().getFullYear()
     <nav>
       <a href="/" class="nav-logo">codegen</a>
       <ul>
-        <li><a href="/"     class={activeNav === 'docs'     ? 'active' : undefined}>Docs</a></li>
-        <li><a href="/pricing"  class={activeNav === 'pricing'  ? 'active' : undefined}>Pricing</a></li>
-        <li><a href="/activate" class={activeNav === 'activate' ? 'active' : undefined}>Activate</a></li>
-        <li><a href="/portal"   class={activeNav === 'portal'   ? 'active' : undefined}>Portal</a></li>
+        <li><a href="/"        class={activeNav === 'docs'    ? 'active' : undefined}>Docs</a></li>
+        <li><a href="/support" class={activeNav === 'support' ? 'active' : undefined}>Support</a></li>
       </ul>
     </nav>
 
@@ -164,9 +162,7 @@ const currentYear = new Date().getFullYear()
       <p class="footer-line">
         © {currentYear} codegen ·
         <a href="/">Docs</a> ·
-        <a href="/pricing">Pricing</a> ·
-        <a href="/activate">Activate</a> ·
-        <a href="/portal">Manage subscription</a> ·
+        <a href="/support">Support</a> ·
         <a href="/llms-full.txt">llms.txt</a> ·
         <a href="/trust/no-call-home">Trust</a>
       </p>

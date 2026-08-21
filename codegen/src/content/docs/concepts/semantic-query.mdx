@@ -18,8 +18,8 @@ The API mixes two kinds of handle — keep them straight:
 
 Functions whose signature returns `json` hand back a JSON **string** — call `json.decode` on it before use.
 
-<Alert type="info" title="Type facts and --use-workspace">
-Type resolution (`type_of`, `type_symbol_of`, `type_node_of`) and `references` are richest when codegen runs with [`--use-workspace`](/integrations/cli/#preprocessor--parser), which resolves against a whole-workspace semantic snapshot (cross-header types included). Symbol lookups (`find_symbols`, `symbol_summary`, `base_classes`, `members`) work in every mode. Every function returns `nil` when it has no answer.
+<Alert type="info" title="Type facts and the workspace daemon">
+Every codegen run connects to the workspace daemon for the project root, so type resolution (`type_of`, `type_symbol_of`, `type_node_of`), `references`, and symbol lookups (`find_symbols`, `symbol_summary`, `base_classes`, `members`) all resolve against the same whole-workspace semantic snapshot (cross-header types included). Every function returns `nil` when it has no answer.
 </Alert>
 
 ## Resolving a node's type
@@ -44,7 +44,7 @@ local resolved = type_of(varId)        -- json string of a ResolvedType, or nil
 {
   "state": "Known",
   "type": {
-    "identifier": { "name": "ConnectionOptions", "templateArguments": [] },
+    "identifier": { "name": "ConnectionOptions", "templateArgs": [] },
     "isConst": false,
     "isPointer": false,
     "isReference": false
@@ -193,5 +193,5 @@ end
 - `type_symbol_of` gives a node's type as a symbol; `type_node_of` pivots into that type's declaration node; `type_of` returns the full `ResolvedType` (`state` + `type` signature + `typeSymbol`).
 - `symbol_summary`, `find_symbols`, `references`, `base_classes`, and `members` cover symbol lookup, occurrences, and the class graph. `json`-returning functions hand back a string — `json.decode` it.
 - Builtins, dependent, and unresolved types return `nil` / `null` — an incompatible node stays empty, never guesses.
-- Type and reference facts are fullest under [`--use-workspace`](/integrations/cli/#preprocessor--parser); symbol lookups work in every mode.
+- All of it — type/reference facts and symbol lookups alike — resolves against the whole-workspace snapshot the daemon serves; there's no reduced mode.
 </Alert>

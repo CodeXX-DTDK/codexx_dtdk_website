@@ -43,7 +43,6 @@ export default defineConfig({
         },
       ],
       components: {
-        SocialIcons: "./src/components/HeaderNav.astro",
         PageFrame: "./src/components/PageFrame.astro",
       },
       sidebar: [
@@ -78,6 +77,7 @@ export default defineConfig({
             { label: "Grouping Logic", slug: "rules/grouping" },
             { label: "Inline Injection", slug: "rules/inline-injection" },
             { label: "Permissions Model", slug: "rules/permissions" },
+            { label: "Rules Registry", slug: "rules/registry" },
           ],
         },
         // Examples
@@ -116,14 +116,10 @@ export default defineConfig({
             { label: "Supply Chain", slug: "trust/supply-chain" },
           ],
         },
-        // Licensing
+        // Support
         {
-          label: "Licensing",
-          items: [
-            { label: "Tiers & Pricing", slug: "licensing/tiers" },
-            { label: "License Activation", slug: "licensing/activation" },
-            { label: "Support Policy", slug: "licensing/support" },
-          ],
+          label: "Support",
+          items: [{ label: "Support Policy", slug: "support" }],
         },
         // Reference
         {

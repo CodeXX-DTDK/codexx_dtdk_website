@@ -195,7 +195,7 @@ codegen -i ./include -r .codegen/rules -a MarkdownDocs
 
 ## Extending this example
 
-**Add descriptions.** Accept a string attribute argument: `[[codegen::MarkdownDocs("Optional per-entity description")]]`. The handler reads it via `node.attributes[i]` (look for `attr.ns == "codegen"` and `attr.name == "MarkdownDocs"`, then `attr.arguments[1]`).
+**Add descriptions.** Accept a string attribute argument: `[[codegen::MarkdownDocs("Optional per-entity description")]]`. The handler reads it via `node.attributes[i]` (look for `attr.ns == "codegen"` and `attr.name == "MarkdownDocs"`, then `attr.args[1]`).
 
 **Sort alphabetically.** Inside `grouping.luau`, sort `data.entities` by `entity.qualifiedName` before assigning paths. Output assembly visits entities in the post-grouping order.
 
